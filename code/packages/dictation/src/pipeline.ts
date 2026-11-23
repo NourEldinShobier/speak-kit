@@ -119,13 +119,13 @@ export async function foreground(inserter: DictationDeps["inserter"]): Promise<T
 
 const windowNow = (ctx: Context) => within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => foreground(ctx.deps.inserter));
 
-/** The window the key was pressed in and the one in front now. With "return to the app" on, a different window in front is replaced by the first; `lost` says that did not work. */
-async function windows(ctx: Context, job: Job, settings: Settings): Promise<{ target: Target | undefined; current: Target | undefined; lost: boolean }> {
+/** The window the key was pressed in and the one in front now. A different window in front is replaced by the first; `lost` says that did not work. */
+async function windows(ctx: Context, job: Job): Promise<{ target: Target | undefined; current: Target | undefined; lost: boolean }> {
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
   const current = await windowNow(ctx);
   const focus = ctx.deps.inserter.focus;
   const moved = !!target && !!current && current.id !== target.id && !current.passwordField;
-  if (!settings.returnToApp || !moved || !focus) return { target, current, lost: false };
+  if (!moved || !focus) return { target, current, lost: false };
   const back = await within(ctx, { name: "return-to-app", ms: STAGE_MS, fallback: false }, () => focus(target));
   return { target, current: back ? await windowNow(ctx) : current, lost: !back };
 }
@@ -140,7 +140,7 @@ type Said = { clip: Clip; heard: Heard; text: string; rewrite?: RewriteOutcome }
 
 async function insert(ctx: Context, job: Job, said: Said & { settings: Settings; transcribeMs: number; droppedMs: number | undefined }): Promise<Outcome> {
   const { clip, heard, text, transcribeMs, droppedMs } = said;
-  const { target, current, lost } = await windows(ctx, job, said.settings);
+  const { target, current, lost } = await windows(ctx, job);
   const plan = planPaste({ target, current, settings: said.settings, interrupted: clip.interrupted === true });
   if (plan.method === "refuse") return { error: plan.reason };
   // The text is in History before anything is sent, so an insertion that fails or a window that cannot be reached loses nothing.
@@ -243,6 +243,17 @@ async function rewriteStep(ctx: Context, eff: Settings, text: string): Promise<{
   return rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock, style: rewriteStyle(eff) });
 }
 
+/** One log line per take: numbers only, never the spoken text. */
+function logTake(ctx: Context, { clip, heard, transcribeMs }: { clip: Clip; heard: string; transcribeMs: number }): void {
+  const length = Math.round((clip.pcm.length / clip.sampleRate) * 1000);
+  const ending = clip.interrupted ? ", interrupted" : "";
+  try {
+    ctx.deps.log?.("take", `${length} ms, peak ${clip.peak.toFixed(3)}, heard ${heard.trim() ? "text" : "nothing"}, transcribed in ${transcribeMs} ms${ending}`);
+  } catch {
+    // a broken log must not hold the text up
+  }
+}
+
 /** Recording to inserted text: silence check, transcription, text rules, rewrite, insertion plan, history. */
 export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefined> {
   const clip = await job.clip;
@@ -256,14 +267,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
   let text = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
-  try {
-    ctx.deps.log?.(
-      "take",
-      `${Math.round((clip.pcm.length / clip.sampleRate) * 1000)} ms, peak ${clip.peak.toFixed(3)}, heard ${heard.text.trim() ? "text" : "nothing"}, transcribed in ${transcribeMs} ms${clip.interrupted ? ", interrupted" : ""}`,
-    );
-  } catch {
-    // a broken log must not hold the text up
-  }
+  logTake(ctx, { clip, heard: heard.text, transcribeMs });
   if (!text) return { notice: { kind: "no-speech" } };
   const rewritten = job.raw ? undefined : await rewriteStep(ctx, eff, text);
   if (rewritten) text = rewritten.text;

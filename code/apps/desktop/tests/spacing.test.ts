@@ -11,7 +11,7 @@ const start = async (o: Parameters<typeof launch>[0] = {}) => {
 afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 
 /** Runs in the page: the rectangle and the computed spacing of the first element that matches. */
 const probe = (p: Page, sel: string) =>
@@ -29,7 +29,7 @@ const box = (p: Page, sel: string) => probe(p, sel).then((b) => b!);
 describe("title bar on macOS (data-platform=darwin set by hand; Windows keeps its native caption buttons)", () => {
   it("the right group runs to the far right with equal right and top gaps while the search box stays centred", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.evaluate(() => (document.documentElement.dataset.platform = "darwin"));
     const bell = await box(l.page, ".sk-bell");
     const search = await box(l.page, ".sk-search");

@@ -27,7 +27,6 @@ export interface Services {
   events: { open: number };
   heartbeatMs: number;
   mintLimiter: MintLimiter;
-  lookLimiter: MintLimiter;
   deadlines: { controlMs: number; streamIdleMs: number };
 }
 

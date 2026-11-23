@@ -54,7 +54,6 @@ export function historyApi(h: { store: History; deps: DictationDeps; settings():
     recent: async (n) => (await store.list({ limit: n })).map(({ via: _via, ...e }) => e),
     remove: (id) => store.remove(id),
     removeMany: (ids) => store.removeMany(ids),
-    stats: () => store.stats(),
     clear: () => store.clear(),
     status: () => store.status(),
     preservedAs: () => store.preservedAs(),

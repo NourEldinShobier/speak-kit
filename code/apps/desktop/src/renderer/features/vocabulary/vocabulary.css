@@ -1,4 +1,4 @@
-/* Vocabulary, Modes and the rules tester. Rows, cards and sections come from @speakkit/ui; this file adds what those do not have. */
+/* Vocabulary and Modes. Rows, cards and sections come from @speakkit/ui; this file adds what those do not have. */
 
 .vocab-transfer {
   display: flex;
@@ -222,51 +222,18 @@
 }
 
 /* Clean-up. */
-.cleanup-lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
 .cleanup-ctl {
   display: inline-flex;
   align-items: center;
   gap: 12px;
 }
 
-/* Tester. */
+/* Read as test field. */
 .vocab-tester__card {
   overflow: hidden;
 }
 .vocab-tester__in {
   padding: 16px;
-}
-.vocab-steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.vocab-step {
-  display: grid;
-  grid-template-columns: minmax(120px, 190px) 1fr;
-  gap: 16px;
-  padding: 12px 16px;
-  border-block-start: 1px solid var(--stroke-hairline);
-  font-size: 13px;
-}
-.vocab-step__head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-inline-size: 0;
-}
-.vocab-step__head span {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.vocab-step__text {
-  overflow-wrap: anywhere;
 }
 .vocab-final {
   display: flex;
@@ -290,28 +257,6 @@
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 400;
-}
-.vocab-final__acts {
-  display: flex;
-  gap: 8px;
-  flex: none;
-}
-.vocab-fix {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-block-start: 1px solid var(--stroke-hairline);
-}
-.vocab-fix__lead {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.vocab-fix__foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 /* Import result. */
@@ -359,10 +304,6 @@
   .vocab-row {
     grid-template-columns: minmax(80px, 130px) 1fr auto;
     gap: 12px;
-  }
-  .vocab-step {
-    grid-template-columns: 1fr;
-    gap: 4px;
   }
   .vocab-rule {
     grid-template-columns: minmax(60px, 110px) 16px 1fr auto auto;

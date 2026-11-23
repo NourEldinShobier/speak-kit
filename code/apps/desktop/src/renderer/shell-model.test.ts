@@ -9,16 +9,16 @@ describe("navigation", () => {
       { type: "go", page: "voices" },
       { type: "go", page: "engines" },
     ]);
-    expect(s.hist.map((l) => l.page)).toEqual(["home", "voices", "engines"]);
+    expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "engines"]);
     s = run([{ type: "back" }, { type: "back" }, { type: "back" }], s);
-    expect(currentLoc(s).page).toBe("home");
+    expect(currentLoc(s).page).toBe("dictation");
     s = run([{ type: "forward" }], s);
     expect(currentLoc(s).page).toBe("voices");
   });
 
   it("drops the forward entries when going somewhere new, and ignores a repeat of the current place", () => {
     let s = run([{ type: "go", page: "voices" }, { type: "go", page: "engines" }, { type: "back" }, { type: "go", page: "history" }]);
-    expect(s.hist.map((l) => l.page)).toEqual(["home", "voices", "history"]);
+    expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "history"]);
     s = run([{ type: "go", page: "history" }], s);
     expect(s.hist).toHaveLength(3);
   });
@@ -26,7 +26,7 @@ describe("navigation", () => {
   it("keeps the settings section when returning to settings without one, and resets it elsewhere", () => {
     const s = run([
       { type: "go", page: "settings", sub: "shortcuts" },
-      { type: "go", page: "home" },
+      { type: "go", page: "dictation" },
       { type: "go", page: "settings" },
     ]);
     expect(currentLoc(s)).toEqual({ page: "settings", sub: "general" });
@@ -40,20 +40,20 @@ describe("navigation", () => {
   it("moving between settings sections adds no history entry; closing returns to the page before Settings", () => {
     const s = run([
       { type: "go", page: "voices" },
-      { type: "go", page: "settings", sub: "performance" },
+      { type: "go", page: "settings", sub: "storage" },
       { type: "go", page: "settings", sub: "shortcuts" },
       { type: "go", page: "settings", sub: "about" },
     ]);
-    expect(s.hist.map((l) => l.page)).toEqual(["home", "voices", "settings"]);
+    expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "settings"]);
     const closed = run([{ type: "close-settings" }], s);
     expect(currentLoc(closed)).toEqual({ page: "voices", sub: "general" });
-    expect(closed.hist.map((l) => l.page)).toEqual(["home", "voices"]);
+    expect(closed.hist.map((l) => l.page)).toEqual(["dictation", "voices"]);
     expect(run([{ type: "close-settings" }], closed)).toBe(closed);
   });
 
-  it("close-settings opens Home when Settings was the first entry and waits while a dialog is open", () => {
-    const first = { ...initShell(), hist: [{ page: "settings" as const, sub: "performance" as const }] };
-    expect(currentLoc(run([{ type: "close-settings" }], first)).page).toBe("home");
+  it("close-settings opens Dictation when Settings was the first entry and waits while a dialog is open", () => {
+    const first = { ...initShell(), hist: [{ page: "settings" as const, sub: "storage" as const }] };
+    expect(currentLoc(run([{ type: "close-settings" }], first)).page).toBe("dictation");
     const withDialog = run([
       { type: "go", page: "settings" },
       { type: "quit", open: true },

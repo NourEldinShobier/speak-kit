@@ -3,9 +3,9 @@ import type { Row } from "@speakkit/transcripts/pure";
 import type { Push, SettingsView } from "../../../shared/transcripts/contract";
 import { transcripts } from "./api";
 
-/** The live state of the recorder and a counter that moves when anything changes: fetched once, then pushed by the main process. */
+/** A counter that moves when anything changes: fetched once, then pushed by the main process. */
 export function usePush(): Push {
-  const [push, setPush] = useState<Push>({ recording: null, tick: 0 });
+  const [push, setPush] = useState<Push>({ tick: 0 });
   useEffect(() => {
     let live = true;
     void transcripts.push().then((p) => live && setPush((cur) => (cur.tick >= p.tick && cur.tick > 0 ? cur : p)));
@@ -27,8 +27,8 @@ export interface ListState {
 
 const SEARCH_DELAY_MS = 150;
 
-/** The transcripts for a search (or the Trash), fetched again whenever main says something changed. A failed fetch keeps the old rows and sets `error`. */
-export function useTranscriptList(search: string, trashed: boolean, tick: number): ListState {
+/** The transcripts for a search, fetched again whenever main says something changed. A failed fetch keeps the old rows and sets `error`. */
+export function useTranscriptList(search: string, tick: number): ListState {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState(false);
   const [n, setN] = useState(0);
@@ -37,7 +37,7 @@ export function useTranscriptList(search: string, trashed: boolean, tick: number
     const mine = ++latest.current;
     const q = search.trim();
     const run = () =>
-      transcripts.list({ ...(q && { search: q }), trashed }).then(
+      transcripts.list(q ? { search: q } : {}).then(
         (r) => {
           if (mine !== latest.current) return;
           setRows(r);
@@ -47,12 +47,12 @@ export function useTranscriptList(search: string, trashed: boolean, tick: number
       );
     const timer = setTimeout(() => void run(), q ? SEARCH_DELAY_MS : 0);
     return () => clearTimeout(timer);
-  }, [search, trashed, tick, n]);
+  }, [search, tick, n]);
   const reload = useCallback(() => setN((x) => x + 1), []);
   return { rows, error, reload };
 }
 
-/** The settings view (retention, folder, model, storage), fetched again when anything changes. */
+/** The settings view (language, notes, model, storage), fetched again when anything changes. */
 export function useSettingsView(tick: number): { view: SettingsView | null; set(v: SettingsView): void; failed: boolean } {
   const [view, setView] = useState<SettingsView | null>(null);
   const [failed, setFailed] = useState(false);

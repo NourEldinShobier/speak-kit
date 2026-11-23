@@ -12,7 +12,6 @@ import {
   etaText,
   failureText,
   hardwareLine,
-  hiddenLine,
   languagesText,
   memoryText,
   recommendationText,
@@ -24,8 +23,7 @@ import {
   speedText,
   togglePicked,
   transferText,
-  visibleModels,
-  DEFAULT_FILTER,
+  sortedModels,
 } from "./speech-text";
 
 const card = (over: Partial<ModelCard> = {}): ModelCard => ({
@@ -151,26 +149,16 @@ describe("delete confirmation", () => {
   });
 });
 
-describe("visibleModels", () => {
+describe("sortedModels", () => {
   const all = [parakeet, card({ inUse: true }), omit(card({ id: "custom-0123456789ab", name: "Mine", bytes: 100_000_000, languages: ["en"], origin: "custom" }), "speedSeconds")];
-  it("keeps the model in use first whatever the sort", () => {
-    expect(visibleModels(all, { ...DEFAULT_FILTER, sort: "size" }).shown.map((m) => m.name)).toEqual(["Whisper Large v3 Turbo", "Mine", "Parakeet v3"]);
-    expect(visibleModels(all, { ...DEFAULT_FILTER, sort: "speed" }).shown.map((m) => m.name)).toEqual(["Whisper Large v3 Turbo", "Parakeet v3", "Mine"]);
+  it("keeps the model in use first and the rest in list order", () => {
+    expect(sortedModels(all).map((m) => m.name)).toEqual(["Whisper Large v3 Turbo", "Parakeet v3", "Mine"]);
   });
-  it("downloaded only hides the rest and counts them", () => {
-    const r = visibleModels(all, { ...DEFAULT_FILTER, downloadedOnly: true });
-    expect(r.shown.map((m) => m.name)).toEqual(["Whisper Large v3 Turbo", "Parakeet v3", "Mine"].filter((n) => n !== "Parakeet v3"));
-    expect(r.hidden).toBe(1);
-    expect(hiddenLine(r.hidden)).toBe("1 model that is not downloaded is hidden.");
-    expect(hiddenLine(2)).toBe("2 models that are not downloaded are hidden.");
-    expect(hiddenLine(0)).toBe("");
-  });
-  it("the language filter keeps the models that handle it", () => {
-    expect(visibleModels(all, { ...DEFAULT_FILTER, language: "ar" }).shown.map((m) => m.name)).toEqual(["Whisper Large v3 Turbo"]);
-    expect(visibleModels(all, { ...DEFAULT_FILTER, language: "zz" }).shown).toEqual([]);
+  it("lists every model: nothing is hidden", () => {
+    expect(sortedModels(all)).toHaveLength(3);
   });
   it("keeps the original order for equal keys", () => {
-    expect(visibleModels([card({ id: "a" as never, name: "A" }), card({ id: "b" as never, name: "B" })], DEFAULT_FILTER).shown.map((m) => m.name)).toEqual(["A", "B"]);
+    expect(sortedModels([card({ id: "a" as never, name: "A" }), card({ id: "b" as never, name: "B" })]).map((m) => m.name)).toEqual(["A", "B"]);
   });
 });
 
@@ -183,7 +171,6 @@ const base = (over: Partial<SpeechModelsView> = {}): SpeechModelsView => ({
   idleMinutes: 15,
   device: { choice: "auto", failed: [], movedToCpuByMemory: false, cpuWarning: false },
   disk: { total: 0, folder: "" },
-  releaseOnClose: false,
   autoSwitch: { enabled: false, rules: [], skippedRuleIds: [] },
   recording: false,
   noModel: false,
@@ -276,11 +263,10 @@ describe("compare picker", () => {
     expect(togglePicked(["a", "b", "c", "d"], "e")).toEqual(["a", "b", "c", "d"]);
     expect(togglePicked(["a"], "b", 1)).toEqual(["a"]);
   });
-  it("puts the models recommended for the chosen language first", () => {
+  it("puts the models recommended for some language first", () => {
     const de = card({ id: "de", recommendedFor: ["de"] });
     const en = card({ id: "en", recommendedFor: ["en"] });
     const none = card({ id: "none" });
-    expect(visibleModels([none, en, de], { ...DEFAULT_FILTER, language: "de" }).shown.map((m) => m.id)).toEqual(["de", "none", "en"]);
-    expect(visibleModels([none, en, de], DEFAULT_FILTER).shown.map((m) => m.id)).toEqual(["en", "de", "none"]);
+    expect(sortedModels([none, en, de]).map((m) => m.id)).toEqual(["en", "de", "none"]);
   });
 });

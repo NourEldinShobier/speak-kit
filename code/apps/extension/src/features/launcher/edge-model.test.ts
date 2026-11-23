@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { UiModel } from "../../shared/ui-types";
-import { PLAY_VIEW, pillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
+import { PLAY_VIEW, pillTop, railTop, tabClass, tabTop, tooltipText } from "./edge-model";
 
-const launcher = { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 } as const;
+const launcher = { enabled: true, y: 0.42 } as const;
 const model = (over: Partial<UiModel> = {}): UiModel => ({
   status: "idle",
   elapsedMs: 0,
@@ -55,12 +55,9 @@ describe("tab and pill placement", () => {
   });
 });
 
-test("tab classes follow the side, the reading width and the idle ghost", () => {
-  expect(sideClass(launcher)).toBe("");
-  expect(sideClass({ ...launcher, side: "left" })).toBe(" sk-left");
-  expect(tabClass(launcher, true)).toBe("sk-tab is-reading");
-  expect(tabClass({ ...launcher, side: "left", idle: "hidden" }, false)).toBe("sk-tab sk-left is-ghost");
-  expect(tabClass({ ...launcher, widerWhileReading: false }, true)).toBe("sk-tab");
+test("the tab is the slim rail while reading and the plain tab otherwise", () => {
+  expect(tabClass(true)).toBe("sk-tab is-reading");
+  expect(tabClass(false)).toBe("sk-tab");
 });
 
 describe("tooltipText", () => {

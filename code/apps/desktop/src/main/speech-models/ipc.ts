@@ -19,8 +19,6 @@ const handlersOf = (s: SpeechModels): Handlers => ({
   importFile: (kind, name) => s.importFile(kind, name),
   locateFile: (id) => s.locateFile(id),
   removeImported: (id) => s.removeImported(id),
-  scanDisk: () => s.scanDisk(),
-  adoptFound: (ids) => s.adoptFound(ids),
   dismissNewer: async (id) => s.dismissNewer(id),
   continueWithoutModel: async () => s.continueWithoutModel(),
   measureMemory: () => s.measureMemory(),

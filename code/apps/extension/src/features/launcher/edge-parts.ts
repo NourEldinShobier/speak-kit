@@ -1,7 +1,6 @@
-import type { Settings } from "@speakkit/protocol";
 import { avatar, h, iconButton, menu, menuItem } from "@speakkit/ui/vanilla";
 import { speedLabel } from "../../shared/format";
-import { beside } from "../../shared/placement";
+import { besideLeft } from "../../shared/placement";
 import type { Shell } from "../../shared/ui-types";
 import { speedPopover } from "../player";
 import { voicePopover } from "../voices";
@@ -41,12 +40,12 @@ export function moreMenu(shell: Shell, hd: Surface["hd"]): HTMLElement {
 }
 
 /** The speed pill and voice button of the edge pill, each opening its popover beside the pill. `avatar` is the voice initial, which the caller keeps current. */
-export function speedVoiceButtons(s: Surface, l: Settings["launcher"]): { speed: HTMLElement; voice: HTMLElement; avatar: HTMLElement } {
+export function speedVoiceButtons(s: Surface): { speed: HTMLElement; voice: HTMLElement; avatar: HTMLElement } {
   const { shell, hd } = s;
   const m = s.model();
   const speed = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--sm sk-speed", "aria-label": `Speed ${speedLabel(m.speed)}`, "data-sk": "launcher-speed" }, speedLabel(m.speed));
   speed.addEventListener("click", () =>
-    shell.togglePopover({ kind: "speed", anchor: speed, build: () => speedPopover({ speed: () => s.model().speed, onSet: (v) => hd.setSpeed(v) }), place: beside(l.side) }),
+    shell.togglePopover({ kind: "speed", anchor: speed, build: () => speedPopover({ speed: () => s.model().speed, onSet: (v) => hd.setSpeed(v) }), place: besideLeft }),
   );
   const voice = h("button", { type: "button", class: "lm-btn lm-btn--secondary lm-btn--icon sk-vc", "aria-label": "Voice", "data-sk": "launcher-voice" });
   const av = avatar(m.voiceName, 24, "accent");
@@ -56,7 +55,7 @@ export function speedVoiceButtons(s: Surface, l: Settings["launcher"]): { speed:
       kind: "voice",
       anchor: voice,
       build: () => voicePopover({ voices: () => hd.voices(), current: () => s.model().voice, onPick: (v) => hd.setVoice(v.id), onPreview: (id) => hd.previewVoice(id), alive: (el) => el.isConnected }),
-      place: beside(l.side),
+      place: besideLeft,
     }),
   );
   return { speed, voice, avatar: av };

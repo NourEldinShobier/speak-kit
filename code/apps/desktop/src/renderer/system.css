@@ -12,17 +12,17 @@
   color: var(--text-primary);
   white-space: nowrap;
 }
-.sk-notify {
+.sk-hosts {
   width: 100%;
   border-collapse: collapse;
 }
-.sk-notify th,
-.sk-notify td {
+.sk-hosts th,
+.sk-hosts td {
   padding: 10px 16px;
   text-align: center;
   border-top: 1px solid var(--stroke-hairline);
 }
-.sk-notify thead th {
+.sk-hosts thead th {
   border-top: 0;
   color: var(--text-tertiary);
   font-size: 11px;
@@ -30,11 +30,11 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.sk-notify th:first-child {
+.sk-hosts th:first-child {
   text-align: start;
   font-weight: 400;
 }
-.sk-notify td > * {
+.sk-hosts td > * {
   margin: 0 auto;
 }
 .sk-pillbtn {
@@ -148,9 +148,4 @@
   padding-inline-start: 18px;
   font-size: 13px;
   line-height: 18px;
-}
-.sk-export__chapters {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }

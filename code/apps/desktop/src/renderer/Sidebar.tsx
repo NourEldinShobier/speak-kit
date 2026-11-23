@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Icon, IconButton, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
+import { IconButton, NavItem, NavSection, SidebarNav } from "@speakkit/ui";
 import type { AppState, Page, SettingsSub } from "../shared/ipc";
-import { engineView } from "../shared/engine-view";
 import { ExportPill } from "./features/export";
 import { QuickTopics, requestRow, SettingsResults, SettingsSearchField } from "./features/settings";
 import { searchSettings, type SettingRowDef } from "../shared/settings/search-index";
@@ -86,21 +85,6 @@ function SettingsNav(p: SidebarProps) {
   );
 }
 
-function EngineCard({ s }: { s: AppState }) {
-  const { t } = useT();
-  const v = engineView(s.health, s.serverError);
-  return (
-    <div className="sk-engcard">
-      <b>Kokoro-82M · {v.label}</b>
-      {v.hint && <span>{v.hint}</span>}
-      <span className="sk-engcard__ok">
-        <Icon name="lock" size={13} />
-        {t("nav.onDevice")}
-      </span>
-    </div>
-  );
-}
-
 function RecentList({ recent, onPick }: { recent: RecentReading[]; onPick(id: string): void }) {
   const { t } = useT();
   if (recent.length === 0) return <div className="sk-side__empty">{t("nav.recentEmpty")}</div>;
@@ -134,7 +118,6 @@ function MainNav(p: SidebarProps) {
       <RecentList recent={p.recent} onPick={p.onOpenRecent} />
       <div className="sk-side__spacer" />
       <ExportPill s={p.s} onOpen={p.onOpenExport} />
-      <EngineCard s={p.s} />
       <Link icon="settings" href="#settings" onActivate={() => p.go("settings", "general")}>
         {t("nav.settings")}
       </Link>

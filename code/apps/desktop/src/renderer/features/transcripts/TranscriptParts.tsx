@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 import { clock, type Detail, type Match } from "@speakkit/transcripts/pure";
 import { Button, IconButton, TextInput } from "@speakkit/ui";
 import { transcripts } from "./api";
-import { ExportMenu, type ExportResult } from "./ExportMenu";
-import { matchText, parseTime, pieces } from "./model";
+import { matchText, pieces } from "./model";
 
 export const PAGE = 400;
 
@@ -113,18 +112,10 @@ interface FindProps {
   current: number;
   total: number;
   onStep(by: number): void;
-  onJump(sec: number): void;
 }
 
-/** Search inside the transcript (with previous and next) and a jump to a time. */
-export function Find({ query, setQuery, current, total, onStep, onJump }: FindProps) {
-  const [jump, setJump] = useState("");
-  const [bad, setBad] = useState(false);
-  const submit = () => {
-    const t = parseTime(jump);
-    if (t === null) setBad(true);
-    else onJump(t);
-  };
+/** Search inside the transcript, with previous and next. */
+export function Find({ query, setQuery, current, total, onStep }: FindProps) {
   return (
     <div className="tr-find">
       <TextInput icon="search" aria-label="Search in this transcript" placeholder="Search in this transcript" value={query} onChange={(e) => setQuery(e.target.value)} className="tr-find__field" />
@@ -135,15 +126,6 @@ export function Find({ query, setQuery, current, total, onStep, onJump }: FindPr
       ) : null}
       <IconButton name="chevron-up" label="Previous match" size={36} variant="secondary" disabled={total === 0} onClick={() => onStep(-1)} />
       <IconButton name="chevron-down" label="Next match" size={36} variant="secondary" disabled={total === 0} onClick={() => onStep(1)} />
-      <TextInput
-        aria-label="Jump to time"
-        placeholder="Jump to 0:00"
-        value={jump}
-        error={bad ? "Use 1:23 or 1:02:03" : undefined}
-        className="tr-find__jump"
-        onChange={(e) => (setJump(e.target.value), setBad(false))}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-      />
     </div>
   );
 }
@@ -151,29 +133,22 @@ export function Find({ query, setQuery, current, total, onStep, onJump }: FindPr
 interface HeadProps {
   detail: Detail;
   facts: string;
-  audio: string;
-  onResult(r: ExportResult): void;
   onChanged(): void;
-  onDeleted(): void;
+  onDelete(): void;
 }
 
-/** Title with Rename, the Copy, Export and delete buttons, and the facts line with Delete audio. */
-export function Head({ detail: d, facts, audio, onResult, onChanged, onDeleted }: HeadProps) {
+/** Title with Rename and the delete button, and the facts line with Delete audio. */
+export function Head({ detail: d, facts, onChanged, onDelete }: HeadProps) {
   return (
     <>
       <div className="tr-head">
         <Title detail={d} onSaved={onChanged} />
         <div className="tr-head__acts">
-          <Button iconLeft="copy" onClick={() => void transcripts.copyText(d.id).then((ok) => onResult(ok ? { kind: "copied" } : { kind: "error", message: "That transcript is gone." }))}>
-            Copy
-          </Button>
-          <ExportMenu id={d.id} onResult={onResult} trigger={<Button iconLeft="download">Export</Button>} />
-          <IconButton name="trash" label="Delete" size={36} variant="secondary" onClick={onDeleted} />
+          <IconButton name="trash" label="Delete" size={36} variant="secondary" onClick={onDelete} />
         </div>
       </div>
       <p className="tr-facts">
-        {facts}
-        {audio ? `. ${audio[0]!.toUpperCase()}${audio.slice(1)}` : ""}.{" "}
+        {facts}.{" "}
         {d.audioBytes > 0 ? (
           <button type="button" className="tr-link" onClick={() => void transcripts.deleteAudio(d.id).then(onChanged)}>
             Delete audio

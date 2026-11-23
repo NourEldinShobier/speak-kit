@@ -43,34 +43,18 @@ function OtherLanguage({ others, language, onPick }: { others: string[]; languag
   );
 }
 
-/** Which models are already on this computer: a read-only scan when the screen opens; null until it answered. */
-function useFoundModels(): [string[] | null, (id: string) => void] {
-  const [found, setFound] = useState<string[] | null>(null);
-  useEffect(() => {
-    void models.scanDisk().then(
-      (f) => setFound(f.map((x) => x.id)),
-      () => setFound([]),
-    );
-  }, []);
-  return [found, (id) => setFound((f) => [...(f ?? []), id])];
-}
-
-export function LanguageScreen({ view, onBack, onSkip, onContinue }: { view: SpeechModelsView; onBack(): void; onSkip(): void; onContinue(language: string, found: boolean): void }) {
+export function LanguageScreen({ view, onBack, onSkip, onContinue }: { view: SpeechModelsView; onBack(): void; onSkip(): void; onContinue(language: string): void }) {
   const offered = view.table.map((r) => r.language);
   const [language, setLanguage] = useState(() => defaultLanguage(navigator.language, offered));
-  const [found, addFound] = useFoundModels();
-  const choice = languageChoice(view, language, found ?? []);
+  const choice = languageChoice(view, language);
   const shown = FIRST_LANGUAGES as readonly string[];
-  const lookElsewhere = async () => {
-    const r = await models.importFile("multilingual", "");
-    if ("ok" in r && r.ok) addFound(r.id);
-  };
+  const lookElsewhere = () => void models.importFile("multilingual", "");
   const foot = (
     <Foot back={<Back onClick={onBack} />}>
       <Button variant="ghost" onClick={onSkip}>
         Skip dictation
       </Button>
-      <Button variant="primary" size="lg" iconRight="arrow-right" disabled={!choice} onClick={() => choice && onContinue(language, !!found?.includes(choice.model.id))}>
+      <Button variant="primary" size="lg" iconRight="arrow-right" disabled={!choice} onClick={() => choice && onContinue(language)}>
         Continue
       </Button>
     </Foot>
@@ -83,15 +67,15 @@ export function LanguageScreen({ view, onBack, onSkip, onContinue }: { view: Spe
           {offered
             .filter((l) => shown.includes(l))
             .map((code) => (
-              <LanguageRow key={code} code={code} choice={languageChoice(view, code, found ?? [])} checked={language === code} onPick={() => setLanguage(code)} />
+              <LanguageRow key={code} code={code} choice={languageChoice(view, code)} checked={language === code} onPick={() => setLanguage(code)} />
             ))}
         </div>
       </fieldset>
       <OtherLanguage others={offered.filter((l) => !shown.includes(l))} language={language} onPick={setLanguage} />
-      {found && found.length === 0 && (
+      {view.noModel && (
         <p className="sk-lang__note">
           No speech models were found on this computer. The model downloads when you press Continue.{" "}
-          <button type="button" className="sk-linkbtn" onClick={() => void lookElsewhere()}>
+          <button type="button" className="sk-linkbtn" onClick={lookElsewhere}>
             Look in another folder
           </button>
         </p>

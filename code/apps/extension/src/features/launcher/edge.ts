@@ -1,12 +1,9 @@
-import type { Settings } from "@speakkit/protocol";
 import { h, icon, iconButton, logo } from "@speakkit/ui/vanilla";
 import { clock, speedLabel } from "../../shared/format";
-import { beside } from "../../shared/placement";
+import { besideLeft } from "../../shared/placement";
 import { closeButton, focusedControl, talkButton, moreMenu, readerButton, restoreFocus, speedVoiceButtons } from "./edge-parts";
-import { ACTIVE, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railTop, sideClass, tabClass, tabTop, tooltipText } from "./edge-model";
+import { ACTIVE, CLOSE_DELAY_MS, MARGIN, PLAY_VIEW, TAB_HEIGHT, pillTop, railTop, tabClass, tabTop, tooltipText } from "./edge-model";
 import type { Surface } from "./types";
-
-type Launcher = Settings["launcher"];
 
 /** The edge launcher: a thin tab at the page edge that opens into a vertical pill with play, progress, skip, speed, voice and stop. While reading, the tab is a slim progress rail centred on the viewport height. */
 export class EdgeLauncher {
@@ -60,9 +57,9 @@ export class EdgeLauncher {
     if (this.pill) this.pill.style.top = `${this.pillTop(this.pill)}px`;
   }
 
-  /** Reading with the widened tab on: the tab is the progress rail, which stays centred and is not dragged. */
+  /** Reading: the tab is the progress rail, which stays centred and is not dragged. */
   private get rail() {
-    return this.reading && !!this.m.launcher?.widerWhileReading;
+    return this.reading;
   }
 
   private tabTop(): number {
@@ -78,9 +75,8 @@ export class EdgeLauncher {
     const m = this.m;
     const l = m.launcher;
     const reading = this.reading;
-    const idleOpen = !!l && l.idle === "open" && !reading;
-    const open = !!l && !m.readerOpen && (this.pillOpen || idleOpen);
-    const key = l ? `${open}|${reading}|${m.status}|${l.side}|${l.idle}|${l.widerWhileReading}|${l.openOn}|${m.dark}|${m.readerOpen}|${m.voiceOpen}` : "";
+    const open = !!l && !m.readerOpen && this.pillOpen;
+    const key = l ? `${open}|${reading}|${m.status}|${m.dark}|${m.readerOpen}|${m.voiceOpen}` : "";
     if (key === this.key) return;
     this.key = key;
     this.tab?.remove();
@@ -89,14 +85,13 @@ export class EdgeLauncher {
     this.tab = this.pill = this.ltip = this.railFill = this.pillTime = null;
     if (!l) this.pillOpen = false; // closed for this tab: it comes back as the quiet tab
     if (!l || m.readerOpen) return;
-    if (open) this.buildPill(l, reading);
-    else this.buildTab(l, reading);
+    if (open) this.buildPill(reading);
+    else this.buildTab(reading);
   }
 
-  private buildTab(l: Launcher, reading: boolean) {
-    const rail = reading && l.widerWhileReading;
+  private buildTab(reading: boolean) {
     const t = h("div", {
-      class: tabClass(l, reading),
+      class: tabClass(reading),
       "data-sk": "launcher-tab",
       "data-state": this.m.status,
       role: "button",
@@ -104,10 +99,10 @@ export class EdgeLauncher {
       "aria-label": reading ? "Open reading controls" : "Open Speak Kit controls",
     });
     t.style.top = `${this.tabTop()}px`;
-    if (rail) t.append(this.tabRail());
-    else t.append(icon(l.side === "right" ? "chevron-left" : "chevron-right", 10));
-    if (!rail) this.drag(t);
-    this.openOnIntent(t, l);
+    if (reading) t.append(this.tabRail());
+    else t.append(icon("chevron-left", 10));
+    if (!reading) this.drag(t);
+    this.openOnIntent(t);
     this.s.shell.root.append(t);
     this.tab = t;
   }
@@ -120,12 +115,12 @@ export class EdgeLauncher {
   }
 
   /** Hover intent: a short dwell opens the pill (and wakes the model); pressing first (to drag) cancels it. */
-  private openOnIntent(t: HTMLElement, l: Launcher) {
+  private openOnIntent(t: HTMLElement) {
     t.addEventListener("pointerenter", () => {
       clearTimeout(this.closeTimer);
       clearTimeout(this.openTimer);
       this.s.hd.warm("hover");
-      if (l.openOn === "hover") this.openTimer = window.setTimeout(() => this.setPill(true), 90);
+      this.openTimer = window.setTimeout(() => this.setPill(true), 90);
     });
     t.addEventListener("pointerleave", () => clearTimeout(this.openTimer));
     t.addEventListener("pointerdown", () => clearTimeout(this.openTimer));
@@ -171,20 +166,20 @@ export class EdgeLauncher {
     el.addEventListener("pointercancel", end);
   }
 
-  private buildPill(l: Launcher, reading: boolean) {
-    const p = h("div", { class: `sk-pill${sideClass(l)}`, "data-sk": "launcher-pill", "data-state": this.m.status });
+  private buildPill(reading: boolean) {
+    const p = h("div", { class: "sk-pill", "data-sk": "launcher-pill", "data-state": this.m.status });
     const collapse = iconButton({
-      name: l.side === "right" ? "chevron-right" : "chevron-left",
+      name: "chevron-right",
       label: "Collapse",
       size: 28,
       data: { sk: "launcher-collapse" },
       onClick: () => this.setPill(false, true),
     });
     p.append(collapse, logo(32), this.pillPlay(reading), talkButton(this.s, this.tip), ...(reading ? this.pillProgress() : this.pillReader()));
-    const { speed, voice, avatar } = speedVoiceButtons(this.s, l);
+    const { speed, voice, avatar } = speedVoiceButtons(this.s);
     this.pillSpeed = speed;
     this.pillVoice = avatar;
-    p.append(speed, voice, this.pillLast(l, reading), closeButton(this.s.hd, this.tip));
+    p.append(speed, voice, this.pillLast(reading), closeButton(this.s.hd, this.tip));
     this.closeWhenAway(p);
     p.classList.add("is-out");
     this.s.shell.root.append(p);
@@ -237,7 +232,7 @@ export class EdgeLauncher {
   }
 
   /** The last button: stop while reading, else the "More" menu. */
-  private pillLast(l: Launcher, reading: boolean): HTMLElement {
+  private pillLast(reading: boolean): HTMLElement {
     const { shell, hd } = this.s;
     if (reading) return iconButton({ name: "player-stop", label: "Stop", size: 32, data: { sk: "launcher-stop" }, onClick: () => hd.stop() });
     const more: HTMLElement = iconButton({
@@ -245,7 +240,7 @@ export class EdgeLauncher {
       label: "More",
       size: 32,
       data: { sk: "launcher-more" },
-      onClick: () => shell.togglePopover({ kind: "menu", anchor: more, build: () => moreMenu(shell, hd), place: beside(l.side) }),
+      onClick: () => shell.togglePopover({ kind: "menu", anchor: more, build: () => moreMenu(shell, hd), place: besideLeft }),
     });
     return more;
   }
@@ -307,8 +302,7 @@ export class EdgeLauncher {
     const r = anchor.getBoundingClientRect();
     const pr = this.pill!.getBoundingClientRect();
     t.style.top = `${r.top + r.height / 2 - 15}px`;
-    if (this.m.launcher?.side === "left") t.style.left = `${pr.right + 8}px`;
-    else t.style.right = `${this.s.shell.width - pr.left + 8}px`;
+    t.style.right = `${this.s.shell.width - pr.left + 8}px`;
     this.ltip = t;
   }
 
@@ -323,8 +317,7 @@ export class EdgeLauncher {
 
   private scheduleClose() {
     clearTimeout(this.closeTimer);
-    const l = this.m.launcher;
-    if (!l) return;
+    if (!this.m.launcher) return;
     this.closeTimer = window.setTimeout(() => {
       const pop = this.s.shell.popover;
       if (pop && this.pill?.contains(pop.anchor)) {
@@ -332,6 +325,6 @@ export class EdgeLauncher {
         return;
       }
       this.setPill(false);
-    }, l.closeDelayMs);
+    }, CLOSE_DELAY_MS);
   }
 }

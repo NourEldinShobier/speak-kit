@@ -111,9 +111,3 @@ describe("voice chat service", () => {
     expect(await vc.testKey()).toEqual({ ok: false, code: "key-rejected" });
   });
 });
-describe("a screen look", () => {
-  it("answers as unavailable when the app cannot look", async () => {
-    const vc = createVoiceChat({ store: { has: async () => true } as never, config: {} as never, saveConfig: () => {}, log: { info() {}, warn() {}, error() {} } as never });
-    expect(await vc.server.look?.({ session: "s", scope: "screen" }, new AbortController().signal)).toEqual({ ok: false, code: "unavailable" });
-  });
-});

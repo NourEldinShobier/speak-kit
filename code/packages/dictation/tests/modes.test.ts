@@ -15,8 +15,6 @@ import {
   resolveMode,
   rewritePass,
   setApps,
-  withDefault,
-  withoutPristineDefault,
   type WritingMode as Mode,
   type Rewriter,
 } from "../src";
@@ -25,9 +23,9 @@ import { fakeClock, flush, rig, target } from "./fakes";
 const mode = (extra: Partial<Mode>): Mode => ({ ...defaultMode(), id: "x", name: "X", ...extra });
 
 describe("modes", () => {
-  it("adds a mode that keeps capitals as spoken, refusing blank, long and repeated names", () => {
+  it("adds a mode, refusing blank, long and repeated names", () => {
     const r = addMode([defaultMode()], " Code editor ");
-    expect(r.ok && r.mode).toMatchObject({ name: "Code editor", capitals: "keep", apps: [], rewrite: false });
+    expect(r.ok && r.mode).toMatchObject({ name: "Code editor", apps: [], rewrite: false });
     expect(addMode([defaultMode()], " ")).toEqual({ ok: false, error: "empty" });
     expect(addMode([defaultMode()], "x".repeat(41))).toEqual({ ok: false, error: "too-long" });
     expect(addMode([defaultMode()], "default")).toEqual({ ok: false, error: "duplicate" });
@@ -40,51 +38,30 @@ describe("modes", () => {
     ).toEqual({ ok: false, error: "full" });
   });
 
-  it("puts the saved default mode first, or builds one when none was saved", () => {
-    const saved = { ...defaultMode(), rewrite: true };
-    expect(withDefault([mode({ id: "a" }), saved, mode({ id: "b" })]).map((m) => m.id)).toEqual(["default", "a", "b"]);
-    expect(withDefault([mode({ id: "a" }), saved])[0]?.rewrite).toBe(true);
-    expect(withDefault([mode({ id: "a" })]).map((m) => [m.id, m.rewrite])).toEqual([
-      ["default", false],
-      ["a", false],
-    ]);
-    expect(withDefault([])).toEqual([defaultMode()]);
-    expect(withoutPristineDefault([defaultMode(), mode({ id: "a" })]).map((m) => m.id)).toEqual(["a"]);
-    expect(withoutPristineDefault([{ ...defaultMode(), rewrite: true }, mode({ id: "a" })]).map((m) => m.id)).toEqual(["default", "a"]);
-  });
-
-  it("uses the rewrite choice saved on the default mode for apps outside every mode", () => {
-    const list = [{ ...defaultMode(), rewrite: true }, mode({ id: "t", apps: ["slack"] })];
-    expect(applyMode(defaultSettings, resolveMode(list, "notepad.exe")).rewrite).toBe(true);
-    expect(applyMode(defaultSettings, resolveMode(list, "slack.exe")).rewrite).toBe(false);
-  });
-
-  it("never removes the default mode", () => {
-    const list = [defaultMode(), mode({})];
-    expect(removeMode(list, "default")).toHaveLength(2);
-    expect(removeMode(list, "x").map((m) => m.id)).toEqual(["default"]);
+  it("removes a mode by id", () => {
+    expect(removeMode([mode({}), mode({ id: "y" })], "x").map((m) => m.id)).toEqual(["y"]);
   });
 
   it("gives an app to one mode: adding it elsewhere takes it away", () => {
-    const list = [defaultMode(), mode({ id: "a", apps: ["code"] }), mode({ id: "b", apps: [] })];
+    const list = [mode({ id: "a", apps: ["code"] }), mode({ id: "b", apps: [] })];
     const next = setApps(list, "b", ["Code.exe", "cursor", "cursor"]);
     expect(next.find((m) => m.id === "a")?.apps).toEqual([]);
     expect(next.find((m) => m.id === "b")?.apps).toEqual(["code", "cursor"]);
   });
 
   it("picks the mode that lists the program, in any case and with .exe, else the default", () => {
-    const list = [defaultMode(), mode({ id: "t", apps: ["windowsterminal"] })];
+    const list = [mode({ id: "t", apps: ["windowsterminal"] })];
     expect(resolveMode(list, "WindowsTerminal.exe").id).toBe("t");
     expect(resolveMode(list, "notepad.exe").id).toBe("default");
     expect(resolveMode(list, undefined).id).toBe("default");
     expect(resolveMode([], "x.exe").id).toBe("default");
   });
 
-  it("changes the switches for its apps and nothing for the default mode", () => {
+  it("adds its own words and the rewrite choice for its apps and changes nothing for the default mode", () => {
     const base = { ...defaultSettings };
     expect(applyMode(base, defaultMode())).toEqual({ ...base, rewrite: false });
-    const out = applyMode(base, mode({ capitals: "keep", end: "no-full-stop", insertMode: "type", rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
-    expect(out).toMatchObject({ autoCapitalize: false, stripFinalStop: true, insertMode: "type", rewrite: true });
+    const out = applyMode(base, mode({ rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
+    expect(out).toMatchObject({ autoCapitalize: true, stripFinalStop: false, insertMode: "paste", rewrite: true });
     expect(out.terms.map((t) => t.word)).toEqual(["pnpm"]);
   });
 });
@@ -111,16 +88,14 @@ describe("modes by website", () => {
     for (const exe of ["firefox.exe", "notepad.exe", "com.apple.Safari", "", undefined]) expect(reportsPages(exe), String(exe)).toBe(false);
   });
 
-  it("gives a site to one mode: adding it elsewhere takes it away, and the default mode keeps none", () => {
-    const list = [defaultMode(), mode({ id: "a", sites: ["mail.google.com", "slack.com"] }), mode({ id: "b" })];
+  it("gives a site to one mode: adding it elsewhere takes it away", () => {
+    const list = [mode({ id: "a", sites: ["mail.google.com", "slack.com"] }), mode({ id: "b" })];
     const next = setSites(list, "b", ["https://www.Slack.com/x", "slack.com", "bad name", "github.com"]);
     expect(next.find((m) => m.id === "a")?.sites).toEqual(["mail.google.com"]);
     expect(next.find((m) => m.id === "b")?.sites).toEqual(["slack.com", "github.com"]);
-    expect(setSites(list, "default", ["x.com"]).find((m) => m.id === "default")?.sites).toEqual([]);
   });
 
   const list = [
-    defaultMode(),
     mode({ id: "work", sites: ["google.com"] }),
     mode({ id: "mail", sites: ["mail.google.com"] }),
     mode({ id: "chrome", apps: ["chrome"] }),
@@ -142,18 +117,14 @@ describe("modes by website", () => {
     expect(resolveMode(list, "notepad.exe", "mail.google.com").id).toBe("default");
     expect(resolveMode(list, undefined, "mail.google.com").id).toBe("default");
   });
-  it("never picks the default mode by site", () => {
-    expect(resolveMode([{ ...defaultMode(), sites: ["a.com"] }], "chrome.exe", "a.com").id).toBe("default");
-  });
-
-  it("dictates with the rules of the page's mode", async () => {
-    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], capitals: "keep", end: "no-full-stop" });
-    const r = await rig({ modes: [defaultMode(), mail] });
+  it("dictates with the replacements of the page's mode", async () => {
+    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], replacements: [{ from: "there", to: "team" }] });
+    const r = await rig({ modes: [mail] });
     r.ins.state.current = target({ exe: "chrome.exe", site: "mail.google.com" });
     r.stt.state.result = { ok: true, text: "Hello There." };
     await r.hold(1000);
     await r.time.advance(200);
-    expect(r.ins.inserted[0]?.text).toBe("Hello There ");
+    expect(r.ins.inserted[0]?.text).toBe("Hello team. ");
     r.ins.state.current = target({ exe: "chrome.exe", site: "news.org" });
     await r.hold(1000);
     await r.time.advance(200);
@@ -220,13 +191,13 @@ describe("rewrite pass", () => {
     expect(keepsFacts("pay 5 now", "Pay 5 now")).toBe(true);
   });
 
-  it("keeps the missing final full stop the mode chose, whatever the writer returns", async () => {
+  it("keeps the missing final full stop the setting chose, whatever the writer returns", async () => {
     const loud: Rewriter = { rewrite: async () => "Hello There." };
     const stop = await rewritePass({ text: "Hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: true } });
     expect(stop.text).toBe("Hello There ");
   });
 
-  it("drops a rewrite that moved capitals in a mode that keeps them as spoken, and tells the writer the style", async () => {
+  it("drops a rewrite that moved capitals when they are kept as spoken, and tells the writer the style", async () => {
     let seen: unknown;
     const rw: Rewriter = { rewrite: async ({ style }) => ((seen = style), "Hello there") };
     const style = { capitals: "keep", stripFinalStop: false } as const;
@@ -253,8 +224,8 @@ describe("rewrite pass", () => {
 });
 
 describe("dictation with modes, words and rewrite", () => {
-  const code = mode({ id: "code", name: "Code", apps: ["code"], capitals: "keep", end: "no-full-stop", terms: [{ id: "k", word: "kubectl", soundsLike: ["cube cuddle"] }] });
-  const settings = { modes: [defaultMode(), code], terms: [{ id: "s", word: "Wazuh", soundsLike: ["wasu"] }] };
+  const code = mode({ id: "code", name: "Code", apps: ["code"], terms: [{ id: "k", word: "kubectl", soundsLike: ["cube cuddle"] }] });
+  const settings = { modes: [code], terms: [{ id: "s", word: "Wazuh", soundsLike: ["wasu"] }] };
 
   it("uses the shared words everywhere and the mode's own words and rules in its apps", async () => {
     const r = await rig(settings);
@@ -267,7 +238,7 @@ describe("dictation with modes, words and rewrite", () => {
     r.ins.state.current = target({ exe: "Code.exe" });
     await r.hold(1000);
     await r.time.advance(200);
-    expect(r.ins.inserted[1]?.text).toBe("run kubectl on Wazuh ");
+    expect(r.ins.inserted[1]?.text).toBe("Run kubectl on Wazuh. ");
   });
 
   it("sends the words to the speech model as a prompt in the order of the list, merged with the mode's", async () => {
@@ -291,8 +262,8 @@ describe("dictation with modes, words and rewrite", () => {
 
   it("rewrites only in a mode that asks for it, with the switch on, and records the outcome", async () => {
     const rewriter: Rewriter = { rewrite: async ({ text }) => `Polished: ${text}` };
-    const chat = mode({ id: "chat", apps: ["slack"], rewrite: true, capitals: "sentence" });
-    const r = await rig({ modes: [defaultMode(), chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter });
+    const chat = mode({ id: "chat", apps: ["slack"], rewrite: true });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter });
     r.ins.state.current = target({ exe: "slack.exe" });
     await r.hold(1000);
     await r.time.advance(200);
@@ -307,8 +278,8 @@ describe("dictation with modes, words and rewrite", () => {
   });
 
   it("pastes as said after the deadline and says so in the history", async () => {
-    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true, capitals: "sentence" });
-    const r = await rig({ modes: [defaultMode(), chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: () => new Promise(() => {}) } });
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: () => new Promise(() => {}) } });
     await r.hold(1000);
     await r.time.advance(200);
     expect(r.ins.inserted).toHaveLength(0);
@@ -321,7 +292,7 @@ describe("dictation with modes, words and rewrite", () => {
   it("does not rewrite when the opt-in switch is off, even in a mode that asks", async () => {
     let called = 0;
     const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
-    const r = await rig({ modes: [defaultMode(), chat], rewrite: { enabled: false, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: async () => (called++, "x") } });
+    const r = await rig({ modes: [chat], rewrite: { enabled: false, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: async () => (called++, "x") } });
     await r.hold(1000);
     await r.time.advance(200);
     expect(called).toBe(0);
@@ -358,7 +329,7 @@ describe("replacements per mode", () => {
 
   it("swaps the phrase in the mode's app and not in another", async () => {
     const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], replacements: [{ from: "world", to: "team" }] });
-    const r = await rig({ modes: [defaultMode(), chat] });
+    const r = await rig({ modes: [chat] });
     r.ins.state.current = target({ exe: "slack.exe" });
     await r.hold(1000);
     await r.time.advance(200);

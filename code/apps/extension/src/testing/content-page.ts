@@ -5,7 +5,7 @@ import { launch, type Session } from "./harness";
 
 /** Shared setup of the content script tests: one real Chromium per test file and small helpers for opening the article page and talking to it. */
 export const KEY = "speakkit.settings";
-export const base = (over: any = {}) => ({ launcher: { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 }, ...over });
+export const base = (over: any = {}) => ({ launcher: { enabled: true, y: 0.42 }, ...over });
 export const st = (over: any = {}) => ({
   status: "playing",
   docId: "d",

@@ -15,7 +15,6 @@ import * as v from "valibot";
 const TURBO = "large-v3-turbo-q5_0";
 const PARAKEET = "parakeet-tdt-0.6b-v3-q4_0";
 const RTX = { name: "NVIDIA RTX 3060", driver: "31.0.15.5123" };
-const flush = () => new Promise((r) => setTimeout(r, 0));
 
 let dir: string;
 beforeEach(async () => void (dir = await mkdtemp(join(tmpdir(), "speech-models-"))));
@@ -312,14 +311,13 @@ describe("SpeechModels: files on disk", () => {
     expect(speech.view().models.find((m) => m.id === r.id)!.fileMissing).toBeUndefined();
   });
 
-  it("scanning is read-only and adopting copies only what was found", async () => {
+  it("takes in models found on this computer at start by copying only exact catalog files, and leaves other files alone", async () => {
     const { speech, fake } = setup({ scanDirs: () => [join(dir, "Downloads")] });
     await fake.setInstalled(PARAKEET, false);
     await mkdir(join(dir, "Downloads"), { recursive: true });
     await writeFile(join(dir, "Downloads", "random.bin"), Buffer.alloc(100));
-    expect(await speech.scanDisk()).toEqual([]);
+    await speech.init();
     expect((await stat(join(dir, "Downloads", "random.bin"))).size).toBe(100);
-    await speech.adoptFound([PARAKEET]); // nothing was found: nothing happens
     await expect(stat(stt())).rejects.toThrow();
   });
 });
@@ -328,36 +326,18 @@ describe("SpeechModels: small settings", () => {
   it("a registry patch applies each choice the way its own setting does", async () => {
     const { speech, cfg } = setup();
     await speech.init();
-    await applyEnginesPatch(speech, { device: "cpu", idleMinutes: 30, releaseOnClose: true, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
+    await applyEnginesPatch(speech, { device: "cpu", idleMinutes: 30, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
     expect(speech.gpuWanted()).toBe(false);
-    expect(cfg.engines).toMatchObject({ device: "cpu", idleMinutes: 30, releaseOnClose: true, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
+    expect(cfg.engines).toMatchObject({ device: "cpu", idleMinutes: 30, autoSwitch: { enabled: true, rules: [{ id: "a", layout: "de", model: TURBO }] } });
   });
 
-  it("remembers the release setting, the dismissed hint (once), and going on without a model", () => {
+  it("remembers the dismissed hint (once) and going on without a model", () => {
     const { speech, cfg, state } = setup();
-    expect(speech.setReleaseOnClose(true).releaseOnClose).toBe(true);
     speech.dismissNewer("custom-aaaaaaaaaaaa");
     speech.dismissNewer("custom-aaaaaaaaaaaa");
     expect(cfg.engines.dismissedHints).toEqual(["custom-aaaaaaaaaaaa"]);
     expect(speech.continueWithoutModel().skippedModel).toBe(true);
-    expect(state.saves).toBe(4);
-  });
-
-  it("window release unloads the model only with the setting on and dictation off", async () => {
-    const { speech, stt, cfg } = setup();
-    await stt.load(TURBO);
-    speech.windowReleased();
-    await flush();
-    expect(stt.status().state).toBe("ready");
-    cfg.engines.releaseOnClose = true;
-    cfg.dictation.enabled = true;
-    speech.windowReleased();
-    await flush();
-    expect(stt.status().state).toBe("ready");
-    cfg.dictation.enabled = false;
-    speech.windowReleased();
-    await flush();
-    expect(stt.status().state).toBe("unloaded");
+    expect(state.saves).toBe(3);
   });
 
   it("measures the memory of the loaded model and only then", async () => {

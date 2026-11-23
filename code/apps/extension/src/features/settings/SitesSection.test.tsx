@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { byLabel, click, installDom, mount, text, typeInto } from "../../testing/dom";
-import { SitesSection } from "./SitesSection";
+import { SiteRulesCards, SitesSection } from "./SitesSection";
 import { defaultSettings, type Settings } from "./types";
 
 beforeEach(installDom);
@@ -11,7 +11,7 @@ const setup = async (over: Partial<Settings> = {}) => {
   const upd = vi.fn((fn: (s: Settings) => Settings) => {
     current = fn(current);
   });
-  const m = await mount(<SitesSection s={current} upd={upd} saved={false} />);
+  const m = await mount(<SiteRulesCards s={current} upd={upd} />);
   return {
     m,
     upd,
@@ -21,7 +21,7 @@ const setup = async (over: Partial<Settings> = {}) => {
   };
 };
 
-describe("SitesSection", () => {
+describe("SiteRulesCards", () => {
   test("lists each site with its permission, sorted by host, and the default for other sites", async () => {
     const { m } = await setup({ sites: { "news.example.org": "never-read", "docs.example.dev": "always-dock" }, siteDefault: "never-read" });
     const hosts = [...m.root.querySelectorAll(".op-rules li")].map((li) => text(li.querySelector(".sk-grow")));
@@ -51,15 +51,6 @@ describe("SitesSection", () => {
     await s.m.unmount();
   });
 
-  test("Reset section clears the rules and puts the default back to Ask each time", async () => {
-    const s = await setup({ sites: { "a.example.com": "never-read" }, siteDefault: "never-read" });
-    const reset = [...s.m.root.querySelectorAll("button")].find((b) => text(b) === "Reset section")!;
-    expect(reset.className).toBe("lm-btn lm-btn--secondary");
-    await click(reset);
-    expect([s.settings.sites, s.settings.siteDefault]).toEqual([{}, "ask"]);
-    await s.m.unmount();
-  });
-
   test("the chip fills the field with the site of the most recent web tab", async () => {
     (globalThis as Record<string, unknown>).chrome = {
       tabs: {
@@ -73,6 +64,21 @@ describe("SitesSection", () => {
     const { m } = await setup();
     await click(m.root.querySelector(".op-chip"));
     expect((byLabel(m.root, "Site") as HTMLInputElement).value).toBe("www.news.example.com");
+    await m.unmount();
+  });
+});
+
+describe("SitesSection", () => {
+  test("Reset section puts the skip filters back and leaves the site rules alone", async () => {
+    let current: Settings = { ...defaultSettings(), skip: { ...defaultSettings().skip, code: false }, sites: { "a.example.com": "never-read" }, siteDefault: "never-read" };
+    const upd = (fn: (s: Settings) => Settings) => {
+      current = fn(current);
+    };
+    const m = await mount(<SitesSection s={current} upd={upd} saved={false} />);
+    expect(m.root.querySelector(".op-rules")).toBeNull();
+    const reset = [...m.root.querySelectorAll("button")].find((b) => text(b) === "Reset section")!;
+    await click(reset);
+    expect([current.skip.code, current.sites, current.siteDefault]).toEqual([true, { "a.example.com": "never-read" }, "never-read"]);
     await m.unmount();
   });
 });

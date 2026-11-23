@@ -33,22 +33,21 @@ describe("coreSettings", () => {
     expect(coreSettings({ ...DEFAULT_DICTATION, output: "copy" })).toMatchObject({ insertMode: "copy", keepOnClipboard: false });
   });
 
-  it("hands over keep-ready and return-to-app", () => {
-    expect(coreSettings({ ...DEFAULT_DICTATION, keepReady: true, returnToApp: false })).toMatchObject({ keepReady: true, returnToApp: false });
+  it("hands over keep-ready", () => {
+    expect(coreSettings({ ...DEFAULT_DICTATION, keepReady: true })).toMatchObject({ keepReady: true });
   });
 });
 
 describe("keepOpenMs", () => {
-  it("is 0 when released when idle, -1 when kept ready for good, and minutes otherwise", () => {
-    expect(keepOpenMs({ keepReady: false, keepReadyMinutes: 30 })).toBe(0);
-    expect(keepOpenMs({ keepReady: true, keepReadyMinutes: 0 })).toBe(-1);
-    expect(keepOpenMs({ keepReady: true, keepReadyMinutes: 15 })).toBe(900_000);
+  it("is 0 when released when idle and -1 (open while dictation is on) when kept ready", () => {
+    expect(keepOpenMs({ keepReady: false })).toBe(0);
+    expect(keepOpenMs({ keepReady: true })).toBe(-1);
   });
 });
 
 describe("touchesMicrophone", () => {
-  it("is true for the settings that decide which microphone is open and for how long", () => {
-    for (const k of ["keepReady", "keepReadyMinutes", "microphone", "avoidBluetooth"]) expect(touchesMicrophone({ [k]: 1 })).toBe(true);
+  it("is true for the settings that decide which microphone is open and whether it stays open", () => {
+    for (const k of ["keepReady", "microphone", "avoidBluetooth"]) expect(touchesMicrophone({ [k]: 1 })).toBe(true);
     expect(touchesMicrophone({ output: "copy", hotkey: "F8" })).toBe(false);
     expect(touchesMicrophone({})).toBe(false);
   });

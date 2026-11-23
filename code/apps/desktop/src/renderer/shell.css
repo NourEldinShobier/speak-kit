@@ -24,7 +24,6 @@ input,
 textarea,
 [contenteditable="true"],
 .rd-text,
-.sk-token__box,
 code,
 [data-testid="url-details"] {
   user-select: text;
@@ -251,29 +250,6 @@ html[data-platform="darwin"] .sk-title__r {
   min-height: 0;
   width: 100%;
   padding: 0;
-}
-.sk-engcard {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0 0 4px;
-  padding: 10px 12px;
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  background: var(--surface-card);
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.sk-engcard b {
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
-}
-.sk-engcard__ok {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--tag-green);
 }
 .sk-side__empty {
   padding: 4px 10px;

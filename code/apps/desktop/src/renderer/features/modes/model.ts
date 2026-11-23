@@ -1,4 +1,4 @@
-import type { Capitals, EndOfDictation, InsertMode, Term, WritingMode as Mode } from "@speakkit/dictation";
+import type { Term, WritingMode as Mode } from "@speakkit/dictation";
 
 const KNOWN: Record<string, string> = {
   code: "Visual Studio Code",
@@ -44,10 +44,9 @@ export const letterOf = (name: string): string => {
   return /\p{L}/u.test(first) ? first.toUpperCase() : "{ }";
 };
 
-/** One row of the mode list. The default mode takes every app no other mode lists. */
+/** One row of the mode list. */
 export function modeRow(m: Mode, rewriteOn: boolean): ModeRow {
   const rewrite = m.rewrite && rewriteOn ? "Rewrite on" : "Rewrite off";
-  if (m.id === "default") return { id: m.id, letter: "D", name: m.name, detail: "Every app that is not in another mode", chips: ["Shared words only", rewrite] };
   return {
     id: m.id,
     letter: letterOf(m.name),
@@ -63,17 +62,3 @@ export const deadlineLabel = (ms: number): string => `${ms / 1000} seconds`;
 
 /** "Heard as: cooper netties, kuber nettys", or nothing for a word with no sounds-like. */
 export const heardAs = (t: Term): string => (t.soundsLike.length ? `Heard as: ${t.soundsLike.join(", ")}` : "");
-
-export const CAPITALS: { value: Capitals; label: string }[] = [
-  { value: "keep", label: "Keep as spoken" },
-  { value: "sentence", label: "Capitalise sentences" },
-];
-export const ENDS: { value: EndOfDictation; label: string }[] = [
-  { value: "keep", label: "Keep as spoken" },
-  { value: "no-full-stop", label: "No full stop" },
-];
-export const INSERTS: { value: InsertMode; label: string }[] = [
-  { value: "paste", label: "Paste" },
-  { value: "type", label: "Type" },
-  { value: "copy", label: "Copy to clipboard" },
-];

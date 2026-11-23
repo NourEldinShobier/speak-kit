@@ -13,8 +13,6 @@ export const SPEECH_MODEL_METHODS = [
   "importFile",
   "locateFile",
   "removeImported",
-  "scanDisk",
-  "adoptFound",
   "dismissNewer",
   "continueWithoutModel",
   "measureMemory",

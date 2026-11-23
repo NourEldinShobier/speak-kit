@@ -8,7 +8,7 @@ const BASE = "Keep the meaning, the language, every number, every list item and 
 
 const CASE_NOTE = { sentence: "", keep: " Do not change any capital or small letter." } as const;
 
-/** The system prompt: the mode's choices about capitals and the final full stop are told to the model, not left to it. */
+/** The system prompt: the clean-up choices about capitals and the final full stop are told to the model, not left to it. */
 export const instructions = (style?: RewriteStyle): string => {
   const fixes = style && style.capitals !== "sentence" ? "Fix punctuation and clear speech-recognition mistakes." : "Fix punctuation, capital letters and clear speech-recognition mistakes.";
   const case_ = style ? CASE_NOTE[style.capitals] : "";

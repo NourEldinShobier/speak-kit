@@ -65,8 +65,6 @@ export const EnginesConfigSchema = v.object({
   failedDevices: dropBad(FailedDevice, 8),
   /** The outcome of timing an integrated card against the CPU, by "<card>|<driver>". */
   timedDevices: v.fallback(v.record(v.string(), v.picklist(["gpu", "cpu"])), {}),
-  /** Release the window and the graphics card memory when the window is closed to the tray. */
-  releaseOnClose: bool(false),
   autoSwitch: v.fallback(v.object({ enabled: bool(false), rules: dropBad(Rule, 20) }), { enabled: false, rules: [] }),
   /** Newer-model hints the person dismissed. */
   dismissedHints: dropBad(v.pipe(v.string(), v.maxLength(64)), 20),
@@ -82,7 +80,6 @@ export const EnginesPatchSchema = v.partial(
   v.strictObject({
     device: v.picklist(DEVICE_VALUES),
     idleMinutes: v.picklist(SPEECH_IDLE_CHOICES),
-    releaseOnClose: v.boolean(),
     autoSwitch: v.strictObject({ enabled: v.boolean(), rules: v.pipe(v.array(Rule), v.maxLength(20)) }),
   }),
 );

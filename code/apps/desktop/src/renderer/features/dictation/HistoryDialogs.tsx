@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Modal, Select, Toggle } from "@speakkit/ui";
-import type { HistoryStats } from "@speakkit/dictation";
 import { dictation, patchDictation } from "./api";
 import { AUDIO_CAPS_MB } from "../../../shared/dictation/settings";
-import { appName, statsRows } from "./model";
 
 export function ClearDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose: () => void; onConfirm: () => void }) {
   return (
@@ -24,35 +22,6 @@ export function ClearDialog({ open, count, onClose, onConfirm }: { open: boolean
       <p className="sk-modal-text" style={{ margin: 0 }}>
         This deletes {count} {count === 1 ? "entry" : "entries"} from this computer, and the recordings kept with them. It does not change text already typed into other apps. You cannot undo it.
       </p>
-    </Modal>
-  );
-}
-
-/** Totals over the whole history, with how each text ended up. */
-export function StatsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [stats, setStats] = useState<HistoryStats | "failed" | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    setStats(null);
-    dictation.historyStats().then(setStats, () => setStats("failed"));
-  }, [open]);
-  return (
-    <Modal open={open} onClose={onClose} title="Dictation statistics" width={400}>
-      {stats === null && <p className="sk-modal-text">Counting…</p>}
-      {stats === "failed" && <p className="sk-modal-text">The statistics could not be read. Close this and try again.</p>}
-      {stats && stats !== "failed" && (
-        <>
-          <dl className="dict-stats">
-            {statsRows(stats).map((r) => (
-              <div key={r.label}>
-                <dt>{r.label}</dt>
-                <dd>{r.value}</dd>
-              </div>
-            ))}
-          </dl>
-          {stats.topApps.length > 0 && <p className="sk-modal-text dict-stats__apps">{`Most used: ${stats.topApps.map((a) => `${appName(a.app)} (${a.count})`).join(", ")}`}</p>}
-        </>
-      )}
     </Modal>
   );
 }
@@ -132,7 +101,7 @@ export function RecordingsDialog({ open, on, capMb, onClose }: { open: boolean; 
   );
 }
 
-export type HistoryDialog = "clear" | "stats" | "delete" | "recordings" | null;
+export type HistoryDialog = "clear" | "delete" | "recordings" | null;
 
 /** The dialogs of the history page; only the one named by `dialog` is open. */
 export function HistoryDialogs({
@@ -154,7 +123,6 @@ export function HistoryDialogs({
 }) {
   return (
     <>
-      <StatsDialog open={dialog === "stats"} onClose={close} />
       <RecordingsDialog open={dialog === "recordings"} on={keepRecordings} capMb={audioCapMb} onClose={close} />
       <DeleteSelectedDialog
         count={dialog === "delete" ? (picked?.size ?? 0) : 0}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, SettingRow, StatusPill } from "@speakkit/ui";
-import { useToken, type SectionProps } from "../settings";
+import { usePort, useToken, type SectionProps } from "../settings";
 import { send } from "../../shared/client";
 import { openUrl, siteSettingsUrl } from "../../shared/links";
 import { forgetVoiceConsent, hasVoiceConsent, onVoiceConsent } from "../../shared/voice-consent";
@@ -119,9 +119,10 @@ function ConsentCard() {
   );
 }
 
-export function VoiceChatSection({ s, saved }: SectionProps) {
+export function VoiceChatSection({ saved }: SectionProps) {
   const { token } = useToken();
-  const key = useKeyState(s.port, token);
+  const port = usePort();
+  const key = useKeyState(port, token);
   const [mic, allow] = useMic();
   return (
     <>

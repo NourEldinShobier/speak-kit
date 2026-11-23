@@ -1,6 +1,6 @@
 /** Plain constants shared with the sandboxed preload, which cannot load packages: keep valibot and Electron out of this file. */
 
-export const PERMISSION_IDS = ["accessibility", "input-monitoring", "microphone", "screen-recording"] as const;
+export const PERMISSION_IDS = ["accessibility", "input-monitoring", "microphone"] as const;
 export type PermissionId = (typeof PERMISSION_IDS)[number];
 
 /**

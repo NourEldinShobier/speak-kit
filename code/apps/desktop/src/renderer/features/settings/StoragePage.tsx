@@ -76,20 +76,6 @@ export function StoragePage() {
         <UsageRows rows={rows} total={total} />
         <SettingRow
           className="lm-row--control"
-          label={t("s.store.openFolder")}
-          control={
-            <div className="sk-row-actions">
-              <Button iconLeft="folder" onClick={() => api.openPath("models")}>
-                {t("s.store.models")}
-              </Button>
-              <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
-                {t("s.store.logs")}
-              </Button>
-            </div>
-          }
-        />
-        <SettingRow
-          className="lm-row--control"
           label={t("s.store.deleteModels")}
           description={t("s.store.deleteHint")}
           control={

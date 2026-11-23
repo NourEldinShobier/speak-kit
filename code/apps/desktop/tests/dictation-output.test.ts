@@ -5,7 +5,7 @@ import { launch, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const start = async (dictation: object = {}) => {
-  const l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0, dictation }, env: { SPEAKKIT_TEST: "1" } });
+  const l = await launch({ config: { setupDone: true, setupSkipped: false, dictation }, env: { SPEAKKIT_TEST: "1" } });
   running.push(l);
   await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Dictation" }).click();
   await l.page.getByRole("heading", { name: "Dictation shortcut" }).waitFor();

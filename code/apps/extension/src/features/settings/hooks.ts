@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
+import { DEFAULT_PORT, PORT_KEY, SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { parseSettings } from "./schema";
-import { readSettings, readToken, watchKey, writeSettings, writeToken } from "./storage";
+import { readPort, readSettings, readToken, watchKey, writeSettings, writeToken } from "./storage";
 import { defaultSettings, type Settings } from "./types";
 
 interface SettingsApi {
@@ -100,4 +100,19 @@ export function useToken(): { token: string; ready: boolean; set: (t: string) =>
     void writeToken(t);
   }, []);
   return { token, ready, set };
+}
+
+/** The port the app answered on last, from chrome.storage.local. Read-only: the service worker finds it. */
+export function usePort(): number {
+  const [port, setPort] = useState(DEFAULT_PORT);
+  useEffect(() => {
+    let live = true;
+    void readPort().then((p) => live && setPort(p));
+    const off = watchKey("local", PORT_KEY, (v) => setPort(typeof v === "number" ? v : DEFAULT_PORT));
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
+  return port;
 }

@@ -73,7 +73,7 @@ describe("edge launcher", () => {
   test("hover opens the 60 px pill, play reads the page, moving away closes it after the delay", async () => {
     const page = await open();
     await page.hover("[data-sk=launcher-tab]");
-    // Enter the pill at once, as a user does: a pointer resting on the tab lets the 300 ms close timer run out when the page is slow.
+    // Enter the pill at once, as a user does: a pointer resting on the tab lets the 1.5 s close timer run out when the page is slow.
     await page.hover("[data-sk=launcher-play]");
     // The pill is rebuilt when the first state arrives and slides in; measure the one that stays, after its transition.
     const settled = () =>
@@ -98,35 +98,6 @@ describe("edge launcher", () => {
     await page.mouse.move(300, 300);
     await page.waitForSelector("[data-sk=launcher-pill]", { state: "detached", timeout: 3000 });
     expect(await page.locator("[data-sk=launcher-tab]").count()).toBe(1);
-    await page.context().close();
-  });
-
-  test("openOn click needs a click, not a hover", async () => {
-    const page = await open(base({ launcher: { ...base().launcher, openOn: "click" } }));
-    await page.hover("[data-sk=launcher-tab]");
-    await page.waitForTimeout(300);
-    expect(await page.locator("[data-sk=launcher-pill]").count()).toBe(0);
-    await page.click("[data-sk=launcher-tab]");
-    await page.waitForSelector("[data-sk=launcher-pill]");
-    await page.context().close();
-  });
-
-  test("idle 'open' keeps the pill open, idle 'hidden' fades the tab until hovered", async () => {
-    let page = await open(base({ launcher: { ...base().launcher, idle: "open" } }));
-    await page.waitForSelector("[data-sk=launcher-pill]");
-    await page.context().close();
-    page = await open(base({ launcher: { ...base().launcher, idle: "hidden" } }));
-    await page.waitForSelector("[data-sk=launcher-tab]", { state: "attached" });
-    expect(await page.locator("[data-sk=launcher-tab]").evaluate((el: Element) => getComputedStyle(el).opacity)).toBe("0");
-    await page.hover("[data-sk=launcher-tab]");
-    await page.waitForSelector("[data-sk=launcher-pill]");
-    await page.context().close();
-  });
-
-  test("left side mirrors the position", async () => {
-    const page = await open(base({ launcher: { ...base().launcher, side: "left" } }));
-    const b = await box(page, "[data-sk=launcher-tab]");
-    expect(b.x).toBe(0);
     await page.context().close();
   });
 

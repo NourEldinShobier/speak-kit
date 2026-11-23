@@ -25,8 +25,8 @@ describe("patchViaRegistry", () => {
     fake();
     applied.length = 0;
     answer.current = { ok: true };
-    expect(await patchViaRegistry("transcripts", { notes: true, folder: "x" }, { status: async () => "status" })).toBe("status");
-    expect(applied).toEqual([{ "transcripts.notes": true, "transcripts.folder": "x" }]);
+    expect(await patchViaRegistry("transcripts", { notes: true, language: "de" }, { status: async () => "status" })).toBe("status");
+    expect(applied).toEqual([{ "transcripts.notes": true, "transcripts.language": "de" }]);
   });
 
   it("throws what the registry refused with", async () => {

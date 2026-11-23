@@ -3,7 +3,7 @@ import { IdleRelease, ModelSwitcher, AutoSwitch, checkFloor, resolveLanguage, ty
 import type { DictationConfig } from "../../shared/dictation/settings";
 import type { DictationModelId } from "../../shared/dictation/settings";
 import type { EnginesConfig } from "../../shared/speech-models/config";
-import type { DeviceValue, FoundView, ImportOutcome, SpeechModelsView, SwitchOutcome, SwitchRuleView } from "../../shared/speech-models/contract";
+import type { DeviceValue, ImportOutcome, SpeechModelsView, SwitchOutcome, SwitchRuleView } from "../../shared/speech-models/contract";
 import type { ModelManager } from "../dictation/models";
 import type { Stt } from "../dictation/stt";
 import { DevicePolicy } from "./device-policy";
@@ -114,11 +114,15 @@ export class SpeechModels {
     return this.#d.config().dictation;
   }
 
-  /** Reads the models the person added, looks at the hardware and the disk. Safe to call again. */
+  /** Reads the models the person added, looks at the hardware and the disk, then takes in models that are already on this computer. Safe to call again. */
   async init(): Promise<void> {
     await this.#lib.init();
     await this.hardwareKnown();
     this.#d.changed();
+    // A model that cannot be copied (disk full, file in use) stays where it is and can be downloaded as usual.
+    await this.#lib.adoptFound().catch(() => {
+      // best effort: a model that is not adopted is downloaded when it is needed
+    });
   }
 
   /** Resolves once the hardware was looked at (starting that if nobody did). A load at launch waits for it: without the graphics card known, the plan is the CPU, 60 times slower. The probe leaves unknown what it cannot read and never rejects. */
@@ -169,10 +173,6 @@ export class SpeechModels {
     if (id) {
       this.#cfg.lastUsed[id] = (this.#d.now ?? NOW)();
     }
-  }
-  /** The window was destroyed to free memory: with the setting on, the speech model goes too, unless dictation needs it for the hotkey. */
-  windowReleased(): void {
-    if (this.#cfg.releaseOnClose && !this.#dict.enabled) void this.#d.stt.unload().then(() => this.#d.changed());
   }
 
   // ---- the page ---------------------------------------------------------------------------------------------
@@ -289,12 +289,6 @@ export class SpeechModels {
     this.#d.changed();
   }
 
-  setReleaseOnClose(on: boolean): SpeechModelsView {
-    this.#cfg.releaseOnClose = on;
-    this.#d.save();
-    return this.view();
-  }
-
   importFile(kind: "multilingual" | "english", name: string): Promise<ImportOutcome> {
     return this.#lib.importFile(kind, name);
   }
@@ -303,13 +297,6 @@ export class SpeechModels {
   }
   async removeImported(id: string): Promise<SpeechModelsView> {
     await this.#lib.remove(id);
-    return this.view();
-  }
-  scanDisk(): Promise<FoundView[]> {
-    return this.#lib.scan();
-  }
-  async adoptFound(ids: string[]): Promise<SpeechModelsView> {
-    await this.#lib.adopt(ids);
     return this.view();
   }
 

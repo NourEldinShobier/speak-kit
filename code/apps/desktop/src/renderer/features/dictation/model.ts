@@ -1,4 +1,4 @@
-import { MAX_VERSIONS, type HistoryStats } from "@speakkit/dictation";
+import { MAX_VERSIONS } from "@speakkit/dictation";
 import type { HistoryItem, ModelView } from "../../../shared/dictation/contract";
 import { DICTATION_LANGUAGES, type DictationConfig } from "../../../shared/dictation/settings";
 import { SPOKEN_LANGUAGE_LABELS } from "../../../shared/speech-models/config";
@@ -128,84 +128,12 @@ export function timingTags(item: Pick<HistoryItem, "timings">): string[] {
   return tags;
 }
 
-/** "45 s", "12 min" or "2 h 5 min". */
-export function listenText(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m} min`;
-  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
-}
-
-/** The rows of the statistics dialog, label and value. */
-export function statsRows(stats: HistoryStats): { label: string; value: string }[] {
-  const n = (x: number) => x.toLocaleString("en-US");
-  return [
-    { label: "Dictations", value: n(stats.dictations) },
-    { label: "Words", value: n(stats.words) },
-    { label: "Time spoken", value: listenText(stats.listeningMs) },
-    { label: "Pasted", value: n(stats.outcomes.pasted) },
-    { label: "Copied only", value: n(stats.outcomes.copied) },
-    { label: "Not inserted", value: n(stats.outcomes.failed) },
-  ];
-}
-
 /** The selection with `id` ticked or unticked; `null` (selection off) becomes a selection of just that entry. */
 export function toggled(picked: ReadonlySet<string> | null, id: string): Set<string> {
   const next = new Set(picked);
   if (!next.delete(id)) next.add(id);
   return next;
 }
-
-export interface Mark {
-  text: string;
-  /** The word differs from the other side. */
-  changed: boolean;
-}
-
-const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}@]/gu, "");
-
-/** Words of `a` marked when `b` does not have them in the same place (longest common run of words, ignoring case and punctuation). */
-function diff(a: string[], b: string[]): boolean[] {
-  const n = a.length;
-  const m = b.length;
-  const len = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => 0));
-  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) len[i]![j] = norm(a[i]!) && norm(a[i]!) === norm(b[j]!) ? len[i + 1]![j + 1]! + 1 : Math.max(len[i + 1]![j]!, len[i]![j + 1]!);
-  const changed = Array.from({ length: n }, () => true);
-  let i = 0;
-  let j = 0;
-  while (i < n && j < m) {
-    if (norm(a[i]!) && norm(a[i]!) === norm(b[j]!)) {
-      changed[i] = false;
-      i++;
-      j++;
-    } else if (len[i + 1]![j]! >= len[i]![j + 1]!) i++;
-    else j++;
-  }
-  return changed;
-}
-
-const split = (s: string): string[] => s.match(/\S+/g) ?? [];
-
-/** What the model heard and what was pasted, each with the words that changed marked. Very long texts are compared in full too: the sizes are small (a dictation). */
-export function markChanges(heard: string, pasted: string): { heard: Mark[]; pasted: Mark[] } {
-  const a = split(heard);
-  const b = split(pasted);
-  if (a.length * b.length > 250_000) return { heard: a.map((text) => ({ text, changed: false })), pasted: b.map((text) => ({ text, changed: false })) };
-  const ca = diff(a, b);
-  const cb = diff(b, a);
-  return { heard: a.map((text, i) => ({ text, changed: ca[i]! })), pasted: b.map((text, i) => ({ text, changed: cb[i]! })) };
-}
-
-/** "38 min", "1 h 5 min", "45 s" for the stats strip. */
-export function listeningText(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
-  const min = Math.round(s / 60);
-  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
-}
-
-export const numberText = (n: number): string => n.toLocaleString("en-US");
 
 /** The tag under an entry that went through the rewrite pass, or nothing. */
 export function rewriteTag(outcome: HistoryItem["rewrite"], deadlineMs: number): string | undefined {

@@ -52,7 +52,7 @@ export function createExports(ctx: Ctx, toasts: ToastCenter, o: { parent: () => 
     exportStart: async (o) => {
       const dir = o.dir || ctx.state.exportDir;
       await mkdir(dir, { recursive: true });
-      ctx.config.exportPrefs = { format: o.format, mp3Kbps: o.mp3Kbps, folder: dir === ctx.state.exportDir ? "" : dir, captions: o.captions ?? "none", chapters: o.chapters === true };
+      ctx.config.exportPrefs = { format: o.format, mp3Kbps: o.mp3Kbps, folder: dir === ctx.state.exportDir ? "" : dir };
       ctx.saveConfig();
       return jobs.start({ ...o, dir });
     },

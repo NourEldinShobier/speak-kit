@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { historyStats, planEviction, timeLeft, type Term } from "../src";
+import { planEviction, timeLeft, type Term } from "../src";
 import { createHistory, type AudioTrash, type NewEntry } from "../src/history";
 import { fakeClock, fakeStorage, loud, rig } from "./fakes";
 
@@ -193,19 +193,6 @@ describe("files from another version", () => {
   });
 });
 
-describe("numbers above the list", () => {
-  it("counts dictations, words, words per minute and listening time", () => {
-    expect(
-      historyStats([
-        { text: "one two three", durationMs: 30_000 },
-        { text: "four five", durationMs: 30_000 },
-        { text: "", durationMs: 0 },
-      ]),
-    ).toMatchObject({ dictations: 3, words: 5, listeningMs: 60_000, wordsPerMinute: 5 });
-    expect(historyStats([])).toMatchObject({ dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0 });
-  });
-});
-
 describe("through the dictation", () => {
   it("keeps the recording when asked and an audio store exists, linking it to the entry", async () => {
     const saved: string[] = [];
@@ -240,6 +227,5 @@ describe("through the dictation", () => {
       await r.time.advance(200);
     }
     expect((await r.dictation.history.recent(2)).map((e) => e.text)).toEqual(["Three ", "Two "]);
-    expect((await r.dictation.history.stats()).dictations).toBe(3);
   });
 });

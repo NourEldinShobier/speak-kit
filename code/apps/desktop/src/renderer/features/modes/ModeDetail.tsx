@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { DEFAULT_MODE_ID, overridesShared, type WritingMode as Mode, type Term } from "@speakkit/dictation";
+import { overridesShared, type WritingMode as Mode, type Term } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
-import { AppSuggestions } from "../apps";
 import { WordDialog } from "../vocabulary";
 import { AddSiteDialog, SitesCard } from "./SitesCard";
 import { ModeReplacements } from "./ModeReplacements";
-import { appLabel, CAPITALS, ENDS, heardAs, INSERTS, SUGGESTED_APPS } from "./model";
+import { appLabel, heardAs, SUGGESTED_APPS } from "./model";
 
-function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void; open: boolean }) {
+function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
   const key = name
     .trim()
     .toLowerCase()
@@ -40,7 +39,6 @@ function AppFields({ mode, others, name, setName, open }: { mode: Mode; others: 
           </button>
         ))}
       </div>
-      <AppSuggestions query={name} skip={mode.apps} active={open} onPick={(a) => setName(a.key)} />
     </>
   );
 }
@@ -75,7 +73,7 @@ function AddAppDialog({ open, mode, others, onClose, onSave }: { open: boolean; 
           submit();
         }}
       >
-        <AppFields mode={mode} others={others} name={name} setName={setName} open={open} />
+        <AppFields mode={mode} others={others} name={name} setName={setName} />
         <button type="submit" hidden />
       </form>
     </Modal>
@@ -94,7 +92,8 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to the Default mode, and its words and replacements are removed. You cannot undo it.
+        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to your Dictation and Vocabulary settings, and its words and replacements are removed.
+        You cannot undo it.
       </p>
     </Modal>
   );
@@ -211,32 +210,6 @@ function RewriteRow({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady
   );
 }
 
-function Behaviour({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady: boolean; onChange(next: Mode): void }) {
-  return (
-    <div className="lm-card">
-      <SettingRow
-        className="lm-row--control"
-        label="Insert text"
-        description="How the text reaches the app."
-        control={<Select label="Insert text" value={mode.insertMode} onChange={(v) => onChange({ ...mode, insertMode: v as Mode["insertMode"] })} options={INSERTS} />}
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="Capital letters"
-        description="Whether a sentence starts with a capital."
-        control={<Select label="Capital letters" value={mode.capitals} onChange={(v) => onChange({ ...mode, capitals: v as Mode["capitals"] })} options={CAPITALS} />}
-      />
-      <SettingRow
-        className="lm-row--control"
-        label="End of dictation"
-        description="Full stop or nothing after the last word."
-        control={<Select label="End of dictation" value={mode.end} onChange={(v) => onChange({ ...mode, end: v as Mode["end"] })} options={ENDS} />}
-      />
-      <RewriteRow mode={mode} rewriteReady={rewriteReady} onChange={onChange} />
-    </div>
-  );
-}
-
 export interface ModeDetailProps {
   s: DictationStatus;
   mode: Mode;
@@ -248,23 +221,11 @@ export interface ModeDetailProps {
   onDelete(): void;
 }
 
-/** One mode: its apps, how it inserts and cleans up, the rewrite choice and its own words. */
+/** One mode: its apps and websites, the rewrite choice and its own words and replacements. */
 export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites, onDelete }: ModeDetailProps) {
   const [addApp, setAddApp] = useState(false);
   const [addSite, setAddSite] = useState(false);
   const [asking, setAsking] = useState(false);
-  // The default mode takes every app no other mode lists and uses the settings of the Dictation page; only its rewrite choice is its own.
-  if (mode.id === DEFAULT_MODE_ID)
-    return (
-      <Page title={mode.name} lead="How dictation behaves in every app that is not in another mode.">
-        <button type="button" className="modes-back" onClick={onBack}>
-          <Icon name="arrow-left" size={12} /> Modes
-        </button>
-        <div className="lm-card">
-          <RewriteRow mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
-        </div>
-      </Page>
-    );
   return (
     <Page
       title={mode.name}
@@ -280,7 +241,9 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
       </button>
       <AppsCard mode={mode} onApps={onApps} onAdd={() => setAddApp(true)} />
       <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
-      <Behaviour mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
+      <div className="lm-card">
+        <RewriteRow mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
+      </div>
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <ModeReplacements mode={mode} onChange={onChange} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />

@@ -2,7 +2,6 @@ import { test, expect } from "../support/ext";
 
 const SECTIONS: [string, string][] = [
   ["general", "General"],
-  ["launcher", "Edge launcher"],
   ["voice", "Voice and speed"],
   ["highlight", "Highlighting"],
   ["reader", "Reader view"],
@@ -30,22 +29,29 @@ test.describe("options page", () => {
   test("toggles are saved to sync storage and survive a reload", async ({ ext }) => {
     const opt = await ext.ctx.newPage();
     await opt.goto(ext.url("options"));
+    await opt.getByText("Advanced", { exact: true }).click();
     await opt.getByRole("switch", { name: "Selection bubble" }).click();
     await expect.poll(async () => (await ext.settings()).show?.bubble).toBe(false);
     await opt.reload();
+    await opt.getByText("Advanced", { exact: true }).click();
     await expect(opt.getByRole("switch", { name: "Selection bubble" })).toHaveAttribute("aria-checked", "false");
   });
 
-  test("the launcher section changes side and the open trigger", async ({ ext }) => {
+  test("Advanced holds where it appears and the site rules, collapsed until opened", async ({ ext }) => {
     const opt = await ext.ctx.newPage();
-    await opt.goto(ext.url("options") + "#launcher");
-    await opt.getByRole("radio", { name: /Left/ }).first().click();
-    await expect.poll(async () => (await ext.settings()).launcher?.side).toBe("left");
+    await opt.goto(ext.url("options"));
+    await expect(opt.getByRole("switch", { name: "Selection bubble" })).toHaveCount(0);
+    await opt.getByText("Advanced", { exact: true }).click();
+    await expect(opt.getByRole("switch", { name: "Edge launcher" })).toBeVisible();
+    await expect(opt.getByRole("heading", { name: "Site permissions" })).toBeVisible();
+    for (const gone of ["Side of the page", "When idle", "Open on", "Close after the pointer leaves"]) await expect(opt.getByText(gone)).toHaveCount(0);
+    await expect(opt.locator("#port")).toHaveCount(0);
   });
 
   test("site permissions: add a site, change the default for other sites, remove the site", async ({ ext }) => {
     const opt = await ext.ctx.newPage();
-    await opt.goto(ext.url("options") + "#sites");
+    await opt.goto(ext.url("options"));
+    await opt.getByText("Advanced", { exact: true }).click();
     await opt.getByLabel("Site", { exact: true }).fill("https://Reader.Example.com/essay");
     await opt.getByRole("button", { name: "Add site", exact: true }).click();
     await expect.poll(async () => (await ext.settings()).sites).toEqual({ "reader.example.com": "always-dock" });
@@ -54,6 +60,7 @@ test.describe("options page", () => {
     await opt.getByRole("option", { name: "Never read" }).click();
     await expect.poll(async () => (await ext.settings()).siteDefault).toBe("never-read");
     await opt.reload();
+    await opt.getByText("Advanced", { exact: true }).click();
     await expect(opt.getByRole("combobox", { name: "Default for other sites" })).toContainText("Never read");
     await opt.getByRole("button", { name: "Remove rule for reader.example.com" }).click();
     await expect.poll(async () => (await ext.settings()).sites).toEqual({});
@@ -93,7 +100,8 @@ test.describe("options page", () => {
   test("a site rule row with a long host wraps at 320 px: the name keeps its width and the dropdown takes its own line", async ({ ext }) => {
     const opt = await ext.ctx.newPage();
     await opt.setViewportSize({ width: 320, height: 640 });
-    await opt.goto(ext.url("options") + "#sites");
+    await opt.goto(ext.url("options"));
+    await opt.getByText("Advanced", { exact: true }).click();
     const host = "a-very-long-subdomain.reader-example-hosting-service.com";
     await opt.getByLabel("Site", { exact: true }).fill(host);
     await opt.getByRole("button", { name: "Add site", exact: true }).click();

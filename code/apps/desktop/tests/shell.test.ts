@@ -13,14 +13,13 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
 
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const box = async (l: Launched, sel: string) => (await l.page.locator(sel).first().boundingBox())!;
-const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 
 describe("shell", () => {
   it("measures: title bar 38, sidebar 248, search 420x30, content panel 8 px from the right and bottom edges, no footer band, no stroke", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     expect((await box(l, ".sk-title")).height).toBe(38);
     expect((await box(l, ".sk-side")).width).toBe(248);
     const search = await box(l, ".sk-search");
@@ -34,13 +33,13 @@ describe("shell", () => {
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: Menu title, the four groups, Recent and Settings; no New reading and no Browser.
     const nav = l.page.getByRole("navigation", { name: "Main" });
-    for (const n of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
+    for (const n of ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
     for (const n of ["New reading", "Browser"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
     expect(await nav.getByText("Recent").count()).toBe(1);
-    // A ready engine shows nothing in the title bar (the sidebar card says it); the bell lives there.
+    // A ready engine shows nothing in the title bar; the bell lives there.
     await l.page.getByTestId("title-engine-status").waitFor({ state: "detached" });
     expect(await l.page.getByRole("button", { name: "Notifications" }).count()).toBe(1);
-    // Sidebar toggle hides it and the card grows.
+    // Sidebar toggle hides it and the panel grows.
     await l.page.getByRole("button", { name: "Toggle sidebar" }).click();
     expect((await box(l, ".sk-main")).x).toBe(4);
   });
@@ -103,15 +102,15 @@ describe("shell", () => {
 describe("command palette", () => {
   it("Ctrl K opens it, typing filters, Enter runs, Escape closes", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.keyboard.press("Control+K");
     const input = l.page.getByRole("combobox", { name: "Type a command or search" });
     await input.waitFor();
     expect(await l.page.getByRole("option").count()).toBeGreaterThan(8);
-    await input.fill("idle");
+    await input.fill("contrast");
     expect(await l.page.getByRole("option").count()).toBe(1);
     await l.page.keyboard.press("Enter");
-    await l.page.getByRole("heading", { name: "Performance" }).waitFor();
+    await l.page.getByRole("heading", { name: "Accessibility" }).waitFor();
     expect(await input.count()).toBe(0);
     // The title-bar search opens it too; voices are searchable; Escape closes.
     await l.page.getByRole("button", { name: "Search readings, voices and commands" }).click();
@@ -125,7 +124,7 @@ describe("command palette", () => {
 describe("command palette states", () => {
   it("shows Best match, the count and Clear while searching, and the no-results state with chips", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.keyboard.press("Control+K");
     const input = l.page.getByRole("combobox", { name: "Type a command or search" });
     await input.waitFor();
@@ -146,7 +145,7 @@ describe("command palette states", () => {
 
   it("arrow keys move the highlight and Enter runs the highlighted row; the run is remembered under Recent", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.keyboard.press("Control+K");
     const input = l.page.getByRole("combobox", { name: "Type a command or search" });
     await input.waitFor();
@@ -167,7 +166,7 @@ describe("command palette states", () => {
 
   it("Tab stays inside the dialog and Escape closes it even after Tab", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.keyboard.press("Control+K");
     await l.page.getByRole("combobox", { name: "Type a command or search" }).waitFor();
     for (let i = 0; i < 3; i++) {
@@ -182,7 +181,7 @@ describe("command palette states", () => {
 describe("settings sidebar search and Recent", () => {
   it("the search field filters the Settings rows and shows an empty state", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
     const nav = l.page.getByRole("navigation", { name: "Settings" });
     const find = nav.getByRole("searchbox", { name: "Search settings" });
@@ -197,7 +196,7 @@ describe("settings sidebar search and Recent", () => {
 
   it("Recent shows its empty hint when no reading was opened", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.getByText("Readings you open appear here.").waitFor();
   });
 });
@@ -210,7 +209,7 @@ describe("settings", () => {
         .locator(css)
         .first()
         .evaluate((e) => getComputedStyle(e).userSelect);
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     expect(await sel("h1")).toBe("none");
     expect(await sel(".sk-side")).toBe("none");
     expect(await sel(".sk-search")).toBe("none");
@@ -234,7 +233,7 @@ describe("settings", () => {
     await l.page.getByRole("link", { name: "Voices" }).click();
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
-    await l.page.getByRole("link", { name: "Performance" }).click();
+    await l.page.getByRole("link", { name: "Accessibility" }).click();
     await l.page.getByRole("link", { name: "Shortcuts" }).click();
     await l.page.getByRole("button", { name: "Close settings" }).click();
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
@@ -246,25 +245,11 @@ describe("settings", () => {
     await l.page.getByRole("heading", { name: "Voices", exact: true }).waitFor();
   });
 
-  it("Performance: idle unload and battery saver persist to config.json; the engine state is shown", async () => {
-    const l = await start({ config: DONE });
-    await l.page.getByRole("link", { name: "Settings" }).click();
-    await l.page.getByRole("link", { name: "Performance" }).click();
-    await l.page.getByRole("heading", { name: "Performance" }).waitFor();
-    expect(await l.page.getByTestId("memory-engine").textContent()).toBe("Ready");
-    await l.page.getByRole("combobox", { name: "Idle unload" }).click();
-    await l.page.getByRole("option", { name: "After 15 minutes" }).click();
-    await l.page.getByRole("switch", { name: "Battery saver" }).click();
-    await expect.poll(() => configOf(l)).toMatchObject({ idleUnload: "15", batterySaver: false });
-  });
-
-  it("every settings page opens; Browser integration regenerates the token only after confirming", async () => {
+  it("every settings page opens; Browser integration pairs with one Copy button", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();
     for (const [link, heading] of [
       ["General", "General"],
-      ["Voice and playback", "Voice and playback"],
-      ["Performance", "Performance"],
       ["Storage", "Storage"],
       ["About", "About"],
       ["Browser integration", "Browser integration"],
@@ -272,15 +257,10 @@ describe("settings", () => {
       await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: link }).click();
       await l.page.getByRole("heading", { name: heading, level: 1 }).waitFor();
     }
-    await l.page.getByRole("button", { name: "Reveal" }).click();
-    const before = (await l.page.getByTestId("token").textContent())!;
-    await l.page.getByRole("button", { name: "Regenerate" }).click();
-    await l.page.getByRole("dialog", { name: "Regenerate the pairing token?" }).waitFor();
-    await l.page.getByRole("button", { name: "Cancel" }).click();
-    expect(readFileSync(path.join(l.userData, "token"), "utf8").trim()).toBe(before);
-    await l.page.getByRole("button", { name: "Regenerate" }).click();
-    await l.page.getByRole("dialog").getByRole("button", { name: "Regenerate" }).click();
-    await expect.poll(() => readFileSync(path.join(l.userData, "token"), "utf8").trim()).not.toBe(before);
+    await l.page.getByRole("button", { name: "Copy", exact: true }).click();
+    await l.page.getByRole("button", { name: "Copied" }).waitFor();
+    for (const gone of ["Reveal", "Regenerate"]) expect(await l.page.getByRole("button", { name: gone }).count()).toBe(0);
+    expect(await l.page.getByLabel("Server port").count()).toBe(0);
     // Storage shows the models folder and a size bar.
     await l.page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Storage" }).click();
     await l.page.getByTestId("storage-bar").waitFor();
@@ -289,13 +269,11 @@ describe("settings", () => {
     expect(await l.page.getByRole("switch", { name: "Launch at login" }).count()).toBe(1);
   });
 
-  it("Engines page: Kokoro unloaded wakes on play", async () => {
+  it("the title bar says the voice engine is unloaded and wakes on play", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
     await l.page.getByRole("link", { name: "Engines" }).click();
     await l.page.getByRole("heading", { name: "Engines", level: 1 }).waitFor();
-    const kokoro = await l.page.locator("[data-engine=kokoro]").textContent();
-    expect(kokoro).toContain("Unloaded");
-    expect(kokoro).toContain("Not in memory (0 MB)");
+    expect(await l.page.locator("[data-engine=kokoro]").count()).toBe(0);
     expect(await l.page.getByTestId("title-engine-status").textContent()).toBe("Unloaded · Wakes on play");
     // Not ready: a grey 8 px dot and one line of text, no pill and no fill.
     const look = await l.page.getByTestId("title-engine-status").evaluate((e) => {
@@ -310,14 +288,13 @@ describe("settings", () => {
 describe("tray and lifecycle", () => {
   it("native tray menu is short, the icon follows engine state, Quit asks what stops", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const hook = <T>(fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);
     expect(labels.filter((n) => !/^(Dictation|Hold |Paste last|Pause all shortcuts|Speech model)/.test(n))).toEqual([
       "Open Speak Kit",
-      "Record a conversation",
       "Load the voice engine now",
       "Settings",
       "Check for updates",
@@ -344,7 +321,7 @@ describe("tray and lifecycle", () => {
 
   it("speakkit://pair from a second launch focuses the hidden first instance on the Browser page", async () => {
     const first = await start({ config: DONE });
-    await first.page.getByRole("heading", { name: "Home" }).waitFor();
+    await first.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
     const visible = () => first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.isVisible()));
     expect(await visible()).toBe(false);
@@ -360,7 +337,7 @@ describe("tray and lifecycle", () => {
 
   it("a hidden window stops polling health; showing it resumes", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     // Count /v1/health requests seen by the server through node's request channel.
     await l.app.evaluate(() => {
       const dc = process.getBuiltinModule("node:diagnostics_channel");

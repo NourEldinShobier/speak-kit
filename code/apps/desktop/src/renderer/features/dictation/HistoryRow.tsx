@@ -1,21 +1,6 @@
 import { Checkbox, Icon } from "@speakkit/ui";
 import type { HistoryItem } from "../../../shared/dictation/contract";
-import { clockText, entryLabel, expiryText, markChanges, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
-
-export type View = "final" | "side";
-
-function Marked({ words }: { words: { text: string; changed: boolean }[] }) {
-  return (
-    <>
-      {words.map((w, i) => (
-        <span key={i}>
-          {w.changed ? <mark className="dict-hist__mark">{w.text}</mark> : w.text}
-          {i < words.length - 1 ? " " : ""}
-        </span>
-      ))}
-    </>
-  );
-}
+import { clockText, entryLabel, expiryText, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
 
 function RowMeta({ item, deadlineMs }: { item: HistoryItem; deadlineMs: number }) {
   const tag = rewriteTag(item.rewrite, deadlineMs);
@@ -84,7 +69,6 @@ export function HistoryRow({
   copied,
   onCopy,
   onDelete,
-  view = "final",
   open,
   onToggle,
   rewriteDeadlineMs = 4000,
@@ -94,7 +78,6 @@ export function HistoryRow({
   copied: boolean;
   onCopy: () => void;
   onDelete: () => void;
-  view?: View;
   open?: boolean;
   onToggle?: () => void;
   rewriteDeadlineMs?: number;
@@ -102,23 +85,11 @@ export function HistoryRow({
   selection?: { checked: boolean; toggle: () => void };
 }) {
   const label = entryLabel(item.text);
-  const marks = view === "side" ? markChanges(item.raw, item.text) : undefined;
   return (
-    <div className={`lm-row dict-hist__row${view === "side" ? " dict-hist__row--side" : ""}`} data-testid="history-row" data-row={item.id}>
+    <div className="lm-row dict-hist__row" data-testid="history-row" data-row={item.id}>
       {selection && <Checkbox aria-label={`Select: ${label}`} checked={selection.checked} onChange={selection.toggle} />}
       <RowWhen item={item} label={label} open={open} onToggle={onToggle} />
-      {marks ? (
-        <>
-          <p className="dict-hist__text dict-hist__text--raw">
-            <Marked words={marks.heard} />
-          </p>
-          <p className="dict-hist__text">
-            <Marked words={marks.pasted} />
-          </p>
-        </>
-      ) : (
-        <RowMeta item={item} deadlineMs={rewriteDeadlineMs} />
-      )}
+      <RowMeta item={item} deadlineMs={rewriteDeadlineMs} />
       <RowActions label={label} copied={copied} onCopy={onCopy} onDelete={onDelete} />
     </div>
   );

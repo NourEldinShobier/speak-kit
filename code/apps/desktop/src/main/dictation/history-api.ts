@@ -149,11 +149,6 @@ export class HistoryApi {
     return items.map((e) => this.#item(e, now));
   }
 
-  async stats() {
-    await this.d.ready();
-    return (await this.d.core()?.history.stats()) ?? { dictations: 0, words: 0, wordsPerMinute: 0, listeningMs: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
-  }
-
   async recent(n: number): Promise<HistoryItem[]> {
     await this.d.ready();
     const now = Date.now();

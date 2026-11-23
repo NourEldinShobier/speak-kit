@@ -54,11 +54,6 @@ export class HiddenPage<C extends { id: number }, R> {
     this.#d.ipcMain.on(channel, guarded);
   }
 
-  /** Another message from the page (levels, audio) that only this page may send. */
-  on(channel: string, fn: (...a: unknown[]) => void): void {
-    this.#listen(channel, (_e, ...a) => fn(...a));
-  }
-
   owns(contents: WebContents): boolean {
     return !!this.#page && !this.#page.destroyed && this.#page.contents === contents;
   }

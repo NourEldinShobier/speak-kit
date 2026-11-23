@@ -3,7 +3,6 @@ import type { HistoryItem } from "../../shared/dictation/contract";
 import { friendlyAppName } from "./app-name";
 
 const RECENT = 5;
-const NO_STATS = { dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } };
 
 interface Deps {
   /** The whole history was cleared. */
@@ -82,11 +81,6 @@ export class HistoryFacade {
     await this.#d.core()?.history.clear();
     this.#d.cleared?.();
     await this.refresh();
-  }
-
-  async stats() {
-    await this.#d.ready();
-    return (await this.#d.core()?.history.stats()) ?? NO_STATS;
   }
 
   /** Inserts the newest dictation again, into the window in front now. */

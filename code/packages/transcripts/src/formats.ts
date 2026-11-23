@@ -31,7 +31,6 @@ export const failures = {
   tooLarge: (name: string): Failure => ({ code: "too-large", message: `${name} is too large to import. Split it into shorter parts and import each one.` }),
   tooLong: (): Failure => ({ code: "too-long", message: `This file is over the ${MAX_HOURS} hour limit. Split it into shorter parts and import each one.` }),
   decode: (name: string): Failure => ({ code: "decode-failed", message: `${name} could not be decoded. The file may be damaged or protected; try exporting it again as WAV or MP3.` }),
-  nothingRecorded: (): Failure => ({ code: "decode-failed", message: "Nothing was recorded, so there is nothing to transcribe." }),
   engineMissing: (): Failure => ({ code: "engine-missing", message: "No speech model is installed. Download one in Dictation, then try again." }),
   engineLoading: (): Failure => ({ code: "engine-loading", message: "The speech model is still loading. Try again in a moment." }),
   diskFull: (): Failure => ({ code: "disk-full", message: "The disk is full, so the transcript could not be saved. Free some space and try again." }),

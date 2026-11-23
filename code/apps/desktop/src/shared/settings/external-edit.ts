@@ -14,7 +14,7 @@ export type ExternalEdit =
 const OWN_RUN = new Set(["configVersion", "appliedMigrations"]);
 
 /** Decides what a changed config.json means for the running settings: which top-level fields differ, and their new values. */
-export function readExternalEdit(current: Config, fileText: string, keep: readonly string[] = []): ExternalEdit {
+export function readExternalEdit(current: Config, fileText: string): ExternalEdit {
   let parsed: unknown;
   try {
     parsed = JSON.parse(fileText);
@@ -26,7 +26,7 @@ export function readExternalEdit(current: Config, fileText: string, keep: readon
   if (loaded.newerVersion !== null) return { kind: "newer", version: loaded.newerVersion };
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(loaded.config) as (keyof Config)[]) {
-    if (OWN_RUN.has(key) || keep.includes(key)) continue;
+    if (OWN_RUN.has(key)) continue;
     if (JSON.stringify(loaded.config[key]) !== JSON.stringify(current[key])) patch[key] = loaded.config[key];
   }
   const keys = Object.keys(patch);

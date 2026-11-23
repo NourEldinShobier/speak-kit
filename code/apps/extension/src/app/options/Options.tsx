@@ -1,17 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Icon, Logo, NavItem, Select, SidebarNav, type IconName } from "@speakkit/ui";
 import { ConnectionCard, useHealth } from "../../features/connection";
-import { AppearsCard } from "../../features/launcher";
 import { useSettings, useToken, type Settings } from "../../features/settings";
 import type { HealthResult } from "../../shared/client";
-import { PageHead } from "../../shared/ui";
+import { Advanced, PageHead } from "../../shared/ui";
 
 // Everything but General loads on demand, as one chunk: the page opens on General and most visits never leave it (size budget in scripts/budget.mjs).
 const Sections = lazy(() => import("./Sections"));
 
 const NAV: [id: string, label: string, icon: IconName][] = [
   ["general", "General", "adjustments"],
-  ["launcher", "Edge launcher", "layout-sidebar-right"],
   ["voice", "Voice and speed", "microphone"],
   ["voicechat", "Voice chat", "volume"],
   ["highlight", "Highlighting", "highlight"],
@@ -79,9 +77,13 @@ interface GeneralProps {
 function General({ settings, update, saved, health, refresh, token, setToken }: GeneralProps) {
   return (
     <>
-      <PageHead title="General" desc="How the extension talks to the Speak Kit desktop app and where it shows up." />
-      <ConnectionCard s={settings} upd={update} health={health} refresh={refresh} token={token} setToken={setToken} />
-      <AppearsCard s={settings} upd={update} />
+      <PageHead title="General" desc="How the extension talks to the Speak Kit desktop app." />
+      <ConnectionCard health={health} refresh={refresh} token={token} setToken={setToken} />
+      <Advanced>
+        <Suspense fallback={null}>
+          <Sections id="advanced" s={settings} upd={update} saved={saved} />
+        </Suspense>
+      </Advanced>
       {saved && (
         <span className="sk-sr" role="status">
           Saved

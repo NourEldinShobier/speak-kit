@@ -10,10 +10,11 @@ describe("requested row", () => {
   });
 
   it("knows which rows sit behind a fold", () => {
-    expect(isAdvancedRow("general", "general/import")).toBe(true);
-    expect(isAdvancedRow("general", "general/language")).toBe(false);
-    expect(isAdvancedRow("about", "general/import")).toBe(false);
-    expect(isAdvancedRow("general", null)).toBe(false);
+    expect(isAdvancedRow("about", "about/log")).toBe(true);
+    expect(isAdvancedRow("about", "about/models-folder")).toBe(true);
+    expect(isAdvancedRow("about", "about/version")).toBe(false);
+    expect(isAdvancedRow("general", "about/log")).toBe(false);
+    expect(isAdvancedRow("about", null)).toBe(false);
   });
 });
 

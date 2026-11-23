@@ -17,7 +17,10 @@ const page = () =>
   );
 
 describe("VoicesPage", () => {
-  it("has no drawer until a voice is chosen", () => {
-    expect(page()).not.toContain('role="dialog"');
+  it("has a search box and no filter dropdown or detail dialog", () => {
+    const html = page();
+    expect(html).toContain('aria-label="Search voices"');
+    expect(html).not.toContain("Filter voices");
+    expect(html).not.toContain('role="dialog"');
   });
 });

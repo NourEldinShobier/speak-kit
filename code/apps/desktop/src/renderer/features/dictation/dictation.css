@@ -263,27 +263,6 @@
   margin-inline-start: 8px;
   vertical-align: 1px;
 }
-.dict-stats {
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-.dict-stats > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: 13px;
-}
-.dict-stats dt {
-  color: var(--text-secondary);
-}
-.dict-stats dd {
-  margin: 0;
-  font-weight: 500;
-}
-.dict-stats__apps {
-  margin: 12px 0 0;
-}
 .dict-clear {
   color: var(--tag-red);
 }
@@ -386,68 +365,6 @@
   min-inline-size: 0;
   font-size: 13px;
 }
-/* The mode explainer: a keycap per kind of press, and a badge per rule. */
-.dict-frames {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.dict-frame {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-inline-size: 140px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.dict-frame__cap {
-  display: inline-flex;
-  gap: 6px;
-}
-.dict-frame__cap i {
-  inline-size: 44px;
-  block-size: 28px;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--stroke-control);
-  background: var(--surface-card);
-  animation: dict-press 2.4s ease-in-out infinite;
-}
-.dict-frame[data-kind="double"] .dict-frame__cap i:nth-child(2) {
-  animation-delay: 0.3s;
-}
-@keyframes dict-press {
-  0%,
-  60%,
-  100% {
-    transform: none;
-    background: var(--surface-card);
-  }
-  20%,
-  45% {
-    transform: translateY(2px);
-    background: var(--text-primary);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dict-frame__cap i {
-    animation: none;
-  }
-  .dict-frame[data-kind="hold"] .dict-frame__cap i,
-  .dict-frame[data-kind="double"] .dict-frame__cap i:first-child {
-    background: var(--text-primary);
-  }
-}
-.dict-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke-control);
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 .dict-meter {
   display: flex;
   align-items: center;
@@ -463,50 +380,11 @@
 .dict-meter i[data-on] {
   background: #201e25;
 }
-/* History: totals, notices, views, recordings. */
+/* History: notices and recordings. */
 .dict-hist__head-acts {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-.dict-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dict-stats__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-.dict-stats__grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  border: 1px solid var(--stroke-hairline);
-  border-radius: var(--radius-card);
-  background: var(--surface-card);
-  overflow: hidden;
-}
-.dict-stats__grid > div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  border-inline-start: 1px solid var(--stroke-hairline);
-}
-.dict-stats__grid > div:first-child {
-  border-inline-start: 0;
-}
-.dict-stats__grid dt {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.dict-stats__grid dd {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 .dict-hist__body {
   flex: 1;
@@ -524,29 +402,6 @@
   font-size: 11px;
 }
 .dict-hist__tag {
-  color: var(--text-secondary);
-}
-.dict-hist__mark {
-  background: var(--surface-well);
-  border-radius: 4px;
-  padding-inline: 2px;
-  color: inherit;
-}
-.dict-hist__thead,
-.dict-hist__row--side {
-  display: grid;
-  grid-template-columns: 96px 1fr 1fr 80px;
-  gap: 24px;
-  align-items: start;
-}
-.dict-hist__thead {
-  padding: 8px 16px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  background: var(--surface-well);
-  border-block-end: 1px solid var(--stroke-hairline);
-}
-.dict-hist__text--raw {
   color: var(--text-secondary);
 }
 .dict-hist__rec {
@@ -730,26 +585,8 @@
   gap: 8px;
 }
 
-/* The 960 px window: totals in two rows, side by side text stacks, header buttons wrap. */
+/* The 960 px window: header buttons wrap. */
 @media (max-width: 1000px) {
-  .dict-stats__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .dict-stats__grid > div:nth-child(3) {
-    border-inline-start: 0;
-  }
-  .dict-stats__grid > div:nth-child(n + 3) {
-    border-block-start: 1px solid var(--stroke-hairline);
-  }
-  .dict-hist__thead {
-    display: none;
-  }
-  .dict-hist__row--side {
-    grid-template-columns: 76px 1fr 80px;
-  }
-  .dict-hist__row--side .dict-hist__text {
-    grid-column: 2 / 3;
-  }
   .dict-hist__head-acts {
     flex-wrap: wrap;
   }

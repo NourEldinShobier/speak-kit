@@ -8,7 +8,7 @@ describe("config defaults and repair", () => {
   it("an empty or old file gets every new field", () => {
     const c = parseConfig({ setupDone: true, notifyDownload: false });
     expect(c.shortcuts).toEqual(DEFAULT_SHORTCUTS);
-    expect(c).toMatchObject({ autoUpdate: true, exportPrefs: { format: "mp3", mp3Kbps: 192, folder: "" } });
+    expect(c).toMatchObject({ updateChannel: "stable", exportPrefs: { format: "mp3", mp3Kbps: 192, folder: "" } });
     expect("notifyDownload" in c).toBe(false);
   });
 
@@ -27,12 +27,15 @@ describe("config defaults and repair", () => {
   });
 
   it("a bad shortcut falls back to its own default, a good one is normalized", () => {
-    const c = parseConfig({ shortcuts: { "read-selection": "S", "record-toggle": "alt+ctrl+q", "play-pause": 12 } });
-    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+Q" });
+    const c = parseConfig({ shortcuts: { "read-selection": "S", "play-pause": 12 } });
+    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space" });
+    expect(parseConfig({ shortcuts: { "play-pause": "alt+ctrl+q" } }).shortcuts["play-pause"]).toBe("Ctrl+Alt+Q");
   });
 
-  it("a config saved before the record shortcut existed gets its default", () => {
-    expect(parseConfig({ shortcuts: { "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space" } }).shortcuts["record-toggle"]).toBe("Ctrl+Alt+R");
+  it("a saved config that still has the removed record shortcut loads and drops it", () => {
+    const c = parseConfig({ shortcuts: { "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+W" } });
+    expect(c.shortcuts).toEqual(DEFAULT_SHORTCUTS);
+    expect("record-toggle" in c.shortcuts).toBe(false);
   });
 
   it("loads a saved config that still has the removed clipboard keys and drops them", () => {
@@ -50,29 +53,44 @@ describe("config defaults and repair", () => {
       doNotDisturb: true,
       notifications: { "export-done": { toast: false, bell: false, sound: true } },
     };
-    const c = parseConfig({ ...removed, idleUnload: "15", shortcuts: { stop: "Ctrl+Alt+Q", "record-toggle": "Ctrl+Alt+W" } });
+    const c = parseConfig({ ...removed, updateChannel: "early", shortcuts: { stop: "Ctrl+Alt+Q", "play-pause": "Ctrl+Alt+W" } });
     for (const key of Object.keys(removed)) expect(key in c).toBe(false);
-    expect(c.idleUnload).toBe("15");
-    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+Space", "record-toggle": "Ctrl+Alt+W" });
+    expect(c.updateChannel).toBe("early");
+    expect(c.shortcuts).toEqual({ "read-selection": "Ctrl+Alt+S", "play-pause": "Ctrl+Alt+W" });
     for (const [key, value] of Object.entries(removed)) expect(v.safeParse(ConfigPatchSchema, { [key]: value }).success).toBe(false);
   });
 
   it("repairs the export preferences field by field", () => {
     const c = parseConfig({ exportPrefs: { format: "ogg", mp3Kbps: 192, folder: 5 } });
-    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "", captions: "none", chapters: false });
+    expect(c.exportPrefs).toEqual({ format: "mp3", mp3Kbps: 192, folder: "" });
   });
 
   it("loads a saved config that still has the removed load-at-startup setting and drops it; a patch with it is refused", () => {
-    const c = parseConfig({ loadAtStart: true, idleUnload: "15" });
+    const c = parseConfig({ loadAtStart: true, updateChannel: "early" });
     expect("loadAtStart" in c).toBe(false);
-    expect(c.idleUnload).toBe("15");
+    expect(c.updateChannel).toBe("early");
     expect(v.safeParse(ConfigPatchSchema, { loadAtStart: true }).success).toBe(false);
+  });
+});
+
+describe("removed Settings pages", () => {
+  it("a saved config that still has the experiment flags, idle unload, battery saver and update check keys loads without them; a patch with any of them is refused", () => {
+    const removed = { experiments: { "caption-export": true }, idleUnload: "15", batterySaver: false, autoUpdate: false };
+    const c = parseConfig({ ...removed, voice: "af_bella" });
+    for (const key of Object.keys(removed)) expect(key in c).toBe(false);
+    expect(c.voice).toBe("af_bella");
+    for (const [key, value] of Object.entries(removed)) expect(v.safeParse(ConfigPatchSchema, { [key]: value }).success).toBe(false);
+  });
+
+  it("the settings import, the diagnostics report, the activity clear and the restart are no longer calls", () => {
+    for (const method of ["importSettings", "diagnosticsReport", "clearActivity", "restartApp"]) expect(method in ARGS).toBe(false);
+    expect("diagnosticsLog" in ARGS).toBe(true);
   });
 });
 
 describe("what the renderer may change", () => {
   it("accepts known keys and refuses unknown ones, including the shortcut table (it has its own call)", () => {
-    expect(v.safeParse(ConfigPatchSchema, { autoUpdate: false }).success).toBe(true);
+    expect(v.safeParse(ConfigPatchSchema, { updateChannel: "early" }).success).toBe(true);
     expect(v.safeParse(ConfigPatchSchema, { shortcuts: DEFAULT_SHORTCUTS }).success).toBe(false);
     expect(v.safeParse(ConfigPatchSchema, { token: "x" }).success).toBe(false);
   });
@@ -89,7 +107,7 @@ describe("IPC argument tuples", () => {
     expect(ok("reader", [{ type: "delete-everything" }])).toBe(false);
   });
   it("shortcuts, updates and exports", () => {
-    expect(ok("setShortcut", ["record-toggle", "Ctrl+Alt+Q"])).toBe(true);
+    expect(ok("setShortcut", ["play-pause", "Ctrl+Alt+Q"])).toBe(true);
     expect(ok("setShortcut", ["stop", "Ctrl+Alt+Q"])).toBe(false);
     expect(ok("setShortcut", ["quit-everything", "Ctrl+Alt+Q"])).toBe(false);
     expect(ok("updateAction", ["install-now"])).toBe(true);

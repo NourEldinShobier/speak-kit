@@ -1,10 +1,8 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { Button, DropdownMenu, DropdownMenuItem, Modal, Segmented, Toast } from "@speakkit/ui";
-import type { Push, SettingsView } from "../../../shared/transcripts/contract";
+import { Button, DropdownMenu, DropdownMenuItem, Modal, Segmented } from "@speakkit/ui";
+import type { Push } from "../../../shared/transcripts/contract";
 import { transcripts } from "./api";
 import { ImportDialog } from "./ImportDialog";
-import { RecorderCard } from "./RecorderCard";
-import { TrashPage } from "./TrashPage";
 import { TranscriptsTab } from "./TranscriptsTab";
 import { TranscriptView } from "./TranscriptView";
 import { usePush, useSettingsView } from "./useTranscripts";
@@ -21,9 +19,35 @@ function useDictationLead(): string {
   return lead;
 }
 
-type View = { kind: "list" } | { kind: "transcript"; id: string } | { kind: "trash" };
+type View = { kind: "list" } | { kind: "transcript"; id: string };
 type Tab = "dictations" | "transcripts";
-type Undo = { id: string; title: string };
+type Doomed = { id: string; title: string };
+
+/** Delete asks first: the transcript, its words and its audio are removed for good. */
+function DeleteDialog({ doomed, onClose, onConfirm }: { doomed: Doomed | null; onClose(): void; onConfirm(d: Doomed): void }) {
+  return (
+    <Modal
+      open={doomed !== null}
+      onClose={onClose}
+      title="Delete this transcript?"
+      width={400}
+      footer={
+        <>
+          <Button onClick={onClose} data-autofocus>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={() => doomed && onConfirm(doomed)}>
+            Delete
+          </Button>
+        </>
+      }
+    >
+      <p className="sk-modal-text" style={{ margin: 0 }}>
+        {doomed?.title} is deleted from this computer, with its audio. You cannot undo it.
+      </p>
+    </Modal>
+  );
+}
 
 function DeleteAllDialog({ open, count, onClose, onConfirm }: { open: boolean; count: number; onClose(): void; onConfirm(): void }) {
   return (
@@ -38,62 +62,32 @@ function DeleteAllDialog({ open, count, onClose, onConfirm }: { open: boolean; c
             Cancel
           </Button>
           <Button variant="danger" onClick={onConfirm}>
-            Move to Trash
+            Delete all
           </Button>
         </>
       }
     >
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        All {count} {count === 1 ? "transcript moves" : "transcripts move"} to Trash. You can restore {count === 1 ? "it" : "them"} from there until the Trash period ends.
+        {count === 1 ? "The transcript is" : `All ${count} transcripts are`} deleted from this computer, with {count === 1 ? "its" : "their"} audio. You cannot undo it.
       </p>
     </Modal>
   );
 }
 
-function UndoToast({ undo, done }: { undo: Undo; done(): void }) {
-  return (
-    <div className="tr-toast">
-      <Toast tone="delete" action={{ label: "Undo", onClick: () => void transcripts.restore(undo.id).then(done) }}>
-        Moved to Trash: {undo.title}
-      </Toast>
-    </div>
-  );
-}
-
-/** The last delete, kept for eight seconds so Undo can bring it back. */
-function useUndo(): [Undo | null, (u: Undo | null) => void] {
-  const [undo, setUndo] = useState<Undo | null>(null);
-  useEffect(() => {
-    if (!undo) return;
-    const t = setTimeout(() => setUndo(null), 8000);
-    return () => clearTimeout(t);
-  }, [undo]);
-  return [undo, setUndo];
-}
-
 interface Actions {
-  recording: boolean;
   onImport(): void;
-  onRecord(): void;
-  onTrash(): void;
   onSettings(): void;
   onDeleteAll(): void;
 }
 
-/** Import, Record and the More menu: Trash, Transcript settings, Delete all transcripts. Import and Record wait while a recording runs. */
-function HeaderActions({ recording, onImport, onRecord, onTrash, onSettings, onDeleteAll }: Actions) {
+/** Import and the More menu: Transcript settings, Delete all transcripts. */
+function HeaderActions({ onImport, onSettings, onDeleteAll }: Actions) {
   return (
     <div className="tr-actions">
-      <Button iconLeft="upload" disabled={recording} onClick={onImport}>
+      <Button variant="primary" iconLeft="upload" onClick={onImport}>
         Import audio file
       </Button>
-      <Button variant="primary" iconLeft="microphone" disabled={recording} onClick={onRecord}>
-        Record a conversation
-      </Button>
       <DropdownMenu trigger={<Button aria-label="More" iconLeft="dots" />} align="end">
-        <DropdownMenuItem icon="trash" onSelect={onTrash}>
-          Trash
-        </DropdownMenuItem>
         <DropdownMenuItem icon="folder" onSelect={onSettings}>
           Transcript settings
         </DropdownMenuItem>
@@ -102,39 +96,6 @@ function HeaderActions({ recording, onImport, onRecord, onTrash, onSettings, onD
         </DropdownMenuItem>
       </DropdownMenu>
     </div>
-  );
-}
-
-interface TabBodyProps {
-  push: Push;
-  settings: SettingsView | null;
-  search: string;
-  setSearch(s: string): void;
-  recorderOpen: boolean;
-  closeRecorder(): void;
-  setView(v: View): void;
-  onImport(): void;
-  onRecord(): void;
-  onDeleted(u: Undo): void;
-}
-
-/** The Transcripts tab: the recorder card (while it is open or recording) above the list. */
-function TranscriptsBody({ push, settings, search, setSearch, recorderOpen, closeRecorder, setView, onImport, onRecord, onDeleted }: TabBodyProps) {
-  return (
-    <>
-      {push.recording || recorderOpen ? <RecorderCard recording={push.recording} settings={settings} onClose={closeRecorder} /> : null}
-      <TranscriptsTab
-        push={push}
-        settings={settings}
-        search={search}
-        setSearch={setSearch}
-        onOpen={(id) => setView({ kind: "transcript", id })}
-        onImport={onImport}
-        onRecord={onRecord}
-        onTrash={() => setView({ kind: "trash" })}
-        onDeleted={onDeleted}
-      />
-    </>
   );
 }
 
@@ -178,55 +139,50 @@ interface PageProps {
   openSettings(): void;
 }
 
-const moveAllToTrash = () => void transcripts.list().then((rows) => Promise.all(rows.filter((r) => r.status !== "recording").map((r) => transcripts.trash(r.id))));
+const deleteAll = () => void transcripts.list().then((rows) => Promise.all(rows.map((r) => transcripts.remove(r.id))));
 
-/** The Transcripts tab with what it opens: a transcript, the Trash, the import dialog, the recorder, and the undo after a delete. */
+/** The Transcripts tab with what it opens: a transcript, the import dialog, and the confirmations before a delete. */
 function TranscriptsPage({ push, setTab, openSettings }: PageProps) {
   const { view: settings } = useSettingsView(push.tick);
   const [view, setView] = useState<View>({ kind: "list" });
   const [importing, setImporting] = useState(false);
-  const [recorderOpen, setRecorderOpen] = useState(false);
-  const [deleteAll, setDeleteAll] = useState<number | null>(null);
+  const [doomed, setDoomed] = useState<Doomed | null>(null);
+  const [allCount, setAllCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [undo, setUndo] = useUndo();
-  const toast = undo ? <UndoToast undo={undo} done={() => setUndo(null)} /> : null;
   const list = () => setView({ kind: "list" });
-  if (view.kind === "trash") return <TrashPage push={push} settings={settings} onBack={list} />;
+  const remove = (d: Doomed) => {
+    setDoomed(null);
+    if (view.kind === "transcript" && view.id === d.id) list();
+    void transcripts.remove(d.id);
+  };
+  const dialogs = (
+    <>
+      <DeleteDialog doomed={doomed} onClose={() => setDoomed(null)} onConfirm={remove} />
+      <DeleteAllDialog open={allCount !== null} count={allCount ?? 0} onClose={() => setAllCount(null)} onConfirm={() => (setAllCount(null), list(), deleteAll())} />
+    </>
+  );
   if (view.kind === "transcript") {
     return (
       <>
-        <TranscriptView id={view.id} push={push} settings={settings} onBack={list} onDeleted={(r) => (setUndo(r), list())} />
-        {toast}
+        <TranscriptView id={view.id} push={push} settings={settings} onBack={list} onDelete={setDoomed} />
+        {dialogs}
       </>
     );
   }
-  const actions = (
-    <HeaderActions
-      recording={push.recording !== null}
-      onImport={() => setImporting(true)}
-      onRecord={() => setRecorderOpen(true)}
-      onTrash={() => setView({ kind: "trash" })}
-      onSettings={openSettings}
-      onDeleteAll={() => void transcripts.list().then((r) => setDeleteAll(r.length))}
-    />
-  );
+  const actions = <HeaderActions onImport={() => setImporting(true)} onSettings={openSettings} onDeleteAll={() => void transcripts.list().then((r) => setAllCount(r.length))} />;
   return (
     <Frame tab="transcripts" setTab={setTab} lead="Dictations and transcripts, kept on this computer." actions={actions}>
-      <TranscriptsBody
+      <TranscriptsTab
         push={push}
         settings={settings}
         search={search}
         setSearch={setSearch}
-        recorderOpen={recorderOpen}
-        closeRecorder={() => setRecorderOpen(false)}
-        setView={setView}
+        onOpen={(id) => setView({ kind: "transcript", id })}
         onImport={() => setImporting(true)}
-        onRecord={() => setRecorderOpen(true)}
-        onDeleted={setUndo}
+        onDelete={setDoomed}
       />
       <ImportDialog open={importing} settings={settings} onClose={() => setImporting(false)} onStarted={() => setSearch("")} />
-      <DeleteAllDialog open={deleteAll !== null} count={deleteAll ?? 0} onClose={() => setDeleteAll(null)} onConfirm={() => (setDeleteAll(null), moveAllToTrash())} />
-      {toast}
+      {dialogs}
     </Frame>
   );
 }
@@ -236,11 +192,6 @@ export function HistoryRoute({ openSettings, openDictation }: { openSettings(): 
   const push = usePush();
   const [tab, setTab] = useState<Tab>("dictations");
   const lead = useDictationLead();
-  const recording = push.recording !== null;
-  // A recording that is running is shown whichever tab was open when it started (the tray can start one too).
-  useEffect(() => {
-    if (recording) setTab("transcripts");
-  }, [recording]);
   if (tab === "transcripts") return <TranscriptsPage push={push} setTab={setTab} openSettings={openSettings} />;
   return (
     <Frame tab={tab} setTab={setTab} lead={lead}>

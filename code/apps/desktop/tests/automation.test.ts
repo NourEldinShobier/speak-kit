@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
 import path from "node:path";
-import { appDir, launch, type Launched } from "./harness";
+import { launch, type Launched } from "./harness";
 
 const running: Launched[] = [];
-const dirs: string[] = [];
 const start = async (o: Parameters<typeof launch>[0] = {}) => {
   const l = await launch({ ...o, env: { SPEAKKIT_TEST: "1", ...o.env } });
   running.push(l);
@@ -15,11 +12,9 @@ const start = async (o: Parameters<typeof launch>[0] = {}) => {
 };
 afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
-  for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
-const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
+const DONE = { setupDone: true, setupSkipped: false };
 const until = async (f: () => boolean, ms = 10_000) => {
   for (const end = Date.now() + ms; Date.now() < end;) {
     if (f()) return;
@@ -27,80 +22,6 @@ const until = async (f: () => boolean, ms = 10_000) => {
   }
   expect(f()).toBe(true);
 };
-const cli = (dir: string, args: string[], input?: string) => {
-  const r = spawnSync(process.execPath, [path.join(appDir, "dist/cli/speakkit.js"), ...args], {
-    env: { ...process.env, SPEAKKIT_USER_DATA: dir },
-    encoding: "utf8",
-    ...(input !== undefined && { input }),
-  });
-  return { code: r.status, out: r.stdout, err: r.stderr };
-};
-const tmp = () => {
-  const d = mkdtempSync(path.join(tmpdir(), "speakkit-auto-"));
-  dirs.push(d);
-  return d;
-};
-
-describe("the command line against the real app", () => {
-  it("speak --print shows the sentences, queue and voices answer, and stop works", async () => {
-    const l = await start({ config: DONE });
-    await until(() => existsSync(path.join(l.userData, "control.json")));
-    const printed = cli(l.userData, ["speak", "One sentence. Another sentence.", "--print"]);
-    expect([printed.code, printed.out]).toEqual([0, "One sentence.\nAnother sentence.\n"]);
-    expect(JSON.parse(cli(l.userData, ["--json", "queue"]).out)).toMatchObject({ ok: true, data: { items: [] } });
-    expect(JSON.parse(cli(l.userData, ["--json", "voices"]).out).data.voices.length).toBeGreaterThan(0);
-    expect(cli(l.userData, ["stop", "--keep-queue"]).code).toBe(0);
-    expect(cli(l.userData, ["speak", "x", "--out", "relative.txt"]).code).toBe(2);
-  });
-
-  it("speak a file with --out saves the audio and refuses a file over the limit", async () => {
-    const l = await start({ config: DONE });
-    await until(() => existsSync(path.join(l.userData, "control.json")));
-    const dir = tmp();
-    const text = path.join(dir, "notes.txt");
-    writeFileSync(text, "A short note for the export.");
-    const out = path.join(dir, "note.wav");
-    const done = cli(l.userData, ["speak", text, "--out", out]);
-    expect(done.code).toBe(0);
-    expect(done.out.trim()).toBe(out);
-    expect(existsSync(out)).toBe(true);
-    const big = path.join(dir, "big.txt");
-    writeFileSync(big, "");
-    spawnSync(process.execPath, ["-e", `require("fs").truncateSync(${JSON.stringify(big)}, 64*1024*1024+1)`]);
-    const refused = cli(l.userData, ["--json", "speak", big]);
-    expect([refused.code, JSON.parse(refused.out).error.code]).toEqual([1, "too-large"]);
-  });
-
-  it("turns an experiment on and off and lists it", async () => {
-    const l = await start({ config: DONE });
-    await until(() => existsSync(path.join(l.userData, "control.json")));
-    expect(cli(l.userData, ["labs", "on", "caption-export"]).code).toBe(0);
-    await until(() => configOf(l).experiments?.["caption-export"] === true);
-    expect(cli(l.userData, ["labs", "off", "caption-export"]).code).toBe(0);
-    await until(() => configOf(l).experiments?.["caption-export"] !== true);
-    const unknown = cli(l.userData, ["--json", "labs", "on", "no-such-lab"]);
-    expect([unknown.code, JSON.parse(unknown.out).error.code]).toEqual([2, "usage"]);
-  });
-});
-
-describe("the MCP bridge with the app closed", () => {
-  const ask = (dir: string, method: string, params: object = {}) => {
-    const r = cli(dir, ["mcp"], `${JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })}\n`);
-    return JSON.parse(r.out.trim().split("\n")[0]!).result;
-  };
-
-  it("lists the reading tools and nothing that reads the person's own words", async () => {
-    expect(ask(tmp(), "tools/list").tools.map((t: { name: string }) => t.name)).toEqual(["read_aloud", "stop_reading", "reading_queue"]);
-  });
-
-  it("says Speak Kit is not running for a tool call, and does not start it", async () => {
-    const dir = tmp();
-    const on = ask(dir, "tools/call", { name: "reading_queue", arguments: {} });
-    expect(on.isError).toBe(true);
-    expect(on.content[0].text).toBe("Speak Kit is not running.");
-    expect(existsSync(path.join(dir, "control.json"))).toBe(false);
-  });
-});
 
 describe("live transcription over the local API", () => {
   it("a stream of audio ends with the engine's text, the processed text and the times", async () => {
@@ -133,8 +54,8 @@ describe("live transcription over the local API", () => {
 describe("every control in the main menu pages has a name", () => {
   it("visits each page and finds no button, switch, link or field without an accessible name", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    const pages = ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"];
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
+    const pages = ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"];
     const problems: string[] = [];
     for (const name of pages) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
@@ -181,9 +102,9 @@ const axeViolations = async (l: Launched) => {
 describe("accessibility scan with axe", () => {
   it("finds no serious or critical violation on the main pages", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const found: string[] = [];
-    for (const name of ["Home", "Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"]) {
+    for (const name of ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"]) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
       await l.page.getByRole("heading", { level: 1 }).first().waitFor();
       await l.page.waitForTimeout(300);

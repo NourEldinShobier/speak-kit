@@ -3,7 +3,7 @@ import type { Shell, UiHandlers, UiModel } from "../../shared/ui-types";
 import { installDom } from "../../testing/dom";
 import { Launcher } from "./launcher";
 
-const settingsLauncher = { enabled: true, side: "right", idle: "peek", openOn: "click", closeDelayMs: 300, widerWhileReading: true, y: 0.5 } as const;
+const settingsLauncher = { enabled: true, y: 0.5 } as const;
 const model = (over: Partial<UiModel> = {}): UiModel => ({
   status: "idle",
   elapsedMs: 0,
@@ -67,7 +67,7 @@ beforeEach(() => {
 });
 
 describe("edge tab and pill", () => {
-  test("an idle launcher rests as a tab on the saved side; the pill opens on click and Listen reads the page", () => {
+  test("an idle launcher rests as a tab at the saved height; the pill opens on click and Listen reads the page", () => {
     setup();
     expect($("[data-sk=launcher-tab]")!.className).toBe("sk-tab");
     expect($("[data-sk=launcher-tab]")!.style.top).toBe("360px");
@@ -77,11 +77,6 @@ describe("edge tab and pill", () => {
     expect($("[data-sk=launcher-play]")!.getAttribute("aria-label")).toBe("Listen to this page");
     click($("[data-sk=launcher-play]"));
     expect(calls).toEqual(["listen"]);
-  });
-
-  test("left side mirrors the tab", () => {
-    setup(model({ launcher: { ...settingsLauncher, side: "left" } }));
-    expect($("[data-sk=launcher-tab]")!.className).toBe("sk-tab sk-left");
   });
 
   test("an idle tab is a focusable button with a name", () => {
@@ -150,11 +145,6 @@ describe("edge tab and pill", () => {
     $("[data-sk=launcher-play]")!.focus();
     launcher.render(model({ status: "paused", totalMs: 100_000, elapsedMs: 10_000 }));
     expect(document.activeElement?.getAttribute("data-sk")).toBe("launcher-play");
-  });
-
-  test("with the widening off, reading keeps the plain tab at its saved height", () => {
-    setup(model({ status: "playing", totalMs: 100_000, launcher: { ...settingsLauncher, widerWhileReading: false } }));
-    expect([$("[data-sk=launcher-tab]")!.className, $("[data-sk=launcher-tab]")!.style.top, $(".sk-rail")]).toEqual(["sk-tab", "360px", null]);
   });
 
   test("progress and speed update in place on a new model", () => {

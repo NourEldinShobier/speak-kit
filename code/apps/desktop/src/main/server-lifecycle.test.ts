@@ -24,11 +24,12 @@ function runtime(dataDir = "d") {
   const state = { port: 0, serverError: null, health: null, version: "1.0.0", onBattery: false } as unknown as AppState;
   const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const publish = vi.fn(() => state);
-  const config = { preferredPort: 47615, idleUnload: "5", batterySaver: false, setupDone: false } as unknown as Config;
+  const config = { setupDone: false } as unknown as Config;
   const api = { health: vi.fn(async () => null) };
   const deps = {
     state,
     config,
+    startPort: 47615,
     dataDir,
     modelsDir: path.join(dataDir, "models"),
     engineWorker: new URL("file:///w.js"),

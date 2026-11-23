@@ -82,10 +82,10 @@ export function createUpdates(ctx: Ctx, toasts: ToastCenter, onChange: () => voi
   ctx.state.update = updates.state;
 
   const timers: NodeJS.Timeout[] = [];
-  if (mode !== "unsupported" && ctx.config.autoUpdate) {
+  if (mode !== "unsupported") {
     const first = setTimeout(() => {
       void updates.checkAndDownload();
-      timers.push(setInterval(() => ctx.config.autoUpdate && void updates.checkAndDownload(), DAILY_MS).unref());
+      timers.push(setInterval(() => void updates.checkAndDownload(), DAILY_MS).unref());
     }, FIRST_CHECK_MS);
     first.unref();
     timers.push(first);

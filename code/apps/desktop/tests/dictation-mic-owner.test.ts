@@ -20,30 +20,27 @@ const hook = (l: Launched, name: string) => l.app.evaluate((_e, n) => (globalThi
 
 describe("dictation while a voice chat conversation holds the microphone", () => {
   it("is refused with the holder named, and works again once the conversation lets go", async () => {
-    const l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0, dictation: { enabled: true } }, env: { SPEAKKIT_TEST: "1" } });
+    const l = await launch({ config: { setupDone: true, setupSkipped: false, dictation: { enabled: true } }, env: { SPEAKKIT_TEST: "1" } });
     running.push(l);
-    await until(() => existsSync(path.join(l.userData, "control.json")) && existsSync(path.join(l.userData, "token")));
-    const control = JSON.parse(readFileSync(path.join(l.userData, "control.json"), "utf8"));
+    await until(() => existsSync(path.join(l.userData, "token")));
     const token = readFileSync(path.join(l.userData, "token"), "utf8").trim();
-    const dictate = (action: string) =>
-      fetch(`http://127.0.0.1:${control.port}/control`, { method: "POST", headers: { authorization: `Bearer ${control.token}` }, body: JSON.stringify({ command: "dictate", args: { action } }) });
     const held = (on: boolean) =>
       fetch(`http://127.0.0.1:${l.port}/v1/voice-chat/mic`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ held: on }) });
 
     await until(async () => (await health(l.port).catch(() => undefined))?.engine.state === "ready");
     expect((await held(true)).status).toBe(204);
-    await dictate("start");
+    await hook(l, "start");
     await until(async () => JSON.stringify(await hook(l, "state")).includes("mic-in-use"));
     expect(await hook(l, "state")).toMatchObject({ status: "error", code: "mic-in-use", owner: "Voice chat" });
 
     expect((await held(false)).status).toBe(204);
     await until(async () => ((await hook(l, "state")) as { status: string }).status === "idle");
-    await dictate("start");
+    await hook(l, "start");
     // Recording, or a start that failed for a reason of its own (a microphone page that is slow on a busy machine): either way the conversation no longer refuses it.
     await until(async () => {
       const s = (await hook(l, "state")) as { status: string; code?: string };
       return s.status === "recording" || (s.status === "error" && s.code !== "mic-in-use");
     });
-    await dictate("cancel");
+    await hook(l, "cancel");
   });
 });

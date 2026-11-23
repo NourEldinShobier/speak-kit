@@ -1,4 +1,4 @@
-import { normalize, rank, type HistoryStats, historyStats } from "./history-search";
+import { normalize, rank } from "./history-search";
 import type { RewriteOutcome } from "./modes/rewrite";
 import type { Retention } from "./settings";
 import type { Clock, HistoryStorage } from "./types";
@@ -81,7 +81,6 @@ export interface History {
   get(id: string): Promise<HistoryEntry | undefined>;
   remove(id: string): Promise<RemoveReport>;
   removeMany(ids: readonly string[]): Promise<RemoveReport>;
-  stats(): Promise<HistoryStats>;
   clear(): Promise<RemoveReport>;
   /** Drops what the retention no longer allows. */
   prune(): Promise<RemoveReport>;
@@ -307,11 +306,6 @@ class Store implements History {
     this.entries = this.entries.filter((e) => !drop.has(e.id));
     await this.save();
     return this.dispose(gone);
-  }
-
-  async stats(): Promise<HistoryStats> {
-    await this.prune();
-    return historyStats(this.entries);
   }
 
   async update(id: string, patch: Partial<Pick<HistoryEntry, "outcome" | "timings">>): Promise<void> {

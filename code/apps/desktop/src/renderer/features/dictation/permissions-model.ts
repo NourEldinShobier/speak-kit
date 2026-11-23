@@ -5,7 +5,6 @@ const LABEL: Record<PermissionId, { name: string; why: string }> = {
   microphone: { name: "Microphone", why: "To hear you while the hotkey is held." },
   "input-monitoring": { name: "Input Monitoring", why: "To notice the hotkey in any app." },
   accessibility: { name: "Accessibility", why: "To paste the text into the app you are using." },
-  "screen-recording": { name: "Screen Recording", why: "To read what is on the screen." },
 };
 
 export const permissionLabel = (id: PermissionId) => LABEL[id];

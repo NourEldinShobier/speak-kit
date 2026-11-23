@@ -24,24 +24,23 @@ beforeAll(async () => {
   for (const sub of SETTINGS_SUBS) page(sub);
   await vi.waitFor(
     () => {
-      for (const g of SETTINGS_NAV) for (const i of g.items.filter((x) => x.id !== "performance")) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
+      for (const g of SETTINGS_NAV) for (const i of g.items) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
     },
     { timeout: 30_000, interval: 50 },
   );
 });
 
 describe("settings navigation", () => {
-  it("lists the 12 pages in four groups", () => {
+  it("lists the 8 pages in three groups", () => {
     expect(SETTINGS_NAV.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
-      ["General", ["General", "Voice and playback", "Shortcuts", "Accessibility"]],
-      ["Device", ["Performance", "Storage", "Privacy"]],
-      ["Features", ["Experiments"]],
-      ["App", ["Browser integration", "Diagnostics", "What is new", "About"]],
+      ["General", ["General", "Shortcuts", "Accessibility"]],
+      ["Device", ["Storage", "Privacy"]],
+      ["App", ["Browser integration", "What is new", "About"]],
     ]);
   });
 
   it("opens every page with its own title", () => {
-    for (const g of SETTINGS_NAV) for (const i of g.items.filter((x) => x.id !== "performance")) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
+    for (const g of SETTINGS_NAV) for (const i of g.items) expect(page(i.id)).toContain("<h1>" + i.label + "</h1>");
   });
 
   it("builds every settings page: none is a placeholder", () => {
@@ -50,18 +49,14 @@ describe("settings navigation", () => {
 });
 
 describe("General in Spanish", () => {
-  it("shows the page in the chosen language, with the import row in the folded part", () => {
+  it("shows the page in the chosen language", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider choice="es">
         <Settings s={appState({ config: parseConfig({ setupDone: true, language: "es" }) })} sub="general" />
       </LocaleProvider>,
     );
-    for (const text of ["Abrir al iniciar sesión", "Idioma", "Importar ajustes"]) expect(html).toContain(text);
+    for (const text of ["Abrir al iniciar sesión", "Idioma"]) expect(html).toContain(text);
     expect(html).not.toContain("Launch at login");
-  });
-
-  it("offers the import in English too", () => {
-    expect(page("general")).toContain("Import settings");
   });
 });
 
@@ -69,14 +64,8 @@ describe("General", () => {
   it("shows the startup and language settings, and nothing about the tray or closing the window", () => {
     const html = page("general");
     for (const text of ["Launch at login", "Language"]) expect(html).toContain(text);
-    for (const text of ["Start minimized", "Closing the window", "Tray icon", "Show in folder", "Run setup again"]) expect(html).not.toContain(text);
+    for (const text of ["Start minimized", "Closing the window", "Tray icon", "Show in folder", "Run setup again", "Import settings", "Advanced"]) expect(html).not.toContain(text);
     expect(html).not.toMatch(/clipboard|copy/i); // Speak Kit never reads the clipboard
-  });
-});
-
-describe("Voice and playback", () => {
-  it("shows the stored voice before the voice list has loaded", () => {
-    expect(page("voice", { voice: "bf_emma" })).toContain("bf_emma");
   });
 });
 
@@ -85,6 +74,7 @@ describe("Storage", () => {
     const html = page("storage");
     expect(html).toContain("Delete downloaded models");
     expect(html).toContain("Your library and settings stay.");
+    expect(html).not.toContain("Open folder");
   });
 });
 
@@ -102,11 +92,10 @@ describe("About", () => {
 const pageWith = (sub: Parameters<typeof Settings>[0]["sub"], over: Partial<Parameters<typeof appState>[0]> = {}) => renderToStaticMarkup(<Settings s={appState(over)} sub={sub} />);
 
 describe("settings pages of the surface package", () => {
-  it("General has two basic rows and an Advanced fold that starts closed", () => {
+  it("General has its two rows and no Advanced fold", () => {
     const html = pageWith("general");
     expect((html.match(/data-setting-row="general\/(launch|language)"/g) ?? []).length).toBe(2);
-    expect(html).toMatch(/aria-expanded="false"[^>]*aria-controls="advanced-general"/);
-    expect(html).toContain('id="advanced-general" hidden=""');
+    expect(html).not.toContain("advanced-general");
     expect(html).not.toContain("Theme");
   });
 
@@ -116,37 +105,21 @@ describe("settings pages of the surface package", () => {
     expect(html).not.toContain("Reduce motion");
   });
 
-  it("Privacy states there is no telemetry and lists every network host", () => {
+  it("Privacy lists every network host and has no telemetry statement", () => {
     const html = pageWith("privacy");
-    expect(html).toContain("sends no usage data");
+    expect(html).not.toContain("Telemetry");
     for (const h of ["github.com", "huggingface.co", "api.openai.com", "127.0.0.1"]) expect(html).toContain(h);
   });
 
-  it("Experiments shows developer-only cards on a source build and hides them in an installed one", () => {
-    const dev = pageWith("experiments", { packaged: false });
-    expect(dev).toContain("Live dictation preview");
-    expect(dev).toContain("Turn on");
-    expect(dev).not.toContain("Turn off");
-    const installed = pageWith("experiments", { packaged: true });
-    expect(installed).toContain("Experiments");
-    expect(installed).not.toContain("Live dictation preview");
-    expect(installed).not.toContain("Caption export");
-  });
-
-  it("Experiments shows a turned-on experiment as On with Turn off", () => {
-    const html = pageWith("experiments", { packaged: false, config: parseConfig({ setupDone: true, experiments: { "caption-export": true } }) });
-    expect(html).toContain("Turn off");
-  });
-
-  it("Diagnostics has Copy diagnostics, Open log folder and an empty activity log", () => {
-    const html = pageWith("diagnostics");
-    for (const t of ["Copy diagnostics", "Open log folder", "Nothing logged yet", "Run setup again"]) expect(html).toContain(t);
-  });
-
-  it("Diagnostics lists activity rows in plain words", () => {
-    const html = pageWith("diagnostics", { activity: [{ id: 1, atMs: 1_700_000_000_000, kind: "error", title: "Engine stopped", body: "Restart it from the tray." }] });
-    expect(html).toContain("Engine stopped");
-    expect(html).toContain("Problem: Restart it from the tray.");
+  it("About keeps the update channel without a switch for checking, and its Advanced fold starts closed with the folders and the live log", () => {
+    const html = pageWith("about");
+    expect(html).toContain("Update channel");
+    expect(html).not.toContain("Check automatically");
+    expect(html).toMatch(/aria-expanded="false"[^>]*aria-controls="advanced-about"/);
+    expect(html).toContain('id="advanced-about" hidden=""');
+    for (const row of ["about/models-folder", "about/log-folder", "about/log"]) expect(html).toContain(`data-setting-row="${row}"`);
+    for (const text of ["Models folder", "Open models folder", "Open log folder", "Log (last lines)"]) expect(html).toContain(text);
+    expect(html).toContain("3 settings");
   });
 
   it("About shows the version, the channel, release notes and the network table", () => {
@@ -156,9 +129,9 @@ describe("settings pages of the surface package", () => {
   });
 
   it("a settings notice shows above the page and names the repaired fields", () => {
-    const html = pageWith("general", { settingsNotice: { kind: "repaired", fields: ["idleUnload"] } });
+    const html = pageWith("general", { settingsNotice: { kind: "repaired", fields: ["appearance"] } });
     expect(html).toContain("Some settings were reset");
-    expect(html).toContain("idleUnload");
+    expect(html).toContain("appearance");
   });
 
   it("a newer settings file shows a warning", () => {

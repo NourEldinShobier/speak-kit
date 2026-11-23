@@ -185,19 +185,22 @@ function SiteAwareCard() {
   );
 }
 
-/** Sites and filters. */
+/** What to skip and the site-aware switch. */
 export function SitesSection({ s, upd, saved }: SectionProps) {
   return (
     <>
-      <PageHead
-        title="Sites and filters"
-        desc="Choose where Speak Kit appears and what it skips when it reads."
-        saved={saved}
-        onReset={() => upd((x) => ({ ...x, skip: defaultSettings().skip, sites: {}, siteDefault: "ask" }))}
-      />
+      <PageHead title="Sites and filters" desc="Choose what Speak Kit skips when it reads." saved={saved} onReset={() => upd((x) => ({ ...x, skip: defaultSettings().skip }))} />
       <SkipCard s={s} upd={upd} />
-      <RulesCard s={s} upd={upd} />
       <SiteAwareCard />
+    </>
+  );
+}
+
+/** Per-site rules and the default for sites without one; shown under Advanced on the General page. */
+export function SiteRulesCards({ s, upd }: Pick<SectionProps, "s" | "upd">) {
+  return (
+    <>
+      <RulesCard s={s} upd={upd} />
       <Card
         title="Sites not in the list"
         id="default-h"

@@ -8,7 +8,7 @@ let dir = "";
 beforeAll(async () => void (dir = await mkdtemp(path.join(tmpdir(), "sk-tr-"))));
 afterAll(() => rm(dir, { recursive: true, force: true }));
 
-test("writes atomically into new folders, reads, appends, renames, removes", async () => {
+test("writes atomically into new folders, reads, renames, removes", async () => {
   const fs = nodeFs();
   const file = path.join(dir, "a", "b", "f.txt");
   expect(await fs.read(file)).toBeUndefined();
@@ -16,8 +16,7 @@ test("writes atomically into new folders, reads, appends, renames, removes", asy
   await fs.write(file, "one");
   expect(new TextDecoder().decode(await fs.read(file))).toBe("one");
   await fs.write(file, new TextEncoder().encode("two"));
-  await fs.append(file, new TextEncoder().encode("+more"));
-  expect(new TextDecoder().decode(await fs.read(file))).toBe("two+more");
+  expect(new TextDecoder().decode(await fs.read(file))).toBe("two");
   expect(await readdir(path.dirname(file))).toEqual(["f.txt"]); // no temporary file is left
   const moved = path.join(dir, "c", "g.txt");
   await fs.rename(file, moved);
@@ -26,8 +25,6 @@ test("writes atomically into new folders, reads, appends, renames, removes", asy
   await fs.remove(moved);
   await fs.remove(moved); // already gone: fine
   expect(await fs.exists(moved)).toBe(false);
-  await fs.append(path.join(dir, "d", "new.raw"), new Uint8Array([1, 2]));
-  expect([...(await fs.read(path.join(dir, "d", "new.raw")))!]).toEqual([1, 2]);
 });
 
 test("a read error other than a missing file is thrown, and a failed write leaves no temporary file", async () => {

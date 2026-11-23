@@ -1,6 +1,6 @@
 import type { IpcRenderer } from "electron";
-import { DEC_COMMAND, DEC_READY, DEC_REPLY, MIC_CHUNK, MIC_COMMAND, MIC_ENDED, MIC_LEVEL, MIC_READY, MIC_REPLY, TRANSCRIPTS_EVENT, TRANSCRIPTS_METHODS, transcriptsChannel } from "./channels";
-import type { DecoderCommand, MicCommand, Push, TranscriptsBridge } from "./contract";
+import { DEC_COMMAND, DEC_READY, DEC_REPLY, TRANSCRIPTS_EVENT, TRANSCRIPTS_METHODS, transcriptsChannel } from "./channels";
+import type { DecoderCommand, Push, TranscriptsBridge } from "./contract";
 
 /** `pathOf` is Electron's webUtils.getPathForFile, passed in by the preload, which may import Electron. */
 export function transcriptsBridge(ipc: IpcRenderer, pathOf: (file: File) => string): TranscriptsBridge {
@@ -18,14 +18,6 @@ export function transcriptsBridge(ipc: IpcRenderer, pathOf: (file: File) => stri
       onCommand: (cb) => on<DecoderCommand>(DEC_COMMAND, cb),
       reply: (id, r) => ipc.send(DEC_REPLY, id, r),
       ready: () => ipc.send(DEC_READY),
-    },
-    mic: {
-      onCommand: (cb) => on<MicCommand>(MIC_COMMAND, cb),
-      reply: (id, r) => ipc.send(MIC_REPLY, id, r),
-      chunk: (pcm) => ipc.send(MIC_CHUNK, pcm),
-      level: (n) => ipc.send(MIC_LEVEL, n),
-      ended: () => ipc.send(MIC_ENDED),
-      ready: () => ipc.send(MIC_READY),
     },
   } as TranscriptsBridge;
 }

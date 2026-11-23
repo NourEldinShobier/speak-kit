@@ -120,40 +120,13 @@ export function deleteConfirm(c: ModelCard, view: Pick<SpeechModelsView, "models
   return { title: `Delete ${c.name}?`, body: `${frees}${stops}${custom}` };
 }
 
-export type SortKey = "recommended" | "size" | "speed";
-export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "recommended", label: "Recommended first" },
-  { value: "size", label: "File size" },
-  { value: "speed", label: "Speed" },
-];
-
-export interface Filter {
-  downloadedOnly: boolean;
-  /** A language code, or "all". */
-  language: string;
-  sort: SortKey;
-}
-
-export const DEFAULT_FILTER: Filter = { downloadedOnly: false, language: "all", sort: "recommended" };
-
-/** Applies the filter and the sort. The model in use stays first whatever the sort, and a model is never ranked against another on accuracy. */
-export function visibleModels(models: readonly ModelCard[], f: Filter): { shown: ModelCard[]; hidden: number } {
-  const byLanguage = models.filter((m) => f.language === "all" || m.languages.includes(f.language));
-  const filtered = f.downloadedOnly ? byLanguage.filter((m) => m.installed) : byLanguage;
-  const recommended = (m: ModelCard) => Number(!(f.language === "all" ? m.recommendedFor.length > 0 : m.recommendedFor.includes(f.language)));
-  const keys: Record<Filter["sort"], (m: ModelCard) => number> = { recommended, size: (m) => m.bytes, speed: (m) => m.speedSeconds ?? Infinity };
-  const key = keys[f.sort];
-  const shown = filtered
+/** The model in use first, then the ones recommended for a language, then the rest; the order of the list decides inside each group. */
+export function sortedModels(models: readonly ModelCard[]): ModelCard[] {
+  const recommended = (m: ModelCard) => Number(m.recommendedFor.length === 0);
+  return models
     .map((m, i) => ({ m, i }))
-    .sort((a, b) => Number(b.m.inUse) - Number(a.m.inUse) || key(a.m) - key(b.m) || a.i - b.i)
+    .sort((a, b) => Number(b.m.inUse) - Number(a.m.inUse) || recommended(a.m) - recommended(b.m) || a.i - b.i)
     .map((x) => x.m);
-  return { shown, hidden: models.length - shown.length };
-}
-
-/** The line under the downloaded filter: how many models are hidden. */
-export function hiddenLine(hidden: number): string {
-  if (hidden === 0) return "";
-  return hidden === 1 ? "1 model that is not downloaded is hidden." : `${hidden} models that are not downloaded are hidden.`;
 }
 
 export function recommendationText(v: SpeechModelsView): { title: string; body: string; model: string } | undefined {

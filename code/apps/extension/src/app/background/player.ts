@@ -1,5 +1,5 @@
 import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
-import { getToken, loadSettings, saveSettings } from "../../features/settings";
+import { getPort, getToken, loadSettings, saveSettings } from "../../features/settings";
 import type { FromOffscreen, PlayerConfig } from "../../shared/internal";
 import { closeOffscreenIfIdle, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
 import { endVoice } from "./voice-state";
@@ -9,7 +9,7 @@ const SOUNDS = new Set<PlayerCommand["cmd"]>(["play", "resume", "toggle", "queue
 
 async function playerConfig(): Promise<PlayerConfig> {
   const s = await loadSettings();
-  return { port: s.port, token: await getToken(), voice: s.voice, speed: s.speed, pause: s.pauseBetweenParagraphs };
+  return { port: await getPort(), token: await getToken(), voice: s.voice, speed: s.speed, pause: s.pauseBetweenParagraphs };
 }
 
 export async function runPlayerCommand(command: PlayerCommand, senderTabId?: number, cfgOverride?: Partial<PlayerConfig>): Promise<void> {

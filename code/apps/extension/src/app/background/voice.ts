@@ -1,5 +1,5 @@
 import { VOICE_PORT, type VoiceUp } from "@speakkit/protocol";
-import { getToken, loadSettings } from "../../features/settings";
+import { getPort, getToken } from "../../features/settings";
 import { VOICE_DOC_PORT, type FromOffscreen, type VoiceCommand } from "../../shared/internal";
 import { parseVoiceUp } from "../../shared/schemas";
 import { OFFSCREEN_URL, closeOffscreen, createOffscreen, hasOffscreen, sendOffscreen } from "./offscreen";
@@ -42,7 +42,7 @@ async function begin(tabId: number, up: Extract<VoiceUp, { t: "start" }>) {
     await pausePlayer();
     await closeOffscreen(); // the player's document, or a conversation of another tab
     await createOffscreen({ url: `${OFFSCREEN_URL}?voice`, reasons: ["USER_MEDIA" as chrome.offscreen.Reason], justification: "Listens through the microphone and plays the model's voice" });
-    await toVoiceDoc(tabId, up, { cfg: { port: (await loadSettings()).port, token: await getToken() } });
+    await toVoiceDoc(tabId, up, { cfg: { port: await getPort(), token: await getToken() } });
   } catch {
     voiceTabs.delete(tabId);
     tellEnded(tabId, "unavailable");

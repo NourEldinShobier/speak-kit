@@ -11,7 +11,6 @@ const DEFAULTS = {
   idleMinutes: 0,
   failedDevices: [],
   timedDevices: {},
-  releaseOnClose: false,
   autoSwitch: { enabled: false, rules: [] },
   dismissedHints: [],
   skippedModel: false,
@@ -36,8 +35,8 @@ describe("engines config", () => {
   });
 
   it("repairs bad values one at a time", () => {
-    const e = v.parse(EnginesConfigSchema, { device: "tpu", idleMinutes: 7, releaseOnClose: "yes", skippedModel: true });
-    expect(e).toMatchObject({ device: "auto", idleMinutes: 0, releaseOnClose: false, skippedModel: true });
+    const e = v.parse(EnginesConfigSchema, { device: "tpu", idleMinutes: 7, skippedModel: true });
+    expect(e).toMatchObject({ device: "auto", idleMinutes: 0, skippedModel: true });
   });
 
   it("keeps the idle choices of the page and the never choice", () => {

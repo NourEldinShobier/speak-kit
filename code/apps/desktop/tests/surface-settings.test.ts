@@ -14,13 +14,13 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
 
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const configFile = (l: Launched) => path.join(l.userData, "config.json");
 const configOf = (l: Launched) => JSON.parse(readFileSync(configFile(l), "utf8"));
 const openSettings = async (l: Launched, page = "General") => {
   const nav = l.page.getByRole("navigation", { name: "Settings" });
   if (!(await nav.isVisible())) {
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
   }
   await nav.getByRole("link", { name: page, exact: true }).click();
@@ -83,7 +83,7 @@ describe("keyboard and window", () => {
     const nav = l.page.getByRole("navigation", { name: "Settings" });
     await nav.getByRole("link", { name: "General", exact: true }).focus();
     await l.page.keyboard.press("ArrowDown");
-    expect(await l.page.evaluate(() => document.activeElement?.textContent)).toContain("Voice and playback");
+    expect(await l.page.evaluate(() => document.activeElement?.textContent)).toContain("Shortcuts");
     await l.page.keyboard.press("End");
     expect(await l.page.evaluate(() => document.activeElement?.textContent)).toContain("About");
     await l.page.keyboard.press("Home");
@@ -97,7 +97,7 @@ describe("keyboard and window", () => {
 describe("the main window uses the dark taskbar tray variant only when asked", () => {
   it("the tray icon is built and the app runs with it", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const state = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { trayState(): string } }).__speakkit.trayState());
     expect(state).toMatch(/^[a-z]+\|Speak Kit/);
   }, 60_000);

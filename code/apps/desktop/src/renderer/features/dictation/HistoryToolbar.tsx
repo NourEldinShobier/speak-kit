@@ -1,19 +1,14 @@
-import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, IconButton, Segmented, TextInput } from "@speakkit/ui";
+import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, IconButton, TextInput } from "@speakkit/ui";
 import { dictation, patchDictation } from "./api";
-import { CopyRecent } from "./HistoryParts";
-import type { View } from "./HistoryRow";
 import { RETENTION_OPTIONS } from "./model";
 
 interface ToolbarProps {
   search: string;
   setSearch: (s: string) => void;
-  view: View;
-  setView: (v: View) => void;
   empty: boolean;
   retention: string;
   keepRecordings: boolean;
   onClear: () => void;
-  onStats: () => void;
   onRecordings: () => void;
   /** Selection mode: null when off. */
   picked: ReadonlySet<string> | null;
@@ -44,20 +39,6 @@ function MoreMenu({ p }: { p: ToolbarProps }) {
   );
 }
 
-function ViewToggle({ view, setView }: Pick<ToolbarProps, "view" | "setView">) {
-  return (
-    <Segmented
-      label="Show"
-      value={view}
-      onChange={(v) => setView(v as View)}
-      items={[
-        { id: "final", label: "Final text" },
-        { id: "side", label: "Side by side" },
-      ]}
-    />
-  );
-}
-
 function Tools(p: ToolbarProps) {
   const { picked } = p;
   if (picked)
@@ -74,10 +55,6 @@ function Tools(p: ToolbarProps) {
     );
   return (
     <>
-      <CopyRecent disabled={p.empty} />
-      <Button disabled={p.empty} onClick={p.onStats}>
-        Statistics
-      </Button>
       <Button disabled={p.empty} onClick={() => p.setSelecting(true)}>
         Select
       </Button>
@@ -101,7 +78,6 @@ export function Toolbar(p: ToolbarProps) {
         onChange={(e) => p.setSearch(e.target.value)}
         frameClassName="dict-hist__search"
       />
-      <ViewToggle view={p.view} setView={p.setView} />
       <div className="dict-hist__tools">
         <Tools {...p} />
       </div>

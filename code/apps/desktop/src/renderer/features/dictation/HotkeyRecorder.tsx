@@ -64,8 +64,6 @@ interface Props {
   status?: DictationStatus;
   /** Saves the shortcut; resolves with the status after the save. The page shows Saved only after this resolves. */
   save(value: string): Promise<DictationStatus | void>;
-  /** Set for a recorder that can be cleared. */
-  remove?: boolean;
   /** The value Restore default goes back to; the button is disabled while it is already in use. */
   restore?: string;
   /** Called with the keys of a shortcut that needs the advanced warning before it is saved. */
@@ -100,7 +98,7 @@ function RecordingRow({ label, stop, line }: { label: string; stop(): void; line
  * One shortcut as keycaps and Change, a recorder while changing, and a line for the result: refused keys, a clash with another shortcut, saving, saved,
  * could not save. The row has a fixed width so the buttons never move while the state changes.
  */
-export function HotkeyRecorder({ slot, label, value, status, save, remove, restore, confirmAdvanced, onRecording }: Props) {
+export function HotkeyRecorder({ slot, label, value, status, save, restore, confirmAdvanced, onRecording }: Props) {
   const [recording, setRecordingState] = useState(false);
   const [note, setNote] = useState<RecorderNote | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -117,7 +115,7 @@ export function HotkeyRecorder({ slot, label, value, status, save, remove, resto
     try {
       const after = await save(next);
       if (after?.rejected && after.rejected.slot === slot) return setNote({ kind: "conflict", text: conflictText(next, after.rejected.with) });
-      setNote(next ? { kind: "saved" } : null);
+      setNote({ kind: "saved" });
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setNote((n) => (n?.kind === "saved" ? null : n)), 2500);
     } catch {
@@ -135,7 +133,7 @@ export function HotkeyRecorder({ slot, label, value, status, save, remove, resto
   if (recording) return <RecordingRow label={label} stop={stop} line={line} />;
   return (
     <div className="dict-hotkey" role="group" aria-label={label}>
-      <Resting label={label} value={value} restore={restore} remove={remove} start={() => (setNote(null), setRecording(true))} commit={(v) => void commit(v)} />
+      <Resting label={label} value={value} restore={restore} start={() => (setNote(null), setRecording(true))} commit={(v) => void commit(v)} />
       {line}
     </div>
   );
@@ -145,13 +143,12 @@ interface RestingProps {
   label: string;
   value: string;
   restore: string | undefined;
-  remove: boolean | undefined;
   start(): void;
   commit(value: string): void;
 }
 
-/** The row when nothing is being recorded: keycaps with Change (and Restore default or Remove), or Not set with an add button. */
-function Resting({ label, value, restore, remove, start, commit }: RestingProps) {
+/** The row when nothing is being recorded: keycaps with Change (and Restore default), or Not set with an add button. */
+function Resting({ label, value, restore, start, commit }: RestingProps) {
   if (!value)
     return (
       <>
@@ -170,11 +167,6 @@ function Resting({ label, value, restore, remove, start, commit }: RestingProps)
       {restore !== undefined && (
         <Button aria-label={`Restore the default ${label}`} disabled={value === restore} onClick={() => commit(restore)}>
           Restore default
-        </Button>
-      )}
-      {remove && (
-        <Button aria-label={`Remove ${label}`} onClick={() => commit("")}>
-          Remove
         </Button>
       )}
     </>

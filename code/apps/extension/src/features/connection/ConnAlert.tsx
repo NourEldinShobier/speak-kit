@@ -4,7 +4,7 @@ import type { HealthResult } from "../../shared/client";
 
 const ALERT_TEXT = {
   offline: "Open Speak Kit and this page reconnects by itself. If it doesn't, download the app first.",
-  token: "Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch.",
+  token: "Speak Kit rejected the pairing token saved in this browser. Paste a new token below.",
 };
 
 const RESULT = { copied: { text: "Copied", icon: "check" }, failed: { text: "Could not copy", icon: "alert-circle" } } as const;

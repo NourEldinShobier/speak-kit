@@ -5,7 +5,7 @@ import { filterSettingsNav, MENU, menuItem, SETTINGS_NAV, settingsItem } from ".
 describe("routes", () => {
   it("the menu groups and rows are in the designed order", () => {
     expect(MENU.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
-      ["Read", ["Home", "Library"]],
+      ["Read", ["Library"]],
       ["Voice", ["Voices", "Voice chat", "Engines"]],
       ["Dictation", ["Dictation", "Modes", "Vocabulary", "History"]],
     ]);
@@ -17,14 +17,14 @@ describe("routes", () => {
   it("every route id has a menu row or a settings row, and nothing else", () => {
     expect(MENU.flatMap((g) => g.items.map((i) => i.page)).sort()).toEqual(PAGES.filter((p) => p !== "settings").sort());
     expect(SETTINGS_NAV.flatMap((g) => g.items.map((i) => i.id)).sort()).toEqual([...SETTINGS_SUBS].sort());
-    expect(settingsItem("performance").label).toBe("Performance");
+    expect(settingsItem("about").label).toBe("About");
   });
 });
 
 describe("filterSettingsNav", () => {
   const ids = (q: string) => filterSettingsNav(q).flatMap((g) => g.items.map((i) => i.id));
   it("returns every row for blank text", () => {
-    expect(ids("  ")).toHaveLength(12);
+    expect(ids("  ")).toHaveLength(8);
   });
   it("matches label or keywords, every word, any case", () => {
     expect(ids("SHORTCUTS")).toEqual(["shortcuts"]);
@@ -37,8 +37,8 @@ describe("filterSettingsNav", () => {
 });
 
 describe("settings icons", () => {
-  it("use the lock and pulse glyphs of the design", () => {
+  it("use the lock glyph of the design for Privacy", () => {
     const icon = (id: string) => SETTINGS_NAV.flatMap((g) => g.items).find((i) => i.id === id)?.icon;
-    expect([icon("privacy"), icon("diagnostics")]).toEqual(["lock", "activity"]);
+    expect(icon("privacy")).toBe("lock");
   });
 });

@@ -64,7 +64,7 @@ export function stopGuard(exit: () => void, ms = STOP_GUARD_MS): () => void {
 }
 
 /**
- * What the stop guard runs: a recording still being saved is awaited (up to `savingCapMs`), then the runtime and control server are shut
+ * What the stop guard runs: a recording still being saved is awaited (up to `savingCapMs`), then the runtime and the features are shut
  * down (up to `cleanupCapMs`, so a hung worker cannot keep the app), and only then does the app exit.
  */
 export async function exitAfterCleanup(o: { saving(): Promise<unknown> | undefined; cleanup(): Promise<unknown> | unknown; exit(): void; savingCapMs?: number; cleanupCapMs?: number }): Promise<void> {

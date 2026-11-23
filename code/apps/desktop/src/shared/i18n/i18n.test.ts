@@ -3,12 +3,10 @@ import { LOCALES as _L } from "./index";
 import { MENU, SETTINGS_NAV } from "../../renderer/routes";
 import { EN } from "./en";
 import { PACK_EN } from "./pack";
-import "./packs/apps";
 import "./packs/shell";
 import "./packs/voices";
 import "./packs/settings";
 import "./packs/main";
-import "./packs/experiments";
 import "./packs/export";
 import "./packs/library";
 import { directionOf, languageOptions, listOf, loadLocale, LOCALES, NATIVE_NAMES, resolveLocale, TABLES, translate, translateOr, type StringKey } from "./index";
@@ -63,7 +61,7 @@ describe("string tables", () => {
     expect(translate("en", "fold.count", { n: 1234 })).toBe("1,234 settings");
     expect(translate("de", "fold.count", { n: 1234 })).toBe("1.234 Einstellungen");
     expect(translate("ar", "fold.count", { n: 1234 })).toBe("1,234 إعدادات");
-    expect(translate("fr", "home.portBusy", { port: "47615" })).toBe("Le port 47615 est utilisé");
+    expect(translate("fr", "v.previewAria", { name: "Heart" })).toBe("Écouter Heart");
   });
 });
 
@@ -89,10 +87,10 @@ describe("resolveLocale", () => {
 
 describe("translate", () => {
   it("fills placeholders and leaves unknown ones", () => {
-    expect(translate("en", "general.importSkipped", { n: 3, skipped: "a, b" })).toBe("Imported 3 settings. Left out: a, b.");
-    expect(translate("es", "general.importDone", { n: 1 })).toBe("Se importaron 1 ajustes.");
-    expect(translate("en", "general.importDone")).toBe("Imported {n} settings.");
-    expect(translate("en", "general.importDone", { x: 1 })).toBe("Imported {n} settings.");
+    expect(translate("en", "shortcuts.resetHint", { keys: "Ctrl+Alt+S" })).toBe("Back to Ctrl+Alt+S.");
+    expect(translate("es", "fold.count", { n: 3 })).toBe("3 ajustes");
+    expect(translate("en", "fold.count")).toBe("{n} settings");
+    expect(translate("en", "fold.count", { x: 1 })).toBe("{n} settings");
   });
 
   it("shows English for a string a table lacks", () => {
@@ -103,7 +101,7 @@ describe("translate", () => {
   });
 
   it("translateOr uses the fallback for a key no table has", () => {
-    expect(translateOr("es", "page.home", "Home")).toBe("Inicio");
+    expect(translateOr("es", "page.library", "Library")).toBe("Biblioteca");
     expect(translateOr("es", "page.nothing", "Nothing")).toBe("Nothing");
   });
 });
@@ -113,7 +111,7 @@ describe("plurals and lists", () => {
     expect([1, 2].map((n) => translate("en", "quit.exports", { n }))).toEqual(["The export is cancelled", "The exports are cancelled"]);
     expect([1, 5].map((n) => translate("es", "pal.count", { n }))).toEqual(["1 resultado", "5 resultados"]);
     expect([0, 1, 2, 3, 11].map((n) => translate("ar", "lib.readings", { n }))).toEqual(["0 قراءة", "قراءة واحدة", "قراءتان", "3 قراءات", "11 قراءة"]);
-    expect(translate("de", "export.chaptersFound", { n: 2 })).toBe("2 Überschriften im Text gefunden.");
+    expect(translate("de", "lib.readings", { n: 2 })).toBe("2 Lesungen");
   });
 
   it("groups the number a plural shows in the language's digits", () => {

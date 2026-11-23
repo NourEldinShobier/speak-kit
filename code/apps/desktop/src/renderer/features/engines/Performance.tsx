@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Icon, Select, SettingRow, Toggle } from "@speakkit/ui";
+import { Button, Icon, Select, SettingRow } from "@speakkit/ui";
 import type { DeviceValue, SpeechModelsView } from "../../../shared/speech-models/contract";
 import { models, patchEngines } from "./api";
 import type { EnginesPatch } from "../../../shared/speech-models/config";
@@ -47,26 +47,19 @@ function DeviceRows({ v, run }: { v: SpeechModelsView; run: Run }) {
 function IdleRows({ v, run }: { v: SpeechModelsView; run: Run }) {
   const note = v.idleMinutes === 0 ? "The model stays in memory. Dictation starts at once." : "Frees about 1.1 GB of memory. The first dictation after an unload takes longer.";
   return (
-    <>
-      <SettingRow
-        className="lm-row--control"
-        label="Unload speech model when idle"
-        description={note}
-        control={
-          <Select
-            label="Unload speech model when idle"
-            value={String(v.idleMinutes)}
-            onChange={(m) => run(() => patchEngines({ idleMinutes: Number(m) as EnginesPatch["idleMinutes"] }))}
-            options={IDLE_OPTIONS}
-          />
-        }
-      />
-      <SettingRow
-        label="Release memory when the window closes"
-        description="The window and the graphics card memory are released at once. The tray keeps running."
-        control={<Toggle aria-label="Release memory when the window closes" checked={v.releaseOnClose} onChange={(on) => run(() => patchEngines({ releaseOnClose: on }))} />}
-      />
-    </>
+    <SettingRow
+      className="lm-row--control"
+      label="Unload speech model when idle"
+      description={note}
+      control={
+        <Select
+          label="Unload speech model when idle"
+          value={String(v.idleMinutes)}
+          onChange={(m) => run(() => patchEngines({ idleMinutes: Number(m) as EnginesPatch["idleMinutes"] }))}
+          options={IDLE_OPTIONS}
+        />
+      }
+    />
   );
 }
 

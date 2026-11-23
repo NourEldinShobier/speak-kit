@@ -10,11 +10,10 @@ import {
   loadImported,
   missingImported,
   removeImported,
-  type FoundModel,
   type ImportedModel,
   type SttModel,
 } from "@speakkit/engine";
-import type { FoundView, ImportOutcome } from "../../shared/speech-models/contract";
+import type { ImportOutcome } from "../../shared/speech-models/contract";
 import type { ModelManager } from "../dictation/models";
 
 export interface LibraryDeps {
@@ -33,7 +32,6 @@ export interface LibraryDeps {
 export class ModelLibrary {
   readonly #d: LibraryDeps;
   #imported: ImportedModel[] = [];
-  #found: FoundModel[] = [];
   missing = new Set<string>();
   disk: { total: number; per: Record<string, number> } = { total: 0, per: {} };
 
@@ -108,26 +106,22 @@ export class ModelLibrary {
     return { ok: true, id: r.model.id, name: r.model.name, alreadyThere: r.alreadyThere };
   }
 
-  /** Read-only look in the usual folders for files that are exactly one of our models. Nothing is copied until the person says so. */
-  async scan(): Promise<FoundView[]> {
+  /** Looks in the usual folders for files that are exactly one of our models we do not have yet, and copies them into our folder; the files there are left where they are. */
+  async adoptFound(): Promise<void> {
     const have = new Set(
       this.catalog()
         .filter((m) => this.#d.models.isInstalled(m.id))
         .map((m) => m.id),
     );
-    this.#found = await findModelsOnDisk(
+    const found = await findModelsOnDisk(
       this.#d.scanDirs(),
       STT_MODELS.filter((m) => !have.has(m.id)),
     );
-    return this.#found.map((f) => ({ id: f.id, name: this.find(f.id)?.name ?? f.id, path: f.path }));
-  }
-
-  async adopt(ids: string[]): Promise<void> {
-    for (const f of this.#found.filter((x) => ids.includes(x.id))) {
+    for (const f of found) {
       const m = STT_MODELS.find((x) => x.id === f.id);
       if (m) await adoptFound(this.#d.modelsDir, f, m);
     }
-    await this.#changed();
+    if (found.length > 0) await this.#changed();
   }
 
   get folder(): string {

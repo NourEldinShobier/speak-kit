@@ -1,13 +1,8 @@
-import type { AppState } from "../../../shared/ipc";
 import type { Command, PaletteAction } from "./model";
 import type { ShellAction } from "../../shell-model";
-import { api } from "../../ui";
 
 interface CommandContext {
-  s: AppState;
   dispatch(a: ShellAction): void;
-  /** Stops a voice preview. */
-  halt(): void;
   /** Starts or stops the preview of a voice. */
   preview(voice: string, text: string): void;
 }
@@ -20,14 +15,6 @@ const RUNNERS: Runners = {
     x.dispatch({ type: "go", page: "library" });
     x.dispatch({ type: "open-doc", doc: { id: a.id, autoplay: false } });
   },
-  pause: (_a, _c, x) => x.halt(),
-  "copy-token": (_a, _c, x) => void api.copy(x.s.token),
-  "open-logs": () => void api.openPath("logs"),
-  "toggle-reading": () => void api.reader({ type: "toggle" }),
-  export: (_a, _c, x) => x.dispatch({ type: "export", open: { text: "" } }),
-  "check-updates": () => void api.updateAction("check"),
-  "install-extension": (_a, _c, x) => x.dispatch({ type: "go", page: "settings", sub: "browser" }),
-  "load-engine": () => void api.warmEngine(),
   preview: (a, c, x) => x.preview(a.voice, `Hello, this is ${c.title}.`),
 };
 

@@ -29,8 +29,6 @@ export const clock = {
 export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   hotkey: c.hotkey,
   mode: c.mode,
-  holdMs: c.holdMs,
-  rawKey: c.rawHotkey,
   pasteLastKey: c.pasteLastHotkey,
   cancelKey: c.cancelKey,
   language: c.language,
@@ -40,7 +38,6 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   skipPauses: c.skipPauses,
   keepOnClipboard: c.output === "keep",
   insertMode: c.output === "copy" ? "copy" : "paste",
-  returnToApp: c.returnToApp,
   ...c.cleanup,
   terms: c.terms,
   prompt: c.prompt,
@@ -53,16 +50,12 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
 /** What the key hook listens for. */
 export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   hotkey: c.hotkey,
-  raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
   cancelKey: c.cancelKey,
 });
 
-/** How long an idle open microphone stays open: nothing when it is released when idle, forever (-1) or for the set number of minutes when kept ready. */
-export function keepOpenMs(c: Pick<DictationConfig, "keepReady" | "keepReadyMinutes">): number {
-  if (!c.keepReady) return 0;
-  return c.keepReadyMinutes === 0 ? -1 : c.keepReadyMinutes * 60_000;
-}
+/** How long an idle open microphone stays open: nothing when it is released when idle, forever (-1) while dictation is on when kept ready. */
+export const keepOpenMs = (c: Pick<DictationConfig, "keepReady">): number => (c.keepReady ? -1 : 0);
 
 /** What the microphone window reported, as an event of the microphone status; the device list is not one. */
 export function micEventOf(e: RecorderEvent): MicEvent | undefined {
@@ -177,7 +170,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", rawHotkey: "raw", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {
@@ -192,7 +185,7 @@ export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reade
   return own.has(b) ? { slot: b, with: a } : undefined;
 }
 
-const MIC_KEYS = ["keepReady", "keepReadyMinutes", "microphone", "avoidBluetooth"] as const;
+const MIC_KEYS = ["keepReady", "microphone", "avoidBluetooth"] as const;
 
 /** True when a settings change needs the microphone window told (which input, and whether it stays open). */
 export const touchesMicrophone = (patch: object): boolean => MIC_KEYS.some((k) => k in patch);

@@ -19,7 +19,7 @@ export const fixtureBytes = (name: string) => [...readFileSync(fixturePath(name)
 
 /** Desktop app with setup done, fake engine and an empty library, opened on the Library page. */
 export async function openLibrary(opts: { userData?: string; env?: Record<string, string> } = {}): Promise<Launched> {
-  const d = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_TEST: "1", ...opts.env }, ...(opts.userData ? { userData: opts.userData } : {}) });
+  const d = await launch({ config: { setupDone: true, setupSkipped: false }, env: { SPEAKKIT_TEST: "1", ...opts.env }, ...(opts.userData ? { userData: opts.userData } : {}) });
   await d.page.getByRole("link", { name: "Library" }).click();
   await d.page.getByRole("heading", { name: "Library" }).waitFor();
   return d;

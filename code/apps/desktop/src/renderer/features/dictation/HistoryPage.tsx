@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
+import { Advanced } from "../settings";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import { DEFAULT_HOTKEY, hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation, platformName } from "./api";
 import { emptyHint, expiryText, focusAfterDelete, groupByDay, historyFooter, historyLead, toggled } from "./model";
 import { HistoryDialogs, type HistoryDialog } from "./HistoryDialogs";
-import { Notices } from "./HistoryParts";
-import { HistoryRow, type View } from "./HistoryRow";
+import { CopyRecent, Notices } from "./HistoryParts";
+import { HistoryRow } from "./HistoryRow";
 import { Toolbar } from "./HistoryToolbar";
 import { RecordingPanel } from "./RecordingPanel";
 import { useDictation } from "./useDictation";
 import "./dictation.css";
 
 export { HistoryRow };
-
-const THEAD = ["Time and app", "What the model heard", "What was pasted", ""];
 
 function Empty({ s }: { s: DictationStatus | null }) {
   return (
@@ -47,7 +46,6 @@ function useFocusAfterReload(items: HistoryItem[]) {
 type GroupsProps = {
   items: HistoryItem[];
   load: () => void;
-  view: View;
   s: DictationStatus;
   picked: ReadonlySet<string> | null;
   toggle: (id: string) => void;
@@ -55,7 +53,7 @@ type GroupsProps = {
 };
 
 /** The entries, newest first, in day groups; `copied` is the entry whose text was just copied. */
-function Groups({ items, load, view, s, picked, toggle, openSettings }: GroupsProps) {
+function Groups({ items, load, s, picked, toggle, openSettings }: GroupsProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const groups = useMemo(() => groupByDay(items, Date.now()), [items]);
@@ -77,19 +75,11 @@ function Groups({ items, load, view, s, picked, toggle, openSettings }: GroupsPr
   return groups.map((g) => (
     <section key={g.label} className="dict-hist__group" onKeyDown={onArrowKeys('[aria-label^="Copy: "]')}>
       <h3 className="dict-hist__day">{g.label}</h3>
-      <div className={`lm-card${view === "side" ? " dict-hist__side" : ""}`}>
-        {view === "side" ? (
-          <div className="dict-hist__thead" aria-hidden="true">
-            {THEAD.map((h, i) => (
-              <span key={i}>{h}</span>
-            ))}
-          </div>
-        ) : null}
+      <div className="lm-card">
         {g.items.map((item) => (
           <div key={item.id}>
             <HistoryRow
               item={item}
-              view={view}
               copied={copied === item.id}
               open={open === item.id}
               rewriteDeadlineMs={s.settings.rewrite.deadlineMs}
@@ -146,7 +136,6 @@ function Entries(p: {
   items: HistoryItem[] | null;
   load: () => void;
   sel: ReturnType<typeof useSelection>;
-  view: View;
   total: number;
   retention: DictationStatus["settings"]["retention"];
   openSettings: () => void;
@@ -155,7 +144,7 @@ function Entries(p: {
   if (!p.s) return null;
   return (
     <>
-      <Groups items={p.items ?? []} load={p.load} view={p.view} s={p.s} picked={p.sel.picked} toggle={p.sel.toggle} openSettings={p.openSettings} />
+      <Groups items={p.items ?? []} load={p.load} s={p.s} picked={p.sel.picked} toggle={p.sel.toggle} openSettings={p.openSettings} />
       {p.items?.length === 0 && <p className="dict-hist__none">Nothing matches that search.</p>}
       <p className="dict-hist__foot">{historyFooter(p.items?.length ?? 0, p.total, p.retention)}</p>
     </>
@@ -179,13 +168,11 @@ function useHistoryNumbers(s: DictationStatus | null) {
 }
 
 /**
- * History > Dictations: what was dictated, searchable, with the raw text beside the final one, copy, delete, bulk delete, statistics, retention and kept
- * recordings. `embedded` leaves out the back link and the title: History puts the page under its own tabs.
+ * History > Dictations: what was dictated, searchable, copy, delete, bulk delete, retention and kept recordings. `embedded` leaves out the back link and the title: History puts the page under its own tabs.
  */
 export function DictationHistoryPage({ back, embedded, openSettings }: { back?: () => void; embedded?: boolean; openSettings?: () => void }) {
   const s = useDictation();
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<View>("final");
   const [dialog, setDialog] = useState<HistoryDialog>(null);
   const { total, rev, retention, keepRecordings, audioCapMb } = useHistoryNumbers(s);
   const { items, setItems, load } = useItems(search, total, rev);
@@ -202,13 +189,10 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
       <Toolbar
         search={search}
         setSearch={setSearch}
-        view={view}
-        setView={setView}
         empty={total === 0}
         retention={retention}
         keepRecordings={keepRecordings}
         onClear={() => setDialog("clear")}
-        onStats={() => setDialog("stats")}
         onRecordings={() => setDialog("recordings")}
         picked={sel.picked}
         shown={items?.length ?? 0}
@@ -216,7 +200,10 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
         selectAll={sel.selectAll}
         onDeleteSelected={() => setDialog("delete")}
       />
-      <Entries s={s} items={items} load={load} sel={sel} view={view} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} />
+      <Advanced page="history" subtitle="Copy one of your last five dictations" count={1}>
+        <CopyRecent disabled={total === 0} />
+      </Advanced>
+      <Entries s={s} items={items} load={load} sel={sel} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} />
       <HistoryDialogs dialog={dialog} close={() => setDialog(null)} total={total} picked={sel.picked} keepRecordings={keepRecordings} audioCapMb={audioCapMb} onChanged={changed} />
     </div>
   );

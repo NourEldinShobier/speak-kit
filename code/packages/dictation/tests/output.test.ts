@@ -200,21 +200,6 @@ describe("return to app", () => {
     expect(focused).toBe(false);
     expect(r.dictation.state()).toMatchObject({ status: "error", code: "password-field" });
   });
-
-  it("is off when the setting is off: the text is copied as before", async () => {
-    const r = await rig({ returnToApp: false });
-    let now = target({ id: "win-1" });
-    let focused = false;
-    r.ins.inserter.target = async () => now;
-    r.ins.inserter.focus = async () => (focused = true);
-    r.press();
-    await r.time.advance(1000);
-    now = target({ id: "other" });
-    r.release();
-    await r.time.advance(300);
-    expect(focused).toBe(false);
-    expect(r.ins.inserted[0]?.plan).toEqual({ method: "copy", reason: "focus-changed" });
-  });
 });
 
 describe("optional stages pass their input on", () => {

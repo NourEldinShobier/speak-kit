@@ -20,20 +20,20 @@ describe("sidebar in Spanish", () => {
   it("names the groups, pages and settings in the chosen language", () => {
     const html = renderToStaticMarkup(
       <LocaleProvider choice="es">
-        <Sidebar s={appState()} hidden={false} page="home" sub="general" recent={[]} go={() => {}} onCloseSettings={() => {}} onOpenRecent={() => {}} onOpenExport={() => {}} />
+        <Sidebar s={appState()} hidden={false} page="dictation" sub="general" recent={[]} go={() => {}} onCloseSettings={() => {}} onOpenRecent={() => {}} onOpenExport={() => {}} />
       </LocaleProvider>,
     );
     const text = html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
-    for (const w of ["Menú", "Leer", "Inicio", "Biblioteca", "Chat de voz", "Historial", "Recientes", "Ajustes"]) expect(text).toContain(`|${w}|`);
+    for (const w of ["Menú", "Leer", "Biblioteca", "Chat de voz", "Historial", "Recientes", "Ajustes"]) expect(text).toContain(`|${w}|`);
     expect(text).not.toContain("|Library|");
   });
 });
 
 describe("sidebar", () => {
   it("shows the Menu title, groups, Recent and Settings in order, without New reading or Browser", () => {
-    const html = render("home");
+    const html = render("dictation");
     const text = html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
-    const order = ["Menu", "Read", "Home", "Library", "Voice", "Voices", "Voice chat", "Engines", "Dictation", "Dictation", "Modes", "Vocabulary", "History", "Recent", "Settings"];
+    const order = ["Menu", "Read", "Library", "Voice", "Voices", "Voice chat", "Engines", "Dictation", "Dictation", "Modes", "Vocabulary", "History", "Recent", "Settings"];
     let at = -1;
     for (const w of order) {
       const i = text.indexOf(`|${w}|`, at + 1);
@@ -48,7 +48,7 @@ describe("sidebar", () => {
       <Sidebar
         s={appState()}
         hidden={false}
-        page="home"
+        page="dictation"
         sub="general"
         recent={[{ id: "d1", title: "Chapter 4 draft" }]}
         go={() => {}}
@@ -59,17 +59,17 @@ describe("sidebar", () => {
     );
     expect(html).toContain("Chapter 4 draft");
     expect(html).not.toContain("appear here");
-    expect(render("home")).toContain("Readings you open appear here.");
+    expect(render("dictation")).toContain("Readings you open appear here.");
   });
   it("has a Settings search field", () => {
     expect(render("settings")).toContain('aria-label="Search settings"');
   });
   it("marks only the open page", () => {
-    expect(render("home").match(/aria-current="page"/g)).toHaveLength(1);
+    expect(render("dictation").match(/aria-current="page"/g)).toHaveLength(1);
   });
-  it("lists the 12 settings rows while in Settings, with one selected", () => {
+  it("lists the 8 settings rows while in Settings, with one selected", () => {
     const html = render("settings", "privacy");
-    expect(html.match(/href="#settings-/g)).toHaveLength(12);
+    expect(html.match(/href="#settings-/g)).toHaveLength(8);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
     expect(html).toContain("Close settings");
   });

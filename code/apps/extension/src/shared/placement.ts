@@ -15,14 +15,11 @@ export const above =
     el.style.left = `${Math.min(Math.max(8, a.right - w), W - w - 8)}px`;
   };
 
-/** Popover on the page side of the edge launcher pill. */
-export const beside =
-  (side: "left" | "right"): Placement =>
-  (el, a, shell) => {
-    const W = shell.width;
-    const H = shell.height;
-    const w = el.offsetWidth;
-    const ph = el.offsetHeight;
-    el.style.left = `${side === "left" ? Math.min(a.right + 14, W - w - 8) : Math.max(8, a.left - 14 - w)}px`;
-    el.style.top = `${Math.min(Math.max(8, a.bottom - ph), H - ph - 8)}px`;
-  };
+/** Popover on the page side of the edge launcher pill, which sits on the right edge. */
+export const besideLeft: Placement = (el, a, shell) => {
+  const H = shell.height;
+  const w = el.offsetWidth;
+  const ph = el.offsetHeight;
+  el.style.left = `${Math.max(8, a.left - 14 - w)}px`;
+  el.style.top = `${Math.min(Math.max(8, a.bottom - ph), H - ph - 8)}px`;
+};

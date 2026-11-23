@@ -1,7 +1,5 @@
 {
   "files": {
-    "apps/desktop/src/cli/bin.ts": "command line: talks to the running Speak Kit app on 127.0.0.1 with the token from its discovery file",
-    "apps/desktop/src/main/control/discovery.ts": "checks that something accepts a connection on the loopback port in the discovery file; sends no data",
     "apps/desktop/src/main/library/public-fetch.ts": "URL import: fetches the page the user typed, public addresses only (undici with a lookup that refuses private ranges)",
     "apps/desktop/src/main/server-api.ts": "desktop main talks to its own loopback server on 127.0.0.1",
     "apps/desktop/src/main/updates-service.ts": "electron-updater checks GitHub Releases for a new version",
@@ -9,7 +7,7 @@
     "apps/extension/src/app/background/connection.ts": "extension talks to the desktop app on 127.0.0.1",
     "apps/extension/src/app/offscreen/main.ts": "offscreen document streams speech from 127.0.0.1",
     "apps/extension/src/app/offscreen/voice.ts": "voice chat: the offscreen session posts the WebRTC offer to OpenAI (api.openai.com, or the test server in test builds) and asks the app on 127.0.0.1 for a client secret",
-    "apps/extension/src/features/connection/health.ts": "health and pairing calls to 127.0.0.1",
+    "apps/extension/src/features/connection/health.ts": "health and token checks on 127.0.0.1; when the app does not answer on its port, a GET of the health route on the ports it falls back to",
     "apps/extension/src/features/connection/lifecycle.ts": "engine lifecycle calls to 127.0.0.1",
     "apps/extension/src/features/voicechat/VoiceChatSection.tsx": "the options card asks the app on 127.0.0.1 whether an OpenAI key is set",
     "apps/extension/src/features/voicechat/mint.ts": "voice chat: asks the Speak Kit app on 127.0.0.1 for a short-lived OpenAI client secret and for whether a key is set",

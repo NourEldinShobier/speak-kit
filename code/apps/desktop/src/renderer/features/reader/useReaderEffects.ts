@@ -90,7 +90,6 @@ export function useSleepTimer({ sleepLeft, sleep, command, dispatch }: { sleepLe
 
 interface FollowArgs {
   sentence: ReaderSentence | undefined;
-  follow: boolean;
   following: RefObject<boolean>;
   scroller: RefObject<HTMLDivElement | null>;
   textRoot: RefObject<HTMLDivElement | null>;
@@ -98,15 +97,15 @@ interface FollowArgs {
 }
 
 /** Scrolls the sentence into view when it nears the edge, unless the person scrolled away. */
-export function useFollowScroll({ sentence, follow, following, scroller, textRoot, scrollToCurrent }: FollowArgs) {
+export function useFollowScroll({ sentence, following, scroller, textRoot, scrollToCurrent }: FollowArgs) {
   useEffect(() => {
     const sc = scroller.current;
     const root = textRoot.current;
-    if (!sentence || !sc || !root || !following.current || !follow) return;
+    if (!sentence || !sc || !root || !following.current) return;
     const rect = rangeIn(root, sentence)?.getBoundingClientRect();
     const box = sc.getBoundingClientRect();
     if (rect && (rect.top < box.top + 40 || rect.bottom > box.bottom - 40)) scrollToCurrent();
-  }, [sentence, follow, following, scroller, textRoot, scrollToCurrent]);
+  }, [sentence, following, scroller, textRoot, scrollToCurrent]);
 }
 
 interface KeyArgs {

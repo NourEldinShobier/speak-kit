@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Icon, IconButton, TextInput } from "@speakkit/ui";
-import { maskToken, type Settings } from "../settings";
+import { Button, Icon } from "@speakkit/ui";
+import { maskToken, usePort } from "../settings";
 import { send, type HealthResult } from "../../shared/client";
 import { ConnAlert } from "./ConnAlert";
 import { engineText } from "./errors";
-import { connState, validPort } from "./hooks";
+import { connState } from "./hooks";
 import { LINKS, openUrl } from "../../shared/links";
 
 interface Props {
-  s: Settings;
-  upd: (fn: (s: Settings) => Settings) => void;
   health: HealthResult | null;
   refresh: () => Promise<HealthResult>;
   token: string;
@@ -34,19 +32,13 @@ function statusText(st: ConnState, ok: Connected | null): { title: string; sub: 
 const STATUS_ICON = { ok: "check", checking: "loader-2", offline: "x", token: "x" } as const;
 const STATUS_CLASS = { ok: "ok", checking: "", offline: "err", token: "err" } as const;
 
-/** Editing the pairing token: the masked or revealed value, a draft being typed, pasting and committing it. */
+/** The pairing step: the saved token shows masked; a pasted one is saved when the field is left or Enter is pressed, then the connection is tested. */
 function useTokenEditor({ token, setToken, test, rejected }: { token: string; setToken: (t: string) => void; test: () => Promise<void>; rejected: boolean }) {
-  const [reveal, setReveal] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (rejected) ref.current?.focus();
   }, [rejected]);
-  const repair = () => {
-    setReveal(false);
-    setDraft("");
-    setTimeout(() => ref.current?.focus(), 0);
-  };
   const commit = async () => {
     const v = (draft ?? "").trim();
     setDraft(null);
@@ -56,9 +48,8 @@ function useTokenEditor({ token, setToken, test, rejected }: { token: string; se
     }
   };
   // A rejected token shows an empty, focused field waiting for the new one.
-  const shown = reveal ? token : maskToken(token);
-  const value = draft ?? (rejected ? "" : shown);
-  return { ref, reveal, toggleReveal: () => setReveal((r) => !r), draft, setDraft, value, repair, commit };
+  const value = draft ?? (rejected ? "" : maskToken(token));
+  return { ref, setDraft, value, draft, commit };
 }
 
 interface StatusProps {
@@ -66,11 +57,10 @@ interface StatusProps {
   ok: Connected | null;
   busy: boolean;
   onTest: () => void;
-  onRepair: () => void;
   refresh: () => Promise<HealthResult>;
 }
 
-function ConnActions({ st, ok, busy, onTest, onRepair, refresh }: StatusProps) {
+function ConnActions({ st, ok, busy, onTest, refresh }: StatusProps) {
   const [launching, setLaunching] = useState(false);
   const launch = async () => {
     setLaunching(true);
@@ -96,16 +86,6 @@ function ConnActions({ st, ok, busy, onTest, onRepair, refresh }: StatusProps) {
           </Button>
         </>
       )}
-      {st === "token" && (
-        <Button variant="primary" iconLeft="link" onClick={onRepair}>
-          Re-pair
-        </Button>
-      )}
-      {st === "ok" && (
-        <Button iconLeft="link" onClick={onRepair}>
-          Re-pair
-        </Button>
-      )}
     </div>
   );
 }
@@ -130,60 +110,13 @@ function ConnStatus(p: StatusProps) {
   );
 }
 
-function PortField({ port, upd }: Pick<Props, "upd"> & { port: number }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const commit = () => {
-    const n = Number(draft);
-    if (draft !== null && validPort(n)) upd((x) => ({ ...x, port: n }));
-    setDraft(null);
-  };
-  const bad = draft !== null && !validPort(Number(draft));
-  return (
-    <div className="op-field">
-      <label className="lm-field__label" htmlFor="port">
-        Port
-      </label>
-      <p>Must match the desktop app. Loopback only; nothing leaves your computer.</p>
-      <TextInput
-        id="port"
-        inputMode="numeric"
-        value={draft ?? String(port)}
-        error={bad ? "Use a port between 1024 and 65535." : undefined}
-        onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && commit()}
-      />
-    </div>
-  );
-}
-
-function TokenTools({ token, reveal, onReveal }: { token: string; reveal: boolean; onReveal: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(token);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* blocked */
-    }
-  };
-  return (
-    <span className="op-token-tools">
-      <IconButton name={reveal ? "eye-off" : "eye"} label={reveal ? "Hide token" : "Reveal token"} size={28} aria-pressed={reveal} disabled={!token} onClick={onReveal} />
-      <IconButton name={copied ? "check" : "copy"} label={copied ? "Copied" : "Copy token"} size={28} disabled={!token} onClick={copy} />
-    </span>
-  );
-}
-
 function TokenField({ token, rejected, editor }: { token: string; rejected: boolean; editor: ReturnType<typeof useTokenEditor> }) {
-  const { reveal, draft } = editor;
   return (
     <div className="op-field">
       <label className="lm-field__label" htmlFor="token">
         Pairing token
       </label>
-      <p>Sent with every request so other websites can't use your voice engine.</p>
+      <p>Copy it from Speak Kit &gt; Settings &gt; Browser integration and paste it here. It keeps other websites from using your voice engine.</p>
       <div className="lm-field">
         <div className={`lm-input ${rejected ? "is-error" : ""}`}>
           <input
@@ -192,17 +125,16 @@ function TokenField({ token, rejected, editor }: { token: string; rejected: bool
             className="lm-input__field"
             autoComplete="off"
             spellCheck={false}
-            placeholder="Paste the new token here"
+            placeholder="Paste the token here"
             aria-invalid={rejected}
             value={editor.value}
             onFocus={(e) => {
-              if (!reveal && draft === null && token) e.currentTarget.select();
+              if (editor.draft === null && token) e.currentTarget.select();
             }}
             onChange={(e) => editor.setDraft(e.target.value)}
             onBlur={editor.commit}
             onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           />
-          {!rejected && <TokenTools token={token} reveal={reveal} onReveal={editor.toggleReveal} />}
         </div>
         {rejected && <div className="lm-field__error">Token rejected. Copy a new one from Speak Kit &gt; Settings &gt; Browser integration.</div>}
       </div>
@@ -210,9 +142,10 @@ function TokenField({ token, rejected, editor }: { token: string; rejected: bool
   );
 }
 
-/** Options "Desktop app connection": status, test, open/download the app, port and pairing token. */
-export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Props) {
+/** Options "Desktop app connection": status, test, open/download the app and the pairing token. */
+export function ConnectionCard({ health, refresh, token, setToken }: Props) {
   const st = connState(health);
+  const port = usePort();
   const [busy, setBusy] = useState(false);
   const test = async () => {
     setBusy(true);
@@ -227,10 +160,9 @@ export function ConnectionCard({ s, upd, health, refresh, token, setToken }: Pro
   return (
     <section className="lm-card op-card" aria-labelledby="conn-h">
       <h2 id="conn-h">Desktop app connection</h2>
-      <ConnStatus st={st} ok={st === "ok" && health?.ok ? health : null} busy={busy} onTest={test} onRepair={editor.repair} refresh={refresh} />
-      {(st === "offline" || st === "token") && <ConnAlert st={st} port={s.port} health={health} />}
-      <div className="op-two">
-        <PortField port={s.port} upd={upd} />
+      <ConnStatus st={st} ok={st === "ok" && health?.ok ? health : null} busy={busy} onTest={test} refresh={refresh} />
+      {(st === "offline" || st === "token") && <ConnAlert st={st} port={port} health={health} />}
+      <div className="op-pair">
         <TokenField token={token} rejected={rejected} editor={editor} />
       </div>
     </section>

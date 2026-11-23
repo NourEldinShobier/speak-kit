@@ -30,26 +30,10 @@ export function dateText(at: number, now: number): string {
   return d.getFullYear() === new Date(now).getFullYear() ? base : `${base}, ${d.getFullYear()}`;
 }
 
-/** Under a row's date: "Removed in 29 days", "Removed today", or nothing when transcripts are kept for ever. */
-export function removedText(daysLeft: number | null): string {
-  if (daysLeft === null) return "";
+/** Under a row's date: "Removed in 29 days" or "Removed today". */
+export function removedText(daysLeft: number): string {
   if (daysLeft === 0) return "Removed today";
   return `Removed in ${daysLeft} ${daysLeft === 1 ? "day" : "days"}`;
-}
-
-/** "audio kept 5 more days" for a recording; nothing for an import (its audio is not kept), "audio removed" once a recording's audio is gone. */
-export function audioText(r: Pick<Row, "source" | "audioBytes" | "audioRemoved">, audioDaysLeft: number | null): string {
-  if (r.source !== "microphone") return "";
-  if (r.audioBytes === 0) return r.audioRemoved ? "audio removed" : "";
-  if (audioDaysLeft === null) return "audio kept";
-  if (audioDaysLeft <= 0) return "audio removed today";
-  return `audio kept ${audioDaysLeft} more ${audioDaysLeft === 1 ? "day" : "days"}`;
-}
-
-/** The recording timer: 00:12:48. */
-export function timerText(sec: number): string {
-  const s = Math.max(0, Math.floor(sec));
-  return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, "0")).join(":");
 }
 
 /** 148 MB, 1.2 GB, 12 KB. */
@@ -72,10 +56,8 @@ export interface Progress {
 }
 
 /** What a row that is not finished says and how far it is. */
-export function progressOf(r: Pick<Row, "status" | "chunksDone" | "chunksTotal" | "durationSec" | "queued" | "source">): Progress | null {
+export function progressOf(r: Pick<Row, "status" | "chunksDone" | "chunksTotal" | "durationSec" | "queued">): Progress | null {
   switch (r.status) {
-    case "recording":
-      return { label: "Recording", fraction: null };
     case "queued":
       return { label: r.queued && r.queued > 1 ? `Waiting, number ${r.queued} in line` : "Waiting for the speech engine", fraction: 0 };
     case "transcribing": {
@@ -118,22 +100,6 @@ export function marked(text: string, query: string): Piece[] {
   const re = new RegExp(String.raw`(?<![\p{L}\p{N}])(?:${terms.join("|")})[\p{L}\p{N}]*`, "giu");
   const ranges = [...text.matchAll(re)].map((m) => ({ from: m.index, to: m.index + m[0].length }));
   return pieces(text, ranges, 0);
-}
-
-/** "1:23", "01:02:03" or "75" (seconds) as seconds; null for anything else. */
-export function parseTime(text: string): number | null {
-  const t = text.trim();
-  if (!/^\d+(:\d{1,2}){0,2}$/.test(t)) return null;
-  const parts = t.split(":").map(Number);
-  if (parts.length > 1 && parts.slice(1).some((n) => n > 59)) return null;
-  return parts.reduce((total, n) => total * 60 + n, 0);
-}
-
-/** Index of the segment that is being spoken at `sec`: the last one that starts at or before it; 0 before the first. */
-export function segmentAt(starts: readonly number[], sec: number): number {
-  let found = 0;
-  for (let i = 0; i < starts.length; i++) if (starts[i]! <= sec) found = i;
-  return found;
 }
 
 /** The names of the transcript languages; Auto picks the language from the audio. */

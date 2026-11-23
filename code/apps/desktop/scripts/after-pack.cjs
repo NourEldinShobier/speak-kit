@@ -8,7 +8,7 @@ const path = require("node:path");
 const ARCHS = { 1: "x64", 3: "arm64" }; // electron-builder's Arch enum
 
 // Flipped here rather than through electron-builder's electronFuses option: that option runs after this hook, and changing the
-// binary after the ad-hoc signature below would invalidate it. See fusePlan for RunAsNode.
+// binary after the ad-hoc signature below would invalidate it. See fusePlan.
 async function setFuses(context) {
   const { flipFuses, FuseVersion, FuseV1Options } = await import("@electron/fuses");
   const { fusePlan } = await import("./stage-lib.mjs");
@@ -16,7 +16,7 @@ async function setFuses(context) {
   const { productFilename } = context.packager.appInfo;
   await flipFuses(path.join(context.appOutDir, mac ? `${productFilename}.app` : `${productFilename}.exe`), {
     version: FuseVersion.V1,
-    ...Object.fromEntries(Object.entries(fusePlan(mac)).map(([name, on]) => [FuseV1Options[name], on])),
+    ...Object.fromEntries(Object.entries(fusePlan()).map(([name, on]) => [FuseV1Options[name], on])),
   });
 }
 

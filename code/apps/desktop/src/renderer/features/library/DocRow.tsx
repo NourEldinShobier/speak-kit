@@ -23,7 +23,6 @@ interface RowActions {
   onOpen(): void;
   onPlay(): void;
   onRename(): void;
-  onVoice(): void;
   onFinished(): void;
   onReveal(): void;
   onDelete(): void;
@@ -60,9 +59,6 @@ function RowMenuItems({ doc, actions }: { doc: DocMeta; actions: RowActions }) {
       </DropdownMenuItem>
       <DropdownMenuItem icon="pencil" onSelect={actions.onRename}>
         {t("lib.rename")}
-      </DropdownMenuItem>
-      <DropdownMenuItem icon="microphone" onSelect={actions.onVoice}>
-        {t("lib.changeVoice")}
       </DropdownMenuItem>
       <DropdownMenuItem icon="circle-check" onSelect={actions.onFinished}>
         {doc.finished ? t("lib.markUnfinished") : t("lib.markFinished")}

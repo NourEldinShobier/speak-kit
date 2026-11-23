@@ -8,10 +8,10 @@ vi.hoisted(() => {
   (globalThis as { document?: unknown }).document = { hidden: false };
 });
 
-import { Home } from "./HomePage";
 import { loadLocale, LOCALES } from "../shared/i18n";
 import { LocaleProvider } from "./i18n";
 import { Settings } from "./settings";
+import { BrowserPage } from "./features/settings/BrowserPage";
 import { QuickTopics, SettingsResults } from "./features/settings";
 import type { ReactNode } from "react";
 
@@ -22,56 +22,46 @@ const settings = (sub: Parameters<typeof Settings>[0]["sub"], config = {}, over 
   es(<Settings s={appState({ config: parseConfig({ setupDone: true, language: "es", ...config }), ...over })} sub={sub} />);
 
 describe("language choice", () => {
-  it("shows the Home page in French and Arabic", () => {
-    const home = (choice: string) =>
-      renderToStaticMarkup(<LocaleProvider choice={choice}>{<Home s={appState({ port: 48999, health: { engine: { state: "ready" } } as never })} go={() => {}} />}</LocaleProvider>);
-    expect(home("fr")).toContain("Moteur vocal");
-    expect(home("ar")).toContain("محرك الصوت");
+  it("shows the Browser integration page in French and Arabic", () => {
+    const browser = (choice: string) =>
+      renderToStaticMarkup(
+        <LocaleProvider choice={choice}>
+          <BrowserPage s={appState()} />
+        </LocaleProvider>,
+      );
+    expect(browser("fr")).toContain("Jeton d’association");
+    expect(browser("ar")).toContain("رمز الاقتران");
   });
 });
 
 describe("pages in Spanish", () => {
-  it("Home", () => {
-    const html = es(<Home s={appState({ port: 48999, health: { engine: { state: "ready" } } as never })} go={() => {}} />);
-    for (const text of ["Inicio", "Speak Kit ejecuta un servidor de voz privado", "Servidor", "En marcha", "Escuchando en", "Motor de voz", "Instala la extensión", "Token de vinculación"])
-      expect(html).toContain(text);
-    for (const text of ["Listening on", "Install the extension", "Pairing token", "Manage"]) expect(html).not.toContain(text);
-  });
-
-  it("Home names a busy port and a failed server", () => {
-    const html = es(<Home s={appState({ portFallback: true, port: 48000, serverError: { code: "unexpected", args: { detail: "x" } } })} go={() => {}} />);
-    expect(html).toContain("El puerto 47615 está en uso");
-    expect(html).toContain("Speak Kit usa el 48000 en su lugar");
-    expect(html).toContain("No se pudo iniciar el servidor");
-  });
-
-  it("Voice and playback", () => {
-    const html = settings("voice");
-    for (const text of ["Voz y reproducción", "Vista previa", "Velocidad de la vista previa"]) expect(html).toContain(text);
-    expect(html).not.toContain("Used for previews");
+  it("Browser integration, with its single pairing step", () => {
+    const html = es(<BrowserPage s={appState()} />);
+    for (const text of ["Token de vinculación", "Cópialo aquí y pégalo en las opciones de la extensión, en General."]) expect(html).toContain(text);
+    for (const text of ["Pairing token", "Server port", "Regenerate"]) expect(html).not.toContain(text);
   });
 
   it("Shortcuts, with the names of the actions", () => {
     const html = settings("shortcuts");
-    for (const text of ["Atajos", "Leer la selección", "Reproducir o pausar", "Cambiar el atajo de Grabar una conversación", "Restablecer todos", "Vuelven a Ctrl+Alt+S, Space y R"])
+    for (const text of ["Atajos", "Leer la selección", "Reproducir o pausar", "Cambiar el atajo de Reproducir o pausar", "Restablecer todos", "Vuelven a Ctrl+Alt+S y Space"])
       expect(html).toContain(text);
     expect(html).not.toContain("Read selection");
   });
 
   it("Shortcuts, with a clash", () => {
-    const html = settings("shortcuts", {}, { shortcuts: { bindings: parseConfig({}).shortcuts, conflicts: { "record-toggle": { reason: "taken", accelerator: "Ctrl+Alt+X", suggestion: null } } } });
+    const html = settings("shortcuts", {}, { shortcuts: { bindings: parseConfig({}).shortcuts, conflicts: { "play-pause": { reason: "taken", accelerator: "Ctrl+Alt+X", suggestion: null } } } });
     expect(html).toContain("Otra aplicación usa Ctrl+Alt+X.");
   });
 
   it("Privacy", () => {
     const html = settings("privacy");
-    for (const text of ["Privacidad", "Telemetría", "Desactivada, siempre", "Acceso al micrófono", "Comprobando...", "Abrir la configuración de Windows", "Dirección"]) expect(html).toContain(text);
+    for (const text of ["Privacidad", "Acceso al micrófono", "Comprobando...", "Abrir la configuración de Windows", "Dirección"]) expect(html).toContain(text);
     expect(html).not.toContain("Microphone access");
   });
 
   it("General", () => {
     const html = settings("general");
-    for (const text of ["Abrir al iniciar sesión", "Idioma", "Importar ajustes"]) expect(html).toContain(text);
+    for (const text of ["Abrir al iniciar sesión", "Idioma"]) expect(html).toContain(text);
     expect(html).not.toContain("Launch at login");
   });
 

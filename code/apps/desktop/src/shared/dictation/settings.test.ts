@@ -8,8 +8,6 @@ const DEFAULTS = {
   enabled: false,
   hotkey: process.platform === "darwin" ? "AltRight" : "ControlRight",
   mode: "hold",
-  holdMs: 300,
-  rawHotkey: "",
   pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
   cancelKey: "Escape",
   language: "en",
@@ -19,9 +17,7 @@ const DEFAULTS = {
   microphone: "",
   avoidBluetooth: true,
   keepReady: false,
-  keepReadyMinutes: 0,
   output: "restore",
-  returnToApp: true,
   skipPauses: false,
   terms: [],
   readAs: [],
@@ -105,7 +101,7 @@ describe("settings added after the first release", () => {
   });
 
   it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
-    const m = { id: "chat", name: "Chat", apps: ["slack"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [] };
+    const m = { id: "chat", name: "Chat", apps: ["slack"], rewrite: false, terms: [] };
     expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [], sites: [] });
     expect(parseConfig({ dictation: { modes: [{ ...m, sites: ["GitHub.com ", "x.org"] }] } }).dictation.modes[0]!.sites).toEqual(["github.com", "x.org"]);
     expect(parseConfig({ dictation: { modes: [{ ...m, sites: [3] }] } }).dictation.modes[0]!.sites).toEqual([]);
@@ -148,15 +144,15 @@ describe("what the renderer may change", () => {
 
 describe("audio and output settings", () => {
   it("fall back to release-when-idle, restore the clipboard and avoid headset microphones", () => {
-    const c = parseConfig({ dictation: { keepReady: "yes", output: "paste-all", keepReadyMinutes: -3, avoidBluetooth: null } }).dictation;
-    expect(c).toMatchObject({ keepReady: false, output: "restore", keepReadyMinutes: 0, avoidBluetooth: true });
+    const c = parseConfig({ dictation: { keepReady: "yes", output: "paste-all", avoidBluetooth: null } }).dictation;
+    expect(c).toMatchObject({ keepReady: false, output: "restore", avoidBluetooth: true });
   });
 
   it("keeps good audio and output values", () => {
     const c = parseConfig({
-      dictation: { microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep" },
+      dictation: { microphone: "abc", keepReady: true, output: "keep" },
     }).dictation;
-    expect(c).toMatchObject({ microphone: "abc", keepReady: true, keepReadyMinutes: 30, output: "keep" });
+    expect(c).toMatchObject({ microphone: "abc", keepReady: true, output: "keep" });
   });
 
   it("ignores the removed sentencePause and blockSleep keys of an older config", () => {
@@ -164,6 +160,18 @@ describe("audio and output settings", () => {
     expect(c.output).toBe("keep");
     expect(c).not.toHaveProperty("sentencePause");
     expect(c).not.toHaveProperty("blockSleep");
+  });
+
+  it("loads a config that still has the removed hold-time, stay-open, return-to-app and raw-shortcut keys, gives them no effect and refuses them in a change", () => {
+    const removed = { holdMs: 500, keepReadyMinutes: 15, returnToApp: false, rawHotkey: "F7" };
+    const c = parseConfig({ dictation: { keepReady: true, ...removed } }).dictation;
+    expect(c).toEqual({ ...DEFAULTS, keepReady: true });
+    for (const [key, value] of Object.entries(removed)) expect(v.safeParse(DictationPatchSchema, { [key]: value }).success, key).toBe(false);
+  });
+
+  it("loads a mode saved with the removed insert, capitals and end choices and drops them", () => {
+    const saved = { id: "m1", name: "Code", apps: ["code"], insertMode: "type", capitals: "keep", end: "no-full-stop", rewrite: true, terms: [] };
+    expect(v.parse(DictationConfigSchema, { modes: [saved] }).modes).toEqual([{ id: "m1", name: "Code", apps: ["code"], sites: [], rewrite: true, terms: [], replacements: [] }]);
   });
 
   it("ignores the removed micExclusions and appRules keys of an older config", () => {
@@ -182,7 +190,6 @@ describe("audio and output settings", () => {
   it("accepts them in a patch and refuses bad ones", () => {
     expect(v.safeParse(DictationPatchSchema, { keepReady: true, output: "copy" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { output: "paste" }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { keepReadyMinutes: 500 }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { appRules: {} }).success).toBe(false);
     expect(v.safeParse(DictationPatchSchema, { micExclusions: [] }).success).toBe(false);
   });
@@ -205,8 +212,8 @@ describe("vocabulary, modes and rewrite in the config", () => {
   });
 
   it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
-    const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], insertMode: "paste", capitals: "keep", end: "no-full-stop", rewrite: false, terms: [] };
-    const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", capitals: "shout" }, { ...mode, id: "m3", name: "" }] }).modes;
+    const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], rewrite: false, terms: [] };
+    const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", rewrite: "yes" }, { ...mode, id: "m3", name: "" }] }).modes;
     expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], replacements: [] }]);
   });
 
@@ -224,9 +231,6 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
     // "lowercase" was a switch once; a saved file that still has it loads and the key is gone.
     expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
-    // A mode saved with capitals "lower" keeps its other settings and now keeps capitals as spoken.
-    const lowerMode = { id: "m1", name: "Chat", apps: [], insertMode: "paste", capitals: "lower", end: "keep", rewrite: false, terms: [] };
-    expect(v.parse(DictationConfigSchema, { modes: [lowerMode] }).modes[0]).toMatchObject({ name: "Chat", capitals: "keep" });
     expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
@@ -242,7 +246,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
   });
 
   it("keeps the rest of a mode when one of its words is broken, instead of losing the whole mode", () => {
-    const mode = { id: "m1", name: "Code", apps: ["code"], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
+    const mode = { id: "m1", name: "Code", apps: ["code"], rewrite: false };
     const good = { id: "t1", word: "pnpm", soundsLike: [] };
     const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
     expect(got).toEqual([{ ...mode, sites: [], replacements: [], terms: [good] }]);
@@ -254,7 +258,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
     expect(ok({ terms: [a, { ...a, id: "b", word: "KUBERNETES" }] })).toBe(false);
     expect(ok({ terms: [a, { ...a, word: "Other" }] })).toBe(false);
-    const m = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false, terms: [a, { ...a, id: "z" }] };
+    const m = { id: "m1", name: "Code", apps: [], rewrite: false, terms: [a, { ...a, id: "z" }] };
     expect(ok({ modes: [m] })).toBe(false);
     const clean = { ...m, terms: [a] };
     expect(ok({ modes: [clean, { ...clean, id: "m2", name: "code" }] })).toBe(false);
@@ -270,22 +274,23 @@ describe("vocabulary, modes and rewrite in the config", () => {
     ).toBe(false);
   });
 
-  it("keeps the default mode under its own name with no apps and refuses another mode called Default", () => {
-    const base = { apps: ["code"], insertMode: "paste", capitals: "sentence", end: "keep", rewrite: true, terms: [] };
+  it("drops a saved default mode, which is built in, and refuses a mode called Default", () => {
+    const base = { apps: ["code"], rewrite: true, terms: [] };
     const saved = v.parse(DictationConfigSchema, {
       modes: [
-        { ...base, id: "default", name: "Anything" },
+        { ...base, id: "default", name: "Default" },
         { ...base, id: "m1", name: "DEFAULT" },
+        { ...base, id: "m2", name: "Code" },
       ],
     }).modes;
-    expect(saved).toEqual([{ ...base, id: "default", name: "Default", apps: [], sites: [], replacements: [] }]);
+    expect(saved.map((m) => m.id)).toEqual(["m2"]);
     expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "m1", name: " default " }] }).success).toBe(false);
-    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Default" }] }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...base, id: "default", name: "Anything" }] }).success).toBe(false);
   });
 });
 
 describe("entries that loading leaves out", () => {
-  const mode = { id: "m1", name: "Code", apps: [], insertMode: "paste", capitals: "keep", end: "keep", rewrite: false };
+  const mode = { id: "m1", name: "Code", apps: [], rewrite: false };
   it("counts broken and repeated entries in every list, and broken words inside a kept mode", () => {
     expect(countDropped(undefined)).toBe(0);
     expect(countDropped({})).toBe(0);
@@ -296,7 +301,8 @@ describe("entries that loading leaves out", () => {
       countDropped({
         modes: [
           { ...mode, terms: [{ id: "t", word: "w", soundsLike: [] }, { id: "u" }] },
-          { ...mode, id: "m2", capitals: "shout", terms: [{ id: "x" }] },
+          { ...mode, id: "m2", rewrite: "yes", terms: [{ id: "x" }] },
+          { ...mode, id: "default", name: "Default" },
         ],
       }),
     ).toBe(2);

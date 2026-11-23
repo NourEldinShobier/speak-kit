@@ -36,8 +36,6 @@ interface MainWindowEvents {
   busy(): boolean;
   /** The system could not create the tray icon: the window cannot be hidden, because nothing would bring it back. */
   trayMissing?(): boolean;
-  /** The window was destroyed to free memory (not by a quit). */
-  onReleased?(): void;
 }
 
 /**
@@ -152,8 +150,7 @@ export class MainWindow {
     w.on("restore", () => this.#events.onVisible());
     w.on("hide", () => {
       this.#events.onHidden();
-      const delay = this.#config.engines.releaseOnClose ? 0 : HIDE_DESTROY_MS; // the setting asks for the memory back at once
-      if (delay > 0 || this.#config.engines.releaseOnClose) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), delay);
+      if (HIDE_DESTROY_MS > 0) destroyTimer = setTimeout(() => !w.isDestroyed() && !w.isVisible() && w.destroy(), HIDE_DESTROY_MS);
     });
     w.on("minimize", () => this.#events.onHidden());
     keepSizeOnMove(w);
@@ -161,7 +158,6 @@ export class MainWindow {
     w.on("close", (e) => this.#onClose(e));
     w.on("closed", () => {
       if (this.#win === w) this.#win = null;
-      if (!this.quitting) this.#events.onReleased?.();
     });
     void w.loadFile(path.join(here, "../renderer/index.html"));
   }

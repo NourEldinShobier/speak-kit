@@ -6,7 +6,7 @@ import { TRANSCRIPTS_EVENT, TRANSCRIPTS_METHODS, transcriptsChannel, type Transc
 import { TRANSCRIPTS_ARGS } from "../../shared/transcripts/contract";
 import { registerValidatedIpc } from "../ipc-register";
 import { dialogs, diskFiles, systemPorts, TestSwitches } from "./electron-ports";
-import { createDecoder, createMicHost } from "./hosts";
+import { createDecoder } from "./hosts";
 import { createTranscriptsService, type TranscriptsService } from "./service";
 
 export interface TranscriptsOptions {
@@ -16,25 +16,21 @@ export interface TranscriptsOptions {
   dictation: DictationService;
   /** The notes writer, or nothing when notes are off. */
   notes?(): Summarise | undefined;
-  /** The test hook is on: the file chooser is replaced by what the test sets, and the microphone can be refused. */
+  /** The test hook is on: the file chooser is replaced by what the test sets. */
   test: boolean;
-  /** Called when the recorder or a job changes state (the tray follows). */
-  onChange(): void;
 }
 
 export interface TranscriptsFeature extends TranscriptsService {
-  /** Tests only: the next file chooser answer, whether the microphone is refused, and what was copied or shown in the folder. */
-  testHook: { pick(file: string | null): void; pickFolder(dir: string | null): void; denyMic(on: boolean): void; revealed(): string[]; clipboard(): string };
+  /** Tests only: the next file chooser answer and what was copied. */
+  testHook: { pick(file: string | null): void; clipboard(): string };
 }
 
-/** Transcripts in the desktop app: the store, the hidden decoder and microphone pages, and the IPC the History page calls. */
+/** Transcripts in the desktop app: the store, the hidden decoder page, and the IPC the History page calls. */
 export function setupTranscripts(ctx: Ctx, o: TranscriptsOptions): TranscriptsFeature {
   const sw = new TestSwitches();
   const decoder = createDecoder({ ipcMain, distDir: o.distDir });
-  const mic = createMicHost({ ipcMain, distDir: o.distDir, micAllowed: () => !sw.micDenied });
   const service = createTranscriptsService(ctx, {
     dataDir: app.getPath("userData"),
-    documentsDir: app.getPath("documents"),
     stt: o.dictation.stt,
     model: () => ctx.config.dictation.model,
     modelName: () => {
@@ -44,14 +40,12 @@ export function setupTranscripts(ctx: Ctx, o: TranscriptsOptions): TranscriptsFe
     dictationBusy: () => o.dictation.state.status !== "idle" && o.dictation.state.status !== "error",
     ...(o.notes && { notes: o.notes }),
     files: diskFiles(decoder.decodeInPage),
-    mic,
     dialog: dialogs(o.test, sw),
     ...systemPorts(o.test, sw),
     push: (p) => {
       const c = o.parent()?.webContents;
       if (c && !c.isDestroyed()) c.send(TRANSCRIPTS_EVENT, p);
     },
-    changed: o.onChange,
   });
   registerValidatedIpc<TranscriptsMethod>(ipcMain, {
     methods: TRANSCRIPTS_METHODS,
@@ -65,13 +59,9 @@ export function setupTranscripts(ctx: Ctx, o: TranscriptsOptions): TranscriptsFe
     async dispose() {
       await service.dispose();
       decoder.dispose();
-      mic.dispose();
     },
     testHook: {
       pick: (f) => void (sw.nextPick = f),
-      pickFolder: (d) => void (sw.nextFolder = d),
-      denyMic: (on) => void (sw.micDenied = on),
-      revealed: () => sw.revealed,
       clipboard: () => sw.copied,
     },
   };

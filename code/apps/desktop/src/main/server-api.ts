@@ -1,17 +1,5 @@
 import * as v from "valibot";
-import {
-  FrameDecoder,
-  engineListSchema,
-  errorBodySchema,
-  exportJobSchema,
-  healthSchema,
-  voiceListSchema,
-  type EngineList,
-  type ExportJob,
-  type ExportRequest,
-  type Health,
-  type VoiceList,
-} from "@speakkit/protocol";
+import { FrameDecoder, errorBodySchema, exportJobSchema, healthSchema, voiceListSchema, type ExportJob, type ExportRequest, type Health, type VoiceList } from "@speakkit/protocol";
 import { DesktopFault } from "../shared/errors";
 import type { PreviewAudio } from "../shared/ipc";
 import { APP_CLIENT_HEADER } from "./pairing";
@@ -84,7 +72,6 @@ export class ServerApi {
 
   health = (signal?: AbortSignal): Promise<Health> => this.#json(healthSchema, this.#call("GET", "/v1/health", { signal }));
   voices = (): Promise<VoiceList> => this.#json(voiceListSchema, this.#call("GET", "/v1/voices"));
-  engines = (): Promise<EngineList> => this.#json(engineListSchema, this.#call("GET", "/v1/engines"));
 
   startExport = (req: ExportRequest): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("POST", "/v1/export", { body: req }));
   exportStatus = (id: string): Promise<ExportJob> => this.#json(exportJobSchema, this.#call("GET", `/v1/export/${id}`));

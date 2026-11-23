@@ -58,8 +58,8 @@ describe("importing", () => {
     expect((await lib.get(doc.id))?.blocks.map((b) => b.text)).toEqual(["Weekly update", "All green."]);
   });
 
-  it("uses the given title and voice, and refuses empty text", async () => {
-    expect(ok(await lib.importText("Hello there.", "My title", "bf_emma"))).toMatchObject({ title: "My title", voice: "bf_emma" });
+  it("uses the given title, and refuses empty text", async () => {
+    expect(ok(await lib.importText("Hello there.", "My title"))).toMatchObject({ title: "My title" });
     expect(await lib.importText("   \n ")).toMatchObject({ ok: false, reason: "empty" });
   });
 
@@ -133,20 +133,9 @@ describe("the collection", () => {
     expect((await again.list()).map((d) => [d.title, d.progress.sentence])).toEqual([["Keep", 3]]);
   });
 
-  it("saves bookmarks on a reading and keeps them across a restart", async () => {
-    const { id } = ok(await lib.importText("One. Two. Three.", "A"));
-    const marks = [{ sentence: 1, label: "Two." }];
-    expect((await lib.setBookmarks(id, marks))?.bookmarks).toEqual(marks);
-    expect((await (await make()).list())[0]?.bookmarks).toEqual(marks);
-    expect((await lib.setBookmarks(id, []))?.bookmarks).toEqual([]);
-    expect(await lib.setBookmarks("missing", marks)).toBeNull();
-  });
-
-  it("renames, sets and clears a voice, marks finished and unfinished", async () => {
+  it("renames, marks finished and unfinished", async () => {
     const { id } = ok(await lib.importText("One. Two.", "A"));
     expect((await lib.rename(id, "B"))?.title).toBe("B");
-    expect((await lib.setVoice(id, "am_adam"))?.voice).toBe("am_adam");
-    expect((await lib.setVoice(id, null))?.voice).toBeUndefined();
     expect(await lib.setFinished(id, true)).toMatchObject({ finished: true, progress: { fraction: 1 } });
     expect(await lib.setFinished(id, false)).toMatchObject({ finished: false, progress: { fraction: 0 } });
     expect(await lib.setProgress(id, { sentence: 9, fraction: 1 })).toMatchObject({ finished: true });

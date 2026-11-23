@@ -37,20 +37,3 @@ export const viewOf = (r: NotesRecord | undefined, writing: boolean): NotesView 
   if (r.failure) return { state: "failed", failure: r.failure, ...(r.doc && { doc: r.doc }) };
   return r.doc ? { state: "ready", doc: r.doc } : undefined;
 };
-
-/** The line every export with a summary ends with. */
-export const footerOf = (writer: string): string => `Summary written by ${writer}.`;
-
-const stampOf = (sec: number) => {
-  const s = Math.max(0, Math.floor(sec));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-};
-
-/** The notes as a block of text for a file: summary, then chapters. The footer names the writer. */
-export function notesBlock(doc: NoteDoc, md: boolean): string[] {
-  const h = (t: string) => (md ? `## ${t}` : t);
-  const out = [h("Summary"), doc.summary, ""];
-  if (doc.chapters.length) out.push(h("Chapters"), ...doc.chapters.map((c) => `${md ? "- " : ""}[${stampOf(c.start)}] ${c.title}`), "");
-  out.push(md ? `_${footerOf(doc.writer)}_` : footerOf(doc.writer), "");
-  return out;
-}

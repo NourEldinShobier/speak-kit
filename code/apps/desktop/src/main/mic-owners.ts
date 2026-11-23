@@ -1,4 +1,4 @@
-/** Who holds the microphone right now. Features that open it (screen look, voice chat) claim it for the time they use it; dictation waits for them. */
+/** Who holds the microphone right now. Features that open it (voice chat) claim it for the time they use it; dictation waits for them. */
 export function createMicOwners() {
   const held = new Map<symbol, string>();
   /** Returns the release function; releasing twice is harmless. */
@@ -30,23 +30,11 @@ export function createMicOwners() {
       timer = timers.set(drop, ttlMs);
     };
   };
-  /** `fn` as a function that holds the microphone for the length of each call. */
-  const holding =
-    <A extends unknown[], R>(name: string, fn: (...a: A) => Promise<R>) =>
-    async (...a: A): Promise<R> => {
-      const release = claim(name);
-      try {
-        return await fn(...a);
-      } finally {
-        release();
-      }
-    };
   return {
     claim,
     lease,
-    holding,
-    /** What the voice chat needs: its screen look holds the microphone per call, and the conversation in the browser holds it by lease. */
-    voiceChat: <A extends unknown[], R>(look: (...a: A) => Promise<R>) => ({ look: holding("Screen look", look), mic: lease("Voice chat") }),
+    /** What the voice chat needs: the conversation in the browser holds the microphone by lease. */
+    voiceChat: () => ({ mic: lease("Voice chat") }),
     owner: (): string | undefined => [...held.values()][0],
   };
 }

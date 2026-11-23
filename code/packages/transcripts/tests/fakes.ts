@@ -22,15 +22,6 @@ export class MemFs implements Fs {
     this.writes++;
     this.files.set(k(file), bytes(data));
   }
-  async append(file: string, data: Uint8Array) {
-    if (this.writes >= this.fullAfter) throw new DiskFullError();
-    this.writes++;
-    const old = this.files.get(k(file)) ?? new Uint8Array(0);
-    const next = new Uint8Array(old.length + data.length);
-    next.set(old);
-    next.set(data, old.length);
-    this.files.set(k(file), next);
-  }
   async remove(file: string) {
     this.files.delete(k(file));
   }

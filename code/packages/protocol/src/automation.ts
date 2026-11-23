@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 /**
- * Automation: what the command line tool and the MCP server ask of the running app. All routes need the bearer token.
+ * Automation: what scripts and other local apps ask of the running app. All routes need the bearer token.
  *
  *   GET  /v1/limits                 -> AutomationLimits
  *   GET  /v1/capabilities           -> Capabilities
@@ -30,7 +30,7 @@ export const AUTOMATION_ERROR_CODES = [
 ] as const;
 export type AutomationErrorCode = (typeof AUTOMATION_ERROR_CODES)[number];
 
-/** One line per code, said the same way by the command line and the MCP server. */
+/** One line per code. */
 export const AUTOMATION_ERROR_TEXT: Record<AutomationErrorCode, string> = {
   model_missing: "The speech model is not downloaded yet.",
   busy: "A recording is already running.",
@@ -73,7 +73,7 @@ export const AUTOMATION_LIMITS = {
   heartbeatMs: 15_000,
 } as const;
 
-/** Commands of this version. `parked` is named in the capability list but does nothing yet. */
+/** Commands of this version. */
 export const AUTOMATION_COMMANDS = {
   speak: "available",
   stop: "available",
@@ -83,21 +83,10 @@ export const AUTOMATION_COMMANDS = {
   export: "available",
   events: "available",
   capabilities: "available",
-  mcp: "available",
-  skill: "available",
-  dictate: "parked",
-  history: "parked",
   "live-stream": "available",
 } as const;
 export type AutomationCommand = keyof typeof AUTOMATION_COMMANDS;
 export type CommandState = (typeof AUTOMATION_COMMANDS)[AutomationCommand];
-
-/** Exit codes of the command line, the same for every command: 0 done, 1 the request failed (the code is printed), 2 wrong usage, 3 the app could not be reached or trusted us. */
-export const EXIT_CODES = { ok: 0, failed: 1, usage: 2, unreachable: 3 } as const;
-export function exitCodeFor(code: AutomationErrorCode): number {
-  if (code === "not_running" || code === "token_rejected") return EXIT_CODES.unreachable;
-  return code === "invalid_input" ? EXIT_CODES.usage : EXIT_CODES.failed;
-}
 
 export interface Capabilities {
   app: "speakkit";
@@ -105,7 +94,6 @@ export interface Capabilities {
   apiVersion: 1;
   commands: Record<AutomationCommand, CommandState>;
   errors: { code: AutomationErrorCode; message: string }[];
-  exitCodes: typeof EXIT_CODES;
 }
 
 export interface AutomationLimits {
@@ -215,9 +203,8 @@ export const capabilitiesSchema: v.GenericSchema<unknown, Capabilities> = v.obje
   app: v.literal("speakkit"),
   version: v.string(),
   apiVersion: v.literal(1),
-  commands: v.record(v.picklist(Object.keys(AUTOMATION_COMMANDS) as AutomationCommand[]), v.picklist(["available", "parked"])) as v.GenericSchema<unknown, Capabilities["commands"]>,
+  commands: v.record(v.picklist(Object.keys(AUTOMATION_COMMANDS) as AutomationCommand[]), v.picklist(["available"])) as v.GenericSchema<unknown, Capabilities["commands"]>,
   errors: v.array(v.object({ code: v.picklist(AUTOMATION_ERROR_CODES), message: v.string() })),
-  exitCodes: v.object({ ok: v.literal(0), failed: v.literal(1), usage: v.literal(2), unreachable: v.literal(3) }),
 });
 /** Body of every automation failure. */
 export const automationErrorSchema = v.object({ code: v.picklist(AUTOMATION_ERROR_CODES), error: v.object({ code: v.string(), message: v.string() }) });
@@ -238,5 +225,4 @@ export const capabilities = (version: string): Capabilities => ({
   apiVersion: 1,
   commands: { ...AUTOMATION_COMMANDS },
   errors: AUTOMATION_ERROR_CODES.map((code) => ({ code, message: AUTOMATION_ERROR_TEXT[code] })),
-  exitCodes: EXIT_CODES,
 });

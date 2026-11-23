@@ -5,7 +5,7 @@ import type { PermissionsAdapter } from "./service";
 /** The parts of Electron's systemPreferences used here. */
 export interface Prefs {
   isTrustedAccessibilityClient(prompt: boolean): boolean;
-  getMediaAccessStatus(kind: "microphone" | "screen"): string;
+  getMediaAccessStatus(kind: "microphone"): string;
   askForMediaAccess(kind: "microphone"): Promise<boolean>;
 }
 
@@ -21,7 +21,6 @@ const MAC_PANES: Record<PermissionId, string> = {
   accessibility: "Privacy_Accessibility",
   "input-monitoring": "Privacy_ListenEvent",
   microphone: "Privacy_Microphone",
-  "screen-recording": "Privacy_ScreenCapture",
 };
 
 export function macAdapter(prefs: Prefs, inputMonitoring: () => Promise<MacInputMonitoring>): PermissionsAdapter {
@@ -40,8 +39,6 @@ export function macAdapter(prefs: Prefs, inputMonitoring: () => Promise<MacInput
         }
         case "microphone":
           return media(prefs.getMediaAccessStatus("microphone"));
-        case "screen-recording":
-          return media(prefs.getMediaAccessStatus("screen"));
       }
     },
     async prompt(id) {
@@ -56,8 +53,6 @@ export function macAdapter(prefs: Prefs, inputMonitoring: () => Promise<MacInput
         case "microphone":
           await prefs.askForMediaAccess("microphone");
           return true;
-        case "screen-recording":
-          return false;
       }
     },
     settingsUrl: (id) => `x-apple.systempreferences:com.apple.preference.security?${MAC_PANES[id]}`,

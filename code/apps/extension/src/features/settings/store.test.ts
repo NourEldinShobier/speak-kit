@@ -1,7 +1,7 @@
-import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
+import { PORT_KEY, SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { defaultSettings } from "./types";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
-import { getToken, invalidateSettings, loadSettings, mergeSettings, normalizeSettings, saveSettings } from "./store";
+import { getPort, getToken, invalidateSettings, loadSettings, mergeSettings, normalizeSettings, savePort, saveSettings } from "./store";
 
 function stubChrome(sync: Record<string, unknown>, local: Record<string, unknown> = {}) {
   const area = (data: Record<string, unknown>) => ({
@@ -34,21 +34,19 @@ describe("normalizeSettings", () => {
 
   it("keeps valid values, clamps numbers and rejects wrong types and enums", () => {
     const s = normalizeSettings({
-      port: 70000,
       speed: 9,
       voice: "bm_george",
       pauseBetweenParagraphs: "huge",
-      launcher: { side: "left", y: -3, idle: "bogus", enabled: "yes" },
+      launcher: { side: "left", idle: "peek", openOn: "click", closeDelayMs: 99, widerWhileReading: false, y: -3, enabled: "yes" },
       show: { dock: false },
       highlight: { mode: "word" },
       sites: { "a.com": "never-read", "b.com": "weird" },
       unknownKey: 1,
     });
-    expect(s.port).toBe(65535);
     expect(s.speed).toBe(3);
     expect(s.voice).toBe("bm_george");
     expect(s.pauseBetweenParagraphs).toBe("short");
-    expect(s.launcher).toMatchObject({ side: "left", y: 0, idle: "peek", enabled: true });
+    expect(s.launcher).toEqual({ enabled: true, y: 0 });
     expect(s.show).toMatchObject({ dock: false, bubble: true });
     expect(s.highlight.mode).toBe("word");
     expect(s.sites).toEqual({ "a.com": "never-read" });
@@ -78,12 +76,23 @@ describe("storage round trip", () => {
     expect((await loadSettings()).speed).toBe(1.2);
     await saveSettings({ speed: 1.8, voice: "af_nicole" });
     invalidateSettings();
-    expect(await loadSettings()).toMatchObject({ speed: 1.8, voice: "af_nicole", port: 47615 });
+    expect(await loadSettings()).toMatchObject({ speed: 1.8, voice: "af_nicole" });
   });
 
-  it("repairs invalid stored data on load", async () => {
+  it("repairs invalid stored data on load and gives the removed port setting no effect", async () => {
     stubChrome({ [SETTINGS_KEY]: { speed: "fast", port: 1234 } });
-    expect(await loadSettings()).toMatchObject({ speed: 1.2, port: 1234 });
+    const s = await loadSettings();
+    expect(s.speed).toBe(1.2);
+    expect(s).not.toHaveProperty("port");
+  });
+
+  it("reads the port the app was found on from local storage, the default otherwise, and never from the old synced setting", async () => {
+    stubChrome({ [SETTINGS_KEY]: { port: 1234 } }, {});
+    expect(await getPort()).toBe(47615);
+    await savePort(47620);
+    expect(await getPort()).toBe(47620);
+    stubChrome({}, { [PORT_KEY]: 99999 });
+    expect(await getPort()).toBe(47615);
   });
 
   it("reads the token from local storage only", async () => {

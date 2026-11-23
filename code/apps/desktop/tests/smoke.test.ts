@@ -14,10 +14,10 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
 
-const SETUP_DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const SETUP_DONE = { setupDone: true, setupSkipped: false };
 
 describe("desktop app", () => {
-  it("first run: wizard, title, health at the port, token reveal and copy, quit", async () => {
+  it("first run: wizard, title, health at the port, token copy, quit", async () => {
     const { app, page, port, userData } = await start();
     expect(await page.title()).toBe("Speak Kit");
     expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe("Speak Kit");
@@ -31,13 +31,8 @@ describe("desktop app", () => {
     await page.getByRole("heading", { name: "Connect your browser" }).waitFor();
     const cont = page.getByRole("button", { name: /^Continue/ });
     expect(await cont.isDisabled()).toBe(true);
-    const tokenBox = page.getByTestId("token");
-    expect(await tokenBox.textContent()).not.toMatch(/[0-9a-f]{64}/);
-    await page.getByRole("button", { name: "Reveal" }).click();
-    const token = (await tokenBox.textContent())!;
+    const token = readFileSync(path.join(userData, "token"), "utf8").trim();
     expect(token).toMatch(/^[0-9a-f]{64}$/);
-    expect(token).toBe(readFileSync(path.join(userData, "token"), "utf8").trim());
-
     await page.getByRole("button", { name: "Copy" }).click();
     expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(token);
     await expect.poll(() => cont.isDisabled()).toBe(false);
@@ -55,35 +50,12 @@ describe("desktop app", () => {
     await cont.click();
     await page.getByRole("heading", { name: "You're all set" }).waitFor();
     await page.getByRole("button", { name: /Open Speak Kit/ }).click();
-    await page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await page.getByTestId("server-address").textContent()).toBe(`127.0.0.1:${port}`);
-    expect(await page.getByTestId("server-status").textContent()).toContain("Running");
+    await page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
 
     const proc = app.process();
     await app.close();
     await new Promise<void>((r) => (proc.exitCode !== null ? r() : proc.once("exit", () => r())));
     await expect(health(port)).rejects.toThrow();
-  });
-
-  it("home: pairing token regenerates and the old token stops working", async () => {
-    const { page, port } = await start({ config: { ...SETUP_DONE, preferredPort: 0 } });
-    await page.getByRole("heading", { name: "Home" }).waitFor();
-    await page.getByRole("button", { name: "Reveal" }).click();
-    const box = page.getByTestId("token");
-    const before = (await box.textContent())!;
-    await page.getByRole("button", { name: "Regenerate" }).click();
-    await page.waitForFunction((old) => document.querySelector("[data-testid=token]")?.getAttribute("data-revealed") === "false" && !document.body.textContent?.includes(old), before);
-    await page.getByRole("button", { name: "Reveal" }).click();
-    const after = (await box.textContent())!;
-    expect(after).toMatch(/^[0-9a-f]{64}$/);
-    expect(after).not.toBe(before);
-    const status = (t: string) =>
-      fetch(`http://127.0.0.1:${port}/v1/auth/check`, {
-        headers: { Authorization: `Bearer ${t}` },
-      }).then((r) => r.status);
-    expect(await status(before)).toBe(404);
-    expect(await status(after)).toBe(204);
-    expect((await health(port)).engine.state).toBe("ready");
   });
 
   it("voices: lists voices and previews one", async () => {
@@ -105,7 +77,7 @@ describe("desktop app", () => {
 
   it("closing the window hides it to the tray; a second launch focuses the first", async () => {
     const first = await start({ config: SETUP_DONE });
-    await first.page.getByRole("heading", { name: "Home" }).waitFor();
+    await first.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
     const visible = () => first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.isVisible()));
     expect(await visible()).toBe(false);
@@ -118,19 +90,17 @@ describe("desktop app", () => {
     await second?.cleanup();
   });
 
-  it("falls back to the next free port and tells the user", async () => {
+  it("falls back to the next free port", async () => {
     const busy = freePort();
     const blocker = net.createServer().listen(busy, "127.0.0.1");
     await new Promise((r) => blocker.once("listening", r));
     try {
       const { page } = await start({
         port: busy,
-        config: { setupDone: true, setupSkipped: false, preferredPort: busy },
+        config: SETUP_DONE,
       });
-      await page.getByRole("heading", { name: "Home" }).waitFor();
-      expect(await page.getByTestId("server-address").textContent()).toBe(`127.0.0.1:${busy + 1}`);
+      await page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
       expect((await health(busy + 1)).app).toBe("speakkit");
-      expect(await page.getByText(`Port ${busy} is in use`).count()).toBe(1);
     } finally {
       blocker.close();
     }

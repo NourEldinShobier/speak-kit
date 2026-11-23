@@ -60,32 +60,15 @@
     width var(--dur-ui, 190ms) var(--ease-spring, ease),
     opacity var(--dur-fade-in, 167ms) ease-out;
 }
-.sk-tab.sk-left {
-  right: auto;
-  left: 0;
-  border-radius: 0 var(--radius-card, 10px) var(--radius-card, 10px) 0;
-  clip-path: inset(-12px -12px -12px 0);
-}
 /* Reading: the tab is only a progress rail, 12 x 96, centred on the viewport height by edge.ts. */
 .sk-tab.is-reading {
   width: 12px;
   height: 96px;
   border-radius: 6px 0 0 6px;
 }
-.sk-tab.sk-left.is-reading {
-  border-radius: 0 6px 6px 0;
-}
 .sk-tab:focus-visible {
   outline: 2px solid var(--stroke-focus-field);
   outline-offset: 2px;
-}
-.sk-tab.is-ghost {
-  opacity: 0;
-}
-@media (hover: hover) and (pointer: fine) {
-  .sk-tab.is-ghost:hover {
-    opacity: 1;
-  }
 }
 .sk-rail {
   position: absolute;
@@ -119,17 +102,10 @@
     opacity var(--dur-fade-in, 167ms) ease-out,
     transform var(--dur-ui, 190ms) var(--ease-spring, ease);
 }
-.sk-pill.sk-left {
-  right: auto;
-  left: 14px;
-}
 .sk-pill.is-out {
   opacity: 0;
   transform: translateX(12px);
   pointer-events: none;
-}
-.sk-pill.sk-left.is-out {
-  transform: translateX(-12px);
 }
 .sk .sk-big {
   width: 44px;

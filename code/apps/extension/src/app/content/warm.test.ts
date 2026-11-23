@@ -11,7 +11,7 @@ afterAll(async () => {
   await s?.close();
 });
 
-const launcher = (side: "left" | "right") => ({ launcher: { enabled: true, side, idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 } });
+const launcher = { launcher: { enabled: true, y: 0.42 } };
 const open = async (settings: any) => {
   const page = await s.page(ARTICLE_PAGE, { settings });
   page.setDefaultTimeout(5000);
@@ -21,30 +21,20 @@ const warms = async (page: any): Promise<any[]> => (await page.evaluate(() => (w
 
 describe("warming the model before the click", () => {
   test("loading a page does not wake the model", async () => {
-    const page = await open(launcher("right"));
+    const page = await open(launcher);
     await page.waitForTimeout(600);
     expect(await warms(page)).toEqual([]);
     await page.context().close();
   });
 
   test("the pointer approaching the launcher edge warms once; moving elsewhere does not", async () => {
-    const page = await open(launcher("right"));
+    const page = await open(launcher);
     const { width, height } = page.viewportSize()!;
     await page.mouse.move(width / 2, height * 0.42);
     await page.mouse.move(width - 300, height * 0.9);
     expect(await warms(page)).toEqual([]);
     await page.mouse.move(width - 40, height * 0.42);
     await page.mouse.move(width - 20, height * 0.45);
-    expect(await warms(page)).toEqual([{ t: "warm", reason: "hover" }]);
-    await page.context().close();
-  });
-
-  test("a launcher on the left warms near the left edge", async () => {
-    const page = await open(launcher("left"));
-    const { width, height } = page.viewportSize()!;
-    await page.mouse.move(width - 20, height * 0.42);
-    expect(await warms(page)).toEqual([]);
-    await page.mouse.move(15, height * 0.42);
     expect(await warms(page)).toEqual([{ t: "warm", reason: "hover" }]);
     await page.context().close();
   });

@@ -18,7 +18,7 @@ export interface LanguageChoice {
   model: ModelCard;
   /** "Uses Parakeet v3, 356 MB. Very fast. 1 wrong word in 18 (English test)." */
   detail: string;
-  /** The model is already on this computer (installed, or found on disk): nothing to download. */
+  /** The model is already on this computer: nothing to download. */
   noDownload: boolean;
 }
 
@@ -28,7 +28,7 @@ const SLOW_SECONDS = 3;
 const EXTRA: Record<string, string> = { auto: "Slower, handles mixed languages. It can mistranscribe close languages." };
 
 /** What the person is told about choosing a language: which model that picks, how big it is, and how good it is, with its test language. */
-export function languageChoice(view: SpeechModelsView, language: string, foundIds: readonly string[] = []): LanguageChoice | undefined {
+export function languageChoice(view: SpeechModelsView, language: string): LanguageChoice | undefined {
   const row = view.table.find((r) => r.language === language);
   const model = row && view.models.find((m) => m.id === row.recommended);
   if (!row || !model) return undefined;
@@ -36,7 +36,7 @@ export function languageChoice(view: SpeechModelsView, language: string, foundId
   const quality = model.accuracy ? `${accuracyText(model, language).replace(/^About /, "")}.` : "";
   const slow = model.speedSeconds !== undefined && model.speedSeconds > SLOW_SECONDS ? ` Slow on this computer: ${secondsText(model.speedSeconds).toLowerCase()} for ten seconds of speech.` : "";
   const detail = `Uses ${model.name}, ${sizeText(model.bytes)}. ${EXTRA[language] ?? `${speed}${quality}`}${slow}`.trim();
-  return { language, title: languageName(language), model, detail, noDownload: model.installed || foundIds.includes(model.id) };
+  return { language, title: languageName(language), model, detail, noDownload: model.installed };
 }
 
 export interface ChecklistRow {
@@ -121,7 +121,6 @@ export function practiceStage(i: PracticeInput): PracticeStage {
 }
 
 /** What Continue does on the language screen: the model is used from disk, or downloaded now (never before this press). */
-export function afterLanguage(choice: LanguageChoice, found: boolean): "use" | "adopt" | "download" {
-  if (choice.model.installed) return "use";
-  return found ? "adopt" : "download";
+export function afterLanguage(choice: LanguageChoice): "use" | "download" {
+  return choice.model.installed ? "use" : "download";
 }

@@ -49,7 +49,7 @@ export function notesRunner({ d, quit, reindex, store, settle, writing, failure 
       const doc: NoteDoc | undefined = r?.ok ? { ...r.notes, writer: r.writer, at: d.now() } : prev?.doc;
       await store.saveNotes(id, { ...(doc && { doc }), ...(bad && { failure: bad }) });
       // The writer's title replaces only the one the transcript got on its own, never a name the person chose.
-      const own = now.title === provisionalTitle({ source: now.source, ...(now.sourceName && { name: now.sourceName }), at: now.createdAt });
+      const own = now.title === provisionalTitle({ ...(now.sourceName && { name: now.sourceName }), at: now.createdAt });
       const next = await settle(id, { notes: bad ? "failed" : "ready", ...(r?.ok && own && { title: r.notes.title.slice(0, 200) }) });
       if (next && next.title !== now.title) await reindex(next);
       return bad ? { ok: false, failure: bad } : { ok: true };

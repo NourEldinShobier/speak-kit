@@ -29,31 +29,31 @@ const json = (res: http.ServerResponse, status: number, body: unknown) => {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 };
-const LIST = { active: "kokoro", engines: [{ id: "kokoro", name: "Kokoro", state: "ready" }] };
+const LIST = { voices: [{ id: "af_heart", name: "Heart", lang: "en-US", gender: "female", quality: "A" }], default: "af_heart" };
 
 describe("ServerApi", () => {
-  it("lists engines with the bearer token and validates the answer", async () => {
+  it("lists voices with the bearer token and validates the answer", async () => {
     const { api, seen } = await stub((_r, _b, res) => json(res, 200, LIST));
-    expect(await api.engines()).toEqual(LIST);
-    expect(seen).toEqual([{ method: "GET", url: "/v1/engines", auth: "Bearer tok", body: "" }]);
+    expect(await api.voices()).toEqual(LIST);
+    expect(seen).toEqual([{ method: "GET", url: "/v1/voices", auth: "Bearer tok", body: "" }]);
   });
 
   it("turns the server's error body into a ServerError with status, code and the server's detail", async () => {
     const { api } = await stub((_r, _b, res) => json(res, 404, { error: { code: "not-found", message: "no such endpoint" } }));
-    await expect(api.engines()).rejects.toMatchObject({ status: 404, code: "not-found", error: { code: "server-error", args: { status: 404, detail: "no such endpoint" } } });
-    await expect(api.engines()).rejects.toBeInstanceOf(ServerError);
+    await expect(api.voices()).rejects.toMatchObject({ status: 404, code: "not-found", error: { code: "server-error", args: { status: 404, detail: "no such endpoint" } } });
+    await expect(api.voices()).rejects.toBeInstanceOf(ServerError);
   });
 
   it("reports a non-JSON failure by its status", async () => {
     const { api } = await stub((_r, _b, res) => {
       res.writeHead(502).end("bad gateway");
     });
-    await expect(api.engines()).rejects.toMatchObject({ status: 502, code: "internal", error: { code: "server-error", args: { status: 502, detail: null } } });
+    await expect(api.voices()).rejects.toMatchObject({ status: 502, code: "internal", error: { code: "server-error", args: { status: 502, detail: null } } });
   });
 
   it("rejects an answer of the wrong shape instead of passing it on", async () => {
-    const { api } = await stub((_r, _b, res) => json(res, 200, { active: "kokoro", engines: "none" }));
-    await expect(api.engines()).rejects.toThrow();
+    const { api } = await stub((_r, _b, res) => json(res, 200, { voices: "none" }));
+    await expect(api.voices()).rejects.toThrow();
   });
 
   it("export: start, status, audio bytes and cancel", async () => {

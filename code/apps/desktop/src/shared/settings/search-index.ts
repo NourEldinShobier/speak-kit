@@ -40,4 +40,4 @@ export function splitMatch(label: string, q: string): { before: string; match: s
 }
 
 /** Quick topics shown under an empty search field. */
-export const QUICK_TOPICS: readonly string[] = ["Shortcuts", "Microphone", "Memory", "Updates", "Logs"];
+export const QUICK_TOPICS: readonly string[] = ["Shortcuts", "Microphone", "Language", "Updates", "Logs"];

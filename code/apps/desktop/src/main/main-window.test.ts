@@ -42,7 +42,7 @@ import { MainWindow } from "./main-window";
 import type { Config } from "../shared/schemas";
 
 const make = (setupDone = true, busy = false, trayMissing = false) =>
-  new MainWindow({ setupDone, engines: { releaseOnClose: false } } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy, trayMissing: () => trayMissing });
+  new MainWindow({ setupDone } as Config, { onVisible: () => {}, onHidden: () => {}, busy: () => busy, trayMissing: () => trayMissing });
 
 describe("MainWindow and the macOS Dock", () => {
   it("closing the window hides the Dock icon and keeps the app alive", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { marked, parseTime, segmentAt, audioText, dateText, lengthText, matchText, pieces, progressOf, removedText, sizeText, timerText } from "./model";
+import { marked, dateText, lengthText, matchText, pieces, progressOf, removedText, sizeText } from "./model";
 
 describe("lengthText", () => {
   it.each([
@@ -30,33 +30,15 @@ describe("dateText", () => {
   });
 });
 
-describe("removedText and audioText", () => {
+describe("removedText", () => {
   it("counts days", () => {
     expect(removedText(29)).toBe("Removed in 29 days");
     expect(removedText(1)).toBe("Removed in 1 day");
     expect(removedText(0)).toBe("Removed today");
-    expect(removedText(null)).toBe("");
-  });
-  it("says how long a recording's audio is kept", () => {
-    const rec = { source: "microphone" as const, audioBytes: 5, audioRemoved: false };
-    expect(audioText(rec, 5)).toBe("audio kept 5 more days");
-    expect(audioText(rec, 1)).toBe("audio kept 1 more day");
-    expect(audioText(rec, 0)).toBe("audio removed today");
-    expect(audioText(rec, null)).toBe("audio kept");
-    expect(audioText({ ...rec, audioBytes: 0, audioRemoved: true }, 3)).toBe("audio removed");
-    expect(audioText({ source: "file", audioBytes: 0, audioRemoved: true }, 3)).toBe("");
-    expect(audioText({ source: "file", audioBytes: 9, audioRemoved: false }, 3)).toBe("");
-    expect(audioText({ source: "file", audioBytes: 0, audioRemoved: false }, 3)).toBe("");
   });
 });
 
-describe("timerText and sizeText", () => {
-  it("timer", () => {
-    expect(timerText(0)).toBe("00:00:00");
-    expect(timerText(768.9)).toBe("00:12:48");
-    expect(timerText(3 * 3600 + 5)).toBe("03:00:05");
-    expect(timerText(-4)).toBe("00:00:00");
-  });
+describe("sizeText", () => {
   it.each([
     [0, "0 B"],
     [1023, "1023 B"],
@@ -70,12 +52,11 @@ describe("timerText and sizeText", () => {
 });
 
 describe("progressOf", () => {
-  const base = { chunksDone: 0, chunksTotal: 0, durationSec: 0, source: "file" as const };
+  const base = { chunksDone: 0, chunksTotal: 0, durationSec: 0 };
   it("a job that is not finished says where it is", () => {
     expect(progressOf({ ...base, status: "queued" })).toEqual({ label: "Waiting for the speech engine", fraction: 0 });
     expect(progressOf({ ...base, status: "queued", queued: 3 })).toEqual({ label: "Waiting, number 3 in line", fraction: 0 });
     expect(progressOf({ ...base, status: "queued", queued: 1 })!.label).toBe("Waiting for the speech engine");
-    expect(progressOf({ ...base, status: "recording" })).toEqual({ label: "Recording", fraction: null });
     expect(progressOf({ ...base, status: "transcribing" })).toEqual({ label: "Preparing", fraction: 0 });
     expect(progressOf({ ...base, status: "transcribing", chunksDone: 3, chunksTotal: 4, durationSec: 1200 })).toEqual({ label: "15 of 20 min transcribed", fraction: 0.75 });
     expect(progressOf({ ...base, status: "transcribing", chunksDone: 1, chunksTotal: 2, durationSec: 20 })!.label).toBe("0 of 1 min transcribed");
@@ -130,27 +111,5 @@ describe("marked", () => {
     expect(marked("plain text", "")).toEqual([{ text: "plain text", hit: false }]);
     expect(marked("", "x")).toEqual([]);
     expect(marked("abc", "zzz")).toEqual([{ text: "abc", hit: false }]);
-  });
-});
-
-describe("parseTime and segmentAt", () => {
-  it.each([
-    ["1:23", 83],
-    ["01:02:03", 3723],
-    ["75", 75],
-    [" 0:05 ", 5],
-    ["1:60", null],
-    ["a", null],
-    ["", null],
-    ["1:2:3:4", null],
-    ["-1", null],
-  ])("%s is %s", (t, n) => expect(parseTime(t)).toBe(n));
-  it("finds the segment being spoken", () => {
-    expect(segmentAt([0, 30, 65], 0)).toBe(0);
-    expect(segmentAt([0, 30, 65], 29.9)).toBe(0);
-    expect(segmentAt([0, 30, 65], 30)).toBe(1);
-    expect(segmentAt([0, 30, 65], 9999)).toBe(2);
-    expect(segmentAt([10, 30], 5)).toBe(0);
-    expect(segmentAt([], 5)).toBe(0);
   });
 });

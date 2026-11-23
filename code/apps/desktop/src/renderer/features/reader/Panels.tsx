@@ -1,18 +1,14 @@
 import { Button, Icon, IconButton, TextInput } from "@speakkit/ui";
-import type { Bookmark } from "../../../shared/library/contract";
 import type { OutlineItem } from "./model";
 
 interface OutlineProps {
   items: OutlineItem[];
-  bookmarks: Bookmark[];
   current: number;
   onPick(block: number): void;
-  onPickBookmark(sentence: number): void;
-  onRemoveBookmark(sentence: number): void;
   onClose(): void;
 }
 
-export function OutlinePanel({ items, bookmarks, current, onPick, onPickBookmark, onRemoveBookmark, onClose }: OutlineProps) {
+export function OutlinePanel({ items, current, onPick, onClose }: OutlineProps) {
   const active = items.findLast((o) => o.block <= current);
   return (
     <aside className="rd-outline" aria-label="Outline">
@@ -30,23 +26,6 @@ export function OutlinePanel({ items, bookmarks, current, onPick, onPickBookmark
             </button>
           ))}
         </nav>
-      )}
-      <div className="rd-outline__head">
-        <b>Bookmarks</b>
-      </div>
-      {bookmarks.length === 0 ? (
-        <p className="rd-muted">No bookmarks yet. Use the bookmark button to save a place.</p>
-      ) : (
-        <ul className="rd-bookmarks" aria-label="Bookmarks">
-          {bookmarks.map((b) => (
-            <li key={b.sentence}>
-              <button type="button" className="rd-outline__item" onClick={() => onPickBookmark(b.sentence)}>
-                {b.label}
-              </button>
-              <IconButton name="x" label={`Remove bookmark: ${b.label}`} size={28} onClick={() => onRemoveBookmark(b.sentence)} />
-            </li>
-          ))}
-        </ul>
       )}
     </aside>
   );

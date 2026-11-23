@@ -24,9 +24,6 @@ files:
   - "!**/node_modules/.bin"
 
 extraResources:
-  # The command line: speakkit.cmd (Windows) and speakkit (macOS) start the app own runtime in Node mode on dist/cli/speakkit.js and pass its exit code on.
-  - from: cli-shim
-    to: bin
   # The Chrome extension, unpacked, for "Load unpacked" (Settings > Browser > Install the extension).
   - from: ../extension/dist-pack
     to: extension
@@ -64,7 +61,6 @@ mac:
     NSAppleEventsUsageDescription: Speak Kit presses Cmd+C in the app you are reading from to get the text you selected.
     NSMicrophoneUsageDescription: Speak Kit listens to your microphone while you hold the dictation key, and turns what you say into text.
     # Dictation's key listener and paste keys are granted under Input Monitoring and Accessibility; macOS shows its own prompt for those.
-    NSScreenCaptureUsageDescription: Speak Kit reads the text on your screen when you ask it to read what you are looking at.
 
 dmg:
   title: Speak Kit ${version}

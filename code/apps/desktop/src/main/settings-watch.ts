@@ -10,7 +10,6 @@ export function watchSettings(d: HandlerDeps, file: string, log: { warn(...a: un
   return watchConfigFile({
     file,
     current: () => d.config,
-    keep: process.env.SPEAKKIT_PORT ? ["preferredPort"] : [], // this run's port comes from the environment, not from the file
     onEdit: (edit) => {
       if (edit.kind === "newer") return;
       d.addActivity("info", "Settings changed outside the app", `Picked up: ${edit.keys.join(", ")}.`);

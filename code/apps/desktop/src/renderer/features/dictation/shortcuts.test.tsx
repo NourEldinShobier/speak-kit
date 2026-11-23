@@ -8,7 +8,7 @@ vi.hoisted(() => {
 });
 
 import { ShortcutsSections } from "./ShortcutsSection";
-import { allShortcuts, conflictText, explainerFrames, isDefault, modeRules, shortcutLead } from "./shortcuts-model";
+import { allShortcuts, conflictText, isDefault, shortcutLead } from "./shortcuts-model";
 
 const base: DictationStatus = {
   supported: true,
@@ -20,8 +20,6 @@ const base: DictationStatus = {
     enabled: true,
     hotkey: "ControlRight",
     mode: "hold",
-    holdMs: 300,
-    rawHotkey: "",
     pasteLastHotkey: "ControlLeft+AltLeft+KeyV",
     cancelKey: "Escape",
     language: "auto",
@@ -52,11 +50,11 @@ const text = (s: DictationStatus) =>
 const buttonOf = (html: string, name: string) => html.match(new RegExp(`<button[^>]*aria-label="${name}"[^>]*>`))?.[0] ?? "missing";
 
 describe("shortcuts page", () => {
-  it("shows every row of the default state, with Restore default disabled and nothing set", () => {
+  it("shows every row of the default state, with Restore default disabled", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
     const t = text(base);
-    for (const s of ["Dictation shortcut", "Right Ctrl", "Shortcut mode", "Hold or double-tap", "Hold time", "300 ms", "Add shortcut", "Not set", "Dictate without processing", "Paste last dictation"])
-      expect(t).toContain(s);
+    for (const s of ["Dictation shortcut", "Right Ctrl", "Shortcut mode", "Hold or double-tap", "Paste last dictation"]) expect(t).toContain(s);
+    for (const s of ["Hold time", "Dictate without processing", "How Hold or double-tap works", "Add shortcut"]) expect(t).not.toContain(s);
     expect(buttonOf(html, "Restore the default Dictation shortcut")).toContain("disabled");
     expect(t).toContain("Hold the key to talk. Let go to insert the text.");
     expect(t).not.toContain("Second shortcut");
@@ -65,14 +63,7 @@ describe("shortcuts page", () => {
 
   it("gives every control an accessible name", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
-    for (const name of ["Change Dictation shortcut", "Add shortcut: Dictate without processing", "Change Paste last dictation"]) expect(html).toContain(`aria-label="${name}"`);
-  });
-
-  it("shows a set raw shortcut with Remove", () => {
-    const t = text(withSettings({ rawHotkey: "AltRight" }));
-    expect(t).toContain("Right Alt");
-    expect(t).toContain("Remove");
-    expect(t).not.toContain("Add shortcut");
+    for (const name of ["Change Dictation shortcut", "Change Paste last dictation"]) expect(html).toContain(`aria-label="${name}"`);
   });
 
   it("enables Restore default once Paste last is changed", () => {
@@ -80,10 +71,9 @@ describe("shortcuts page", () => {
     expect(buttonOf(html, "Restore the default Paste last dictation")).not.toContain("disabled");
   });
 
-  it("explains the mode that is selected, and the amber banner says a clashing shortcut was cleared", () => {
+  it("words the mode that is selected, and the amber banner says a clashing shortcut was cleared", () => {
     const t = text(withSettings({ mode: "tap-or-hold", resetNotice: "clash" }));
-    expect(t).toContain("How Tap or hold works");
-    expect(t).toContain("Only your shortcut ends a dictation");
+    expect(t).toContain("Hold the key to talk, or tap it to start and tap again to finish.");
     expect(t).toContain("A shortcut was reset");
     expect(t).toContain("Two shortcuts shared a key, so the extra one was cleared.");
   });
@@ -103,15 +93,8 @@ describe("shortcuts page", () => {
 });
 
 describe("shortcut model", () => {
-  it("has a rule list and a lead for each mode, and a frame for each kind of press", () => {
-    for (const mode of ["hold", "hold-only", "toggle", "double-tap", "tap-or-hold"] as const) {
-      expect(modeRules(mode, 300).length).toBeGreaterThan(0);
-      expect(shortcutLead[mode].length).toBeGreaterThan(10);
-      expect(explainerFrames(mode).length).toBeGreaterThan(0);
-    }
-    expect(explainerFrames("double-tap")).toEqual(["double"]);
-    expect(modeRules("tap-or-hold", 300)[0]).toEqual({ label: "Hold longer than 300 ms", text: "Dictates until you let go, then inserts the text.", badge: "Hold" });
-    expect(modeRules("hold-only", 500)[1]?.label).toBe("Press shorter than 500 ms");
+  it("has a lead for each mode", () => {
+    for (const mode of ["hold", "hold-only", "toggle", "double-tap", "tap-or-hold"] as const) expect(shortcutLead[mode].length).toBeGreaterThan(10);
   });
 
   it("collects every shortcut, including the reader ones, and words a conflict", () => {

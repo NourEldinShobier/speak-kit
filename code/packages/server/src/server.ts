@@ -23,7 +23,7 @@ import { pageContextRoutes } from "./routes/page-context";
 import { speakRoutes } from "./routes/speak";
 import { statusRoutes } from "./routes/status";
 import { StreamQueue } from "./stream-queue";
-import { LOOKS_PER_WINDOW, MintLimiter, type VoiceChatService } from "./voice-chat";
+import { MintLimiter, type VoiceChatService } from "./voice-chat";
 import { voiceChatRoutes } from "./routes/voice-chat";
 
 export interface ServerOptions {
@@ -120,7 +120,6 @@ function createServices(opts: ServerOptions, plain: PlainOptions, env: Env): Ser
     events: { open: 0 },
     heartbeatMs: opts.heartbeatMs ?? AUTOMATION_LIMITS.heartbeatMs,
     mintLimiter: new MintLimiter(),
-    lookLimiter: new MintLimiter(LOOKS_PER_WINDOW),
     deadlines,
   };
 }

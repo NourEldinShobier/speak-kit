@@ -99,7 +99,7 @@ interface BodyProps {
 }
 
 function List({ view, ui, hits, speed, now, dispatch, open, refresh }: Omit<BodyProps, "loaded" | "pickFiles">) {
-  const dialog = (kind: "rename" | "voice" | "delete", doc: DocMeta) => dispatch({ type: "dialog", dialog: { kind, doc } });
+  const dialog = (kind: "rename" | "delete", doc: DocMeta) => dispatch({ type: "dialog", dialog: { kind, doc } });
   return (
     <ul className="lib-list" onKeyDown={onArrowKeys(".lib-row__main")}>
       {view.visible.map((d) => (
@@ -114,7 +114,6 @@ function List({ view, ui, hits, speed, now, dispatch, open, refresh }: Omit<Body
             onOpen: () => open(d, false),
             onPlay: () => open(d),
             onRename: () => dialog("rename", d),
-            onVoice: () => dialog("voice", d),
             onFinished: () => void library.setFinished(d.id, !d.finished).then(refresh),
             onReveal: () => void library.showInFolder(d.id),
             onDelete: () => dialog("delete", d),

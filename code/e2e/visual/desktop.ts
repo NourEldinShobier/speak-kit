@@ -11,7 +11,7 @@ declare global {
 
 /** Content size inside the 1 px window border (window 1280x800). */
 const WIN = { width: 1278, height: 798 };
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const SLOW = { SPEAKKIT_FAKE_LATENCY_MS: "250" };
 
 const TEXT = [
@@ -60,7 +60,7 @@ const openReader = async (p: Page) => {
   await p.evaluate(async (list) => {
     for (const [name, text] of list) await window.speakkitLibrary.importBytes(name, new TextEncoder().encode(text));
   }, docs);
-  await p.getByRole("link", { name: "Home" }).click();
+  await p.getByRole("link", { name: "Dictation", exact: true }).first().click();
   await p.getByRole("link", { name: "Library" }).click();
   await p.getByRole("heading", { name: "Library" }).waitFor();
   await p.getByRole("button", { name: "Open Why local-first matters" }).click();

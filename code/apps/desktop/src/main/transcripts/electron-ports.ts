@@ -5,12 +5,9 @@ import type { TranscriptsPorts } from "./service";
 import { at } from "../../shared/i18n";
 import "../../shared/i18n/packs/main";
 
-/** What a test sets instead of using the real file chooser, the file manager and the clipboard, and what it reads back. */
+/** What a test sets instead of using the real file chooser, the recycle bin and the clipboard, and what it reads back. */
 export class TestSwitches {
   nextPick: string | null | undefined;
-  nextFolder: string | null | undefined;
-  micDenied = false;
-  readonly revealed: string[] = [];
   readonly recycled: string[] = [];
   copied = "";
 }
@@ -40,25 +37,20 @@ const audioFilters = () => [
   { name: at("filter.allFiles"), extensions: ["*"] },
 ];
 
-/** The file and folder choosers; with the test hook on, a test's answer replaces the dialog. */
+/** The file chooser; with the test hook on, a test's answer replaces the dialog. */
 export function dialogs(test: boolean, sw: TestSwitches): TranscriptsPorts["dialog"] {
   const answer = async (options: Electron.OpenDialogOptions): Promise<string | null> => {
     const r = await dialog.showOpenDialog(options);
     return r.canceled ? null : (r.filePaths[0] ?? null);
   };
-  return {
-    pickFile: async () => (test && sw.nextPick !== undefined ? sw.nextPick : answer({ properties: ["openFile"], filters: audioFilters() })),
-    pickFolder: async () => (test && sw.nextFolder !== undefined ? sw.nextFolder : answer({ properties: ["openDirectory", "createDirectory"] })),
-  };
+  return { pickFile: async () => (test && sw.nextPick !== undefined ? sw.nextPick : answer({ properties: ["openFile"], filters: audioFilters() })) };
 }
 
-/** Show in folder, open a folder and the clipboard; with the test hook on they are recorded instead. */
+/** The recycle bin and the clipboard; with the test hook on they are recorded instead. */
 export function systemPorts(test: boolean, sw: TestSwitches): Pick<TranscriptsPorts, "shell" | "clipboard"> {
   return {
     shell: {
-      reveal: (file) => (test ? void sw.revealed.push(file) : shell.showItemInFolder(file)),
       trash: async (file) => (test ? void sw.recycled.push(file) : shell.trashItem(file)),
-      openFolder: async (dir) => void (await shell.openPath(dir)),
     },
     clipboard: { writeText: (t) => (test ? void (sw.copied = t) : clipboard.writeText(t)) },
   };

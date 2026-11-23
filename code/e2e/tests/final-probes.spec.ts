@@ -4,23 +4,6 @@ import { startApp } from "../support/servers";
 import { readTab } from "../support/probe";
 
 test.describe("release probes", () => {
-  test("changing the port in Options points the extension at the app on the new port", async ({ ext, app }) => {
-    ext.allowed.push(/ERR_CONNECTION_REFUSED|Failed to fetch/);
-    const opt = await ext.pair(app);
-    await app.stop();
-    const moved = await startApp({ token: app.token });
-    try {
-      await opt.getByRole("button", { name: "Test connection" }).click();
-      await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "offline", { timeout: 10_000 });
-      await opt.locator("#port").fill(String(moved.port));
-      await opt.locator("#port").press("Tab");
-      await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "ok", { timeout: 15_000 });
-      expect((await ext.settings()).port).toBe(moved.port);
-    } finally {
-      await moved.stop();
-    }
-  });
-
   test("a new token on the same port: the popup asks for the token and a new pairing works", async ({ ext, app }) => {
     ext.allowed.push(/401|Unauthorized/i);
     await ext.pair(app);

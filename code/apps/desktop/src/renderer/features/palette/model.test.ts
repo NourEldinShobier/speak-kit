@@ -21,8 +21,8 @@ describe("commands", () => {
     expect([c.title, c.icon, c.action]).toEqual(["Open Dictation", "keyboard", { type: "nav", page: "dictation" }]);
   });
   it("has a page command for every menu item and a settings command for every settings page", () => {
-    expect(all.filter((c) => c.group === "Pages")).toHaveLength(9);
-    expect(all.filter((c) => c.group === "Settings")).toHaveLength(12);
+    expect(all.filter((c) => c.group === "Pages")).toHaveLength(8);
+    expect(all.filter((c) => c.group === "Settings")).toHaveLength(8);
   });
   it("builds readings with minutes and voices with a Voice hint", () => {
     expect(all.find((c) => c.id === "d-d1")).toMatchObject({ group: "Readings", hint: "2 min", action: { type: "open-doc", id: "d1" } });
@@ -45,17 +45,19 @@ describe("filter", () => {
     expect(titles("example.com")).toEqual(["Meeting notes 12 Nov", "Chapter 4 draft"]);
   });
   it("matches keywords and requires every word", () => {
-    expect(titles("idle")).toEqual(["Settings: Performance"]);
-    expect(titles("settings performance")).toEqual(["Settings: Performance"]);
-    expect(titles("performance zzz")).toEqual([]);
+    expect(titles("contrast")).toEqual(["Settings: Accessibility"]);
+    expect(titles("settings accessibility")).toEqual(["Settings: Accessibility"]);
+    expect(titles("accessibility zzz")).toEqual([]);
   });
   it("ranks a title that starts with the word first", () => {
-    expect(titles("pause")[0]).toBe("Pause");
+    expect(titles("dictation")[0]).toBe("Open Dictation");
   });
-  it("offers the system actions", () => {
-    expect(filterCommands(all, "clipboard")).toEqual([]);
-    expect(filterCommands(all, "mp3")[0]!.action).toEqual({ type: "export" });
-    expect(filterCommands(all, "chrome")[0]!.action).toEqual({ type: "install-extension" });
+  it("has no action commands: nothing to pause, export, load, update, install, copy or open", () => {
+    for (const q of ["pause", "mp3", "chrome", "clipboard", "engine", "updates", "token", "log folder"])
+      expect(filterCommands(all, q).filter((c) => c.group !== "Settings" && c.group !== "Pages")).toEqual([]);
+    expect(all.some((c) => c.group === ("Actions" as string))).toBe(false);
+  });
+  it("finds settings pages by their keywords", () => {
     expect(filterCommands(all, "global keys")[0]!.action).toEqual({ type: "nav", page: "settings", sub: "shortcuts" });
     expect(filterCommands(all, "browser integration")[0]!.action).toEqual({ type: "nav", page: "settings", sub: "browser" });
   });
@@ -69,18 +71,20 @@ describe("filter", () => {
 });
 
 describe("view", () => {
-  it("empty query shows Recent from the defaults, then the other actions, and no voices", () => {
+  it("empty query shows Recent from the defaults and no voices", () => {
     const v = paletteView(all, "", []);
     expect(v.best).toBeNull();
-    expect(v.sections.map((s) => s.label)).toEqual(["Recent", "Actions"]);
-    expect(v.sections[0]!.items.map((c) => c.title)).toEqual(["Open Dictation", "Play or pause reading", "Export audio"]);
-    expect(v.sections[1]!.items.map((c) => c.title)).not.toContain("Export audio");
+    expect(v.sections.map((s) => s.label)).toEqual(["Recent"]);
+    expect(v.sections[0]!.items.map((c) => c.title)).toEqual(["Open Dictation", "Open Library", "Open Voices"]);
     expect(v.flat.some((c) => c.group === "Voices" || c.group === "Readings")).toBe(false);
     expect(DEFAULT_RECENT).toHaveLength(3);
   });
   it("shows the commands that were run, newest first, and skips ids that no longer exist", () => {
-    const v = paletteView(all, "", ["logs", "gone", "pause"]);
-    expect(v.sections[0]!.items.map((c) => c.id)).toEqual(["logs", "pause"]);
+    const v = paletteView(all, "", ["page-voices", "gone", "page-library"]);
+    expect(v.sections[0]!.items.map((c) => c.id)).toEqual(["page-voices", "page-library"]);
+  });
+  it("falls back to the defaults when every remembered id is gone, such as the removed actions", () => {
+    expect(paletteView(all, "", ["logs", "pause"]).sections[0]!.items.map((c) => c.id)).toEqual(DEFAULT_RECENT);
   });
   it("a query gives the best match first, then the rest grouped by kind", () => {
     const v = paletteView(all, "e", []);
@@ -111,23 +115,6 @@ describe("command table", () => {
     const { action, ...c } = all.find((x) => x.id === id)!;
     return [c.group, c.title, c.does, c.icon, c.keywords, action];
   };
-  it("every action has its literal title, description, icon and keywords", () => {
-    expect(row("pause")).toEqual(["Actions", "Pause", "Pauses the reading that is playing.", "player-pause", "stop playback", { type: "pause" }]);
-    expect(row("toggle-reading")).toEqual(["Actions", "Play or pause reading", "Plays or pauses the current reading.", "player-play", "resume mini player", { type: "toggle-reading" }]);
-    expect(row("export")).toEqual(["Actions", "Export audio", "Opens the export dialog to save speech as an audio file.", "download", "save mp3 wav file", { type: "export" }]);
-    expect(row("load-engine")).toEqual(["Actions", "Load the voice engine now", "Loads the voice engine into memory so the next reading starts at once.", "cpu", "wake warm", { type: "load-engine" }]);
-    expect(row("check-updates")).toEqual(["Actions", "Check for updates", "Looks for a newer version of Speak Kit.", "refresh", "version upgrade", { type: "check-updates" }]);
-    expect(row("install-extension")).toEqual([
-      "Actions",
-      "Install the extension",
-      "Opens Browser integration, where you add the extension.",
-      "brand-chrome",
-      "chrome edge browser load unpacked",
-      { type: "install-extension" },
-    ]);
-    expect(row("copy-token")).toEqual(["Actions", "Copy pairing token", "Copies the token the extension needs to the clipboard.", "copy", "browser extension key", { type: "copy-token" }]);
-    expect(row("logs")).toEqual(["Actions", "Open log folder", "Shows the folder with the log files.", "folder", "debug", { type: "open-logs" }]);
-  });
   it("page and settings commands say what they open", () => {
     expect(row("page-library")).toEqual(["Pages", "Open Library", "Opens the Library page.", "book", expect.any(String), { type: "nav", page: "library" }]);
     expect(row("s-shortcuts")).toEqual(["Settings", "Settings: Shortcuts", "Opens Settings on Shortcuts.", "keyboard", expect.any(String), { type: "nav", page: "settings", sub: "shortcuts" }]);
@@ -145,7 +132,15 @@ describe("command table", () => {
 });
 
 describe("ranking", () => {
-  const cmd = (id: string, title: string, keywords?: string): Command => ({ id, group: "Actions", title, does: "", icon: "bell", action: { type: "pause" }, ...(keywords ? { keywords } : {}) });
+  const cmd = (id: string, title: string, keywords?: string): Command => ({
+    id,
+    group: "Pages",
+    title,
+    does: "",
+    icon: "bell",
+    action: { type: "nav", page: "library" },
+    ...(keywords ? { keywords } : {}),
+  });
   const rank = (list: Command[], q: string) => filterCommands(list, q).map((c) => c.id);
   it("orders by start of title, start of a word, inside a word, then keyword only", () => {
     const list = [cmd("kw", "Zebra", "alpha"), cmd("mid", "Xalpha"), cmd("word", "Big alpha"), cmd("start", "Alpha one")];
@@ -158,26 +153,19 @@ describe("ranking", () => {
   });
   it("matches the group name as a keyword", () => {
     expect(filterCommands(all, "voices").some((c) => c.group === "Voices")).toBe(true);
-    expect(rank([cmd("x", "Thing")], "actions")).toEqual(["x"]);
+    expect(rank([cmd("x", "Thing")], "pages")).toEqual(["x"]);
   });
   it("shows the commands run before in place of the defaults, and falls back to the defaults for an empty list", () => {
-    expect(paletteView(all, "  ", ["logs"]).sections[0]).toMatchObject({ label: "Recent" });
-    expect(paletteView(all, "", ["logs"]).sections[0]!.items.map((c) => c.id)).toEqual(["logs"]);
+    expect(paletteView(all, "  ", ["page-voices"]).sections[0]).toMatchObject({ label: "Recent" });
+    expect(paletteView(all, "", ["page-voices"]).sections[0]!.items.map((c) => c.id)).toEqual(["page-voices"]);
     expect(paletteView(all, "", []).sections[0]!.items.map((c) => c.id)).toEqual(DEFAULT_RECENT);
-  });
-  it("Actions on open leaves out the recent ones and lists only actions", () => {
-    const v = paletteView(all, "", ["logs"]);
-    const actions = v.sections.find((s) => s.label === "Actions")!.items;
-    expect(actions.every((c) => c.group === "Actions")).toBe(true);
-    expect(actions.map((c) => c.id)).not.toContain("logs");
-    expect(actions).toHaveLength(7);
   });
 });
 
 describe("remaining literals", () => {
   it("a voice previews that voice and a query with tabs or repeated spaces splits into words", () => {
     expect(all.find((c) => c.id === "v-af_bella")!.action).toEqual({ type: "preview", voice: "af_bella" });
-    expect(titles("settings 	  performance")).toEqual(["Settings: Performance"]);
+    expect(titles("settings 	  accessibility")).toEqual(["Settings: Accessibility"]);
   });
   it("each section holds only commands of its own group, in list order", () => {
     const v = paletteView(all, "o", []);
@@ -188,7 +176,7 @@ describe("remaining literals", () => {
     expect(buildCommands().filter((c) => c.group === "Readings" || c.group === "Voices")).toEqual([]);
   });
   it("a command without keywords still matches its title and group, and equal scores keep list order", () => {
-    const a = { id: "a", group: "Pages", title: "Same", does: "", icon: "bell", action: { type: "pause" } } as Command;
+    const a = { id: "a", group: "Pages", title: "Same", does: "", icon: "bell", action: { type: "nav", page: "library" } } as Command;
     const b = { ...a, id: "b" } as Command;
     expect(filterCommands([b, a], "same").map((c) => c.id)).toEqual(["b", "a"]);
     expect(filterCommands([a], "pages")).toEqual([a]);

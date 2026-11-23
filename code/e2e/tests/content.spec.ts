@@ -152,49 +152,25 @@ test.describe("edge launcher", () => {
     void b3;
   });
 
-  test("the pill closes after the close delay when the pointer leaves", async ({ ext, app }) => {
+  test("the pill closes 1.5 s after the pointer leaves it", async ({ ext, app }) => {
     await ext.pair(app);
-    await ext.setSettings({ launcher: { closeDelayMs: 400 } });
     const page = await ext.open("/article");
     await expect(sk(page, "launcher-tab")).toBeVisible({ timeout: 8000 });
     await sk(page, "launcher-tab").hover();
     await expect(sk(page, "launcher-pill")).toBeVisible();
     await page.mouse.move(300, 300);
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(600);
     await expect(sk(page, "launcher-pill")).toBeVisible(); // still within the delay
     await expect(sk(page, "launcher-pill")).toHaveCount(0, { timeout: 3000 });
   });
 
-  test("open on click: hover alone does not open it", async ({ ext, app }) => {
-    await ext.pair(app);
-    await ext.setSettings({ launcher: { openOn: "click" } });
-    const page = await ext.open("/article");
-    await expect(sk(page, "launcher-tab")).toBeVisible({ timeout: 8000 });
-    await sk(page, "launcher-tab").hover();
-    await page.waitForTimeout(500);
-    await expect(sk(page, "launcher-pill")).toHaveCount(0);
-    await sk(page, "launcher-tab").click();
-    await expect(sk(page, "launcher-pill")).toBeVisible();
-  });
-
-  test("side setting applies live to an open page", async ({ ext, app }) => {
+  test("the tab sits on the right edge and hover opens the pill", async ({ ext, app }) => {
     await ext.pair(app);
     const page = await ext.open("/article");
     await expect(sk(page, "launcher-tab")).toBeVisible({ timeout: 8000 });
     const vw = page.viewportSize()!.width;
     expect((await sk(page, "launcher-tab").boundingBox())!.x).toBeGreaterThan(vw - 40);
-    await ext.setSettings({ launcher: { side: "left" } });
-    await expect.poll(async () => (await sk(page, "launcher-tab").boundingBox())?.x ?? 999).toBeLessThan(5);
-  });
-
-  test("idle mode 'hidden' keeps the tab invisible until hover", async ({ ext, app }) => {
-    await ext.pair(app);
-    await ext.setSettings({ launcher: { idle: "hidden" } });
-    const page = await ext.open("/article");
-    const tab = sk(page, "launcher-tab");
-    await expect(tab).toHaveClass(/ghost/, { timeout: 8000 });
-    expect(await tab.evaluate((e) => getComputedStyle(e).opacity)).toBe("0");
-    await tab.hover();
+    await sk(page, "launcher-tab").hover();
     await expect(sk(page, "launcher-pill")).toBeVisible();
   });
 

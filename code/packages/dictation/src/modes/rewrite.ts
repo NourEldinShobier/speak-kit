@@ -5,7 +5,7 @@ export const DEFAULT_REWRITE_DEADLINE_MS = 4000;
 export const MIN_REWRITE_DEADLINE_MS = 1000;
 export const MAX_REWRITE_DEADLINE_MS = 15_000;
 
-/** The mode's choices about capitals and the final full stop, which the rewrite must not undo. */
+/** The clean-up choices about capitals and the final full stop, which the rewrite must not undo. */
 export interface RewriteStyle {
   capitals: "sentence" | "keep";
   stripFinalStop: boolean;

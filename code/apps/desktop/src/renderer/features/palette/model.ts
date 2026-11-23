@@ -5,19 +5,8 @@ import type { DocMeta } from "../../../shared/library/contract";
 import { MENU, SETTINGS_NAV } from "../../routes";
 import { ENGLISH, type Translator } from "../../i18n";
 
-export type PaletteGroup = "Actions" | "Pages" | "Settings" | "Readings" | "Voices";
-export type PaletteAction =
-  | { type: "nav"; page: Page; sub?: SettingsSub | undefined }
-  | { type: "open-doc"; id: string }
-  | { type: "pause" }
-  | { type: "toggle-reading" }
-  | { type: "export" }
-  | { type: "check-updates" }
-  | { type: "install-extension" }
-  | { type: "load-engine" }
-  | { type: "copy-token" }
-  | { type: "open-logs" }
-  | { type: "preview"; voice: string };
+export type PaletteGroup = "Pages" | "Settings" | "Readings" | "Voices";
+export type PaletteAction = { type: "nav"; page: Page; sub?: SettingsSub | undefined } | { type: "open-doc"; id: string } | { type: "preview"; voice: string };
 
 export interface Command {
   id: string;
@@ -32,24 +21,10 @@ export interface Command {
 }
 
 /** Commands shown under "Recent" until the person has run any. */
-export const DEFAULT_RECENT = ["page-dictation", "toggle-reading", "export"];
+export const DEFAULT_RECENT = ["page-dictation", "page-library", "page-voices"];
 export const MAX_RECENT_COMMANDS = 3;
 const MAX_RESULTS = 30;
 const READ_WORDS_PER_MIN = 160;
-
-const ACTION_ROWS = [
-  ["pause", "player-pause", "stop playback", "pause"],
-  ["toggle-reading", "player-play", "resume mini player", "toggle-reading"],
-  ["export", "download", "save mp3 wav file", "export"],
-  ["load-engine", "cpu", "wake warm", "load-engine"],
-  ["check-updates", "refresh", "version upgrade", "check-updates"],
-  ["install-extension", "brand-chrome", "chrome edge browser load unpacked", "install-extension"],
-  ["copy-token", "copy", "browser extension key", "copy-token"],
-  ["logs", "folder", "debug", "open-logs"],
-] as const;
-
-const actionCommands = ({ t }: Translator): Command[] =>
-  ACTION_ROWS.map(([id, icon, keywords, type]) => ({ id, group: "Actions", title: t(`pal.${id}`), does: t(`pal.${id}Does`), icon, keywords, action: { type } as PaletteAction }));
 
 const pageCommands = ({ t, label }: Translator) => {
   const pages = MENU.flatMap((g) => g.items).map<Command>((i) => ({
@@ -107,7 +82,7 @@ const voiceCommands = (voices: Voice[], { t }: Translator) => {
 
 /** Every command in the given language (English by default); the group ids stay English, the screen translates them. */
 export function buildCommands(voices: Voice[] = [], docs: DocMeta[] = [], tr: Translator = ENGLISH): Command[] {
-  return [...actionCommands(tr), ...pageCommands(tr), ...settingsCommands(tr), ...readingCommands(docs, tr), ...voiceCommands(voices, tr)];
+  return [...pageCommands(tr), ...settingsCommands(tr), ...readingCommands(docs, tr), ...voiceCommands(voices, tr)];
 }
 
 /** Cost of a title match: none at the start, 1 at a word start, 3 inside a word. */
@@ -155,16 +130,12 @@ export interface PaletteView {
 /** Moves the id of a command to the front of the recent list: no repeats, newest first, at most MAX_RECENT_COMMANDS. */
 export const rememberCommand = (recent: string[], id: string): string[] => [id, ...recent.filter((r) => r !== id)].slice(0, MAX_RECENT_COMMANDS);
 
-/** What the palette shows. Empty query: Recent (commands run before, else the defaults) and the other actions. Otherwise: the best match, then the rest grouped by kind. */
+/** What the palette shows. Empty query: Recent (commands run before, else the defaults). Otherwise: the best match, then the rest grouped by kind. */
 export function paletteView(all: Command[], query: string, recent: string[]): PaletteView {
   if (!query.trim()) {
-    const known = recent.length ? recent : DEFAULT_RECENT;
-    const rec = known.map((id) => all.find((c) => c.id === id)).filter((c): c is Command => !!c);
-    const recIds = new Set(rec.map((c) => c.id));
-    const sections = [
-      { label: "Recent", items: rec },
-      { label: "Actions", items: all.filter((c) => c.group === "Actions" && !recIds.has(c.id)) },
-    ].filter((s) => s.items.length);
+    const known = (ids: string[]) => ids.map((id) => all.find((c) => c.id === id)).filter((c): c is Command => !!c);
+    const rec = known(recent).length ? known(recent) : known(DEFAULT_RECENT);
+    const sections = [{ label: "Recent", items: rec }].filter((s) => s.items.length);
     return { best: null, sections, flat: sections.flatMap((s) => s.items) };
   }
   const hits = filterCommands(all, query);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { listenWithFallback } from "./ports";
+import { listenWithFallback, startPort } from "./ports";
 
 const inUse = () => Object.assign(new Error("busy"), { code: "EADDRINUSE" });
 
@@ -26,5 +26,14 @@ describe("listenWithFallback", () => {
   it("gives up after the tries are used", async () => {
     const busy = { listen: () => Promise.reject(inUse()) };
     await expect(listenWithFallback(50000, () => busy, 3)).rejects.toMatchObject({ error: { code: "no-free-port", args: { from: 50000, to: 50002 } } });
+  });
+});
+
+describe("startPort", () => {
+  it("is the default port, or SPEAKKIT_PORT when the environment sets one (tests and the development app)", () => {
+    expect(startPort({})).toBe(47615);
+    expect(startPort({ SPEAKKIT_PORT: "48123" })).toBe(48123);
+    expect(startPort({ SPEAKKIT_PORT: "" })).toBe(47615);
+    expect(startPort({ SPEAKKIT_PORT: "abc" })).toBe(47615);
   });
 });

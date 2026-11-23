@@ -17,8 +17,6 @@ function RenderingBody({ job }: { job: ExportView }) {
       <p className="sk-modal-text">{text}</p>
       <ul className="sk-export__files" aria-label={t("export.filesWritten")}>
         <li>{job.name}</li>
-        {job.captions ? <li data-testid="export-plan-captions">{t("export.captionsItem", { name: `${job.name.replace(/\.[^.]+$/, "")}.${job.captions}` })}</li> : null}
-        {job.chapters ? <li data-testid="export-plan-chapters">{t("export.chaptersItem")}</li> : null}
       </ul>
       <ProgressBar block className="sk-export__bar" value={Math.round(job.progress * 100)} label={t("export.barLabel", { name: job.name })} />
       <p className="sk-modal-text">{t("export.background")}</p>
@@ -40,8 +38,7 @@ function DoneBody({ job }: { job: ExportView }) {
         {job.durationMs ? ` · ${t("export.seconds", { n: Math.round(job.durationMs / 1000) })}` : ""}
       </p>
       <ul className="sk-export__files" aria-label={t("export.filesSaved")}>
-        <li>{job.chapterCount ? t("export.withChapters", { name: job.name, n: job.chapterCount }) : job.name}</li>
-        {job.captionsPath ? <li data-testid="export-captions">{t("export.withCaptions", { name: job.captionsPath.split(/[/\\]/).pop() ?? "", n: job.captionCount ?? 0 })}</li> : null}
+        <li>{job.name}</li>
       </ul>
       <div className="sk-row-actions">
         <code className="sk-path" title={job.path}>

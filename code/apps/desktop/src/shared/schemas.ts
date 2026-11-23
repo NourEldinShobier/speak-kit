@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { DEFAULT_PORT, DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICES } from "@speakkit/protocol";
+import { DEFAULT_VOICE, DEFAULT_VOICE_CHAT_VOICE, VOICE_CHAT_VOICES } from "@speakkit/protocol";
 import { normalizeApiKey } from "./voice-chat";
 import { UPDATE_ACTIONS } from "./updates";
 import { DictationConfigSchema } from "./dictation/settings";
@@ -7,10 +7,6 @@ import { TranscriptsConfigSchema } from "./transcripts/settings";
 import { EnginesConfigSchema } from "./speech-models/config";
 import { DEFAULT_SHORTCUTS, SHORTCUT_IDS, checkAccelerator, normalize } from "./shortcuts";
 import { LANGUAGE_CHOICES } from "./i18n";
-
-/** Idle-unload choices shown in Settings > Memory; the value is what is stored. */
-export const IDLE_CHOICES = ["1", "5", "15", "never"] as const;
-export type IdleChoice = (typeof IDLE_CHOICES)[number];
 
 const UNWRAPPED = new WeakMap<object, v.GenericSchema>();
 /** v.fallback that remembers the schema it wraps, so the settings loader can tell which stored fields were invalid. */
@@ -35,7 +31,6 @@ const accelerator = (id: (typeof SHORTCUT_IDS)[number]) =>
 const ShortcutsSchema = v.object({
   "read-selection": accelerator("read-selection"),
   "play-pause": accelerator("play-pause"),
-  "record-toggle": accelerator("record-toggle"),
 });
 
 const EXPORT_FORMATS = ["wav", "mp3"] as const;
@@ -45,10 +40,8 @@ const ExportPrefsSchema = fb(
     format: fb(v.picklist(EXPORT_FORMATS), "mp3"),
     mp3Kbps: fb(v.picklist(MP3_KBPS), 192),
     folder: fb(v.pipe(v.string(), v.maxLength(1024)), ""),
-    captions: fb(v.picklist(["none", "srt", "vtt"]), "none"),
-    chapters: fb(v.boolean(), false),
   }),
-  { format: "mp3", mp3Kbps: 192, folder: "", captions: "none", chapters: false },
+  { format: "mp3", mp3Kbps: 192, folder: "" },
 );
 export type ExportPrefs = v.InferOutput<typeof ExportPrefsSchema>;
 
@@ -60,24 +53,17 @@ const WhatsNewSchema = v.object({
   notes: fb(v.array(v.pipe(v.string(), v.maxLength(200))), []),
 });
 
-const port = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(65535));
-
 /** Persisted config (userData/config.json). Every field falls back to its default so a hand-edited or old file never breaks startup. */
 export const ConfigSchema = v.object({
   setupDone: bool(false),
   setupSkipped: bool(false),
   /** The setup step the person was on when the window closed, so setup resumes there. */
   setupStep: fb(v.picklist([0, 1, 2, 3, 4]), 0),
-  preferredPort: fb(port, DEFAULT_PORT),
   language: fb(v.picklist(LANGUAGE_CHOICES), "system"),
   appearance: fb(v.picklist(APPEARANCES), "system"),
   updateChannel: fb(v.picklist(UPDATE_CHANNELS), "stable"),
-  experiments: fb(v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()), {}),
   appliedMigrations: fb(v.array(v.pipe(v.string(), v.maxLength(64))), []),
   configVersion: fb(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-  idleUnload: fb(v.picklist(IDLE_CHOICES), "5"),
-  batterySaver: bool(true),
-  autoUpdate: bool(true),
   /** The notes of the update that was downloaded last, for the What is new page once that version runs. */
   whatsNew: fb(WhatsNewSchema, () => v.parse(WhatsNewSchema, {})),
   shortcuts: fb(ShortcutsSchema, v.parse(ShortcutsSchema, {})),
@@ -104,10 +90,6 @@ export const ConfigPatchSchema = v.partial(
     language: v.picklist(LANGUAGE_CHOICES),
     appearance: v.picklist(APPEARANCES),
     updateChannel: v.picklist(UPDATE_CHANNELS),
-    experiments: v.record(v.pipe(v.string(), v.maxLength(64)), v.boolean()),
-    idleUnload: v.picklist(IDLE_CHOICES),
-    batterySaver: v.boolean(),
-    autoUpdate: v.boolean(),
     exportPrefs: ExportPrefsSchema,
     voice: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
     speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(3)),
@@ -131,8 +113,6 @@ const ExportOptionsSchema = v.object({
   dir: v.pipe(v.string(), v.maxLength(1024)),
   name: v.pipe(v.string(), v.minLength(1), v.maxLength(120)),
   conflict: v.optional(v.picklist(["replace", "keep-both"])),
-  captions: v.optional(v.picklist(["none", "srt", "vtt"])),
-  chapters: v.optional(v.boolean()),
 });
 
 const EXTERNAL_LINKS = ["webstore", "release-notes", "issues", "security"] as const;
@@ -142,10 +122,7 @@ const OPEN_PATHS = ["models", "logs", "data"] as const;
 export const ARGS = {
   state: v.tuple([]),
   applySettings: v.tuple([v.record(v.pipe(v.string(), v.maxLength(80)), v.unknown())]),
-  importSettings: v.tuple([]),
   setLaunchAtLogin: v.tuple([v.boolean()]),
-  setPort: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535))]),
-  regenerateToken: v.tuple([]),
   retryEngine: v.tuple([]),
   downloadModel: v.tuple([]),
   voices: v.tuple([]),
@@ -161,8 +138,6 @@ export const ARGS = {
   reader: v.tuple([ReaderCommandSchema]),
   readerStarted: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
   readerDone: v.tuple([v.pipe(v.number(), v.integer()), v.pipe(v.number(), v.integer())]),
-  warmEngine: v.tuple([]),
-  engines: v.tuple([]),
   updateAction: v.tuple([v.picklist(UPDATE_ACTIONS)]),
   exportCheck: v.tuple([v.pipe(v.string(), v.maxLength(1024)), v.pipe(v.string(), v.maxLength(120)), v.picklist(EXPORT_FORMATS)]),
   exportStart: v.tuple([ExportOptionsSchema]),
@@ -183,10 +158,7 @@ export const ARGS = {
   voiceChatRemoveKey: v.tuple([]),
   voiceChatTestKey: v.tuple([]),
   diagnosticsLog: v.tuple([v.pipe(v.number(), v.integer(), v.minValue(0))]),
-  diagnosticsReport: v.tuple([]),
-  clearActivity: v.tuple([]),
   dismissSettingsNotice: v.tuple([]),
   micAccess: v.tuple([]),
   openSystemSettings: v.tuple([v.literal("microphone")]),
-  restartApp: v.tuple([]),
 } as const;

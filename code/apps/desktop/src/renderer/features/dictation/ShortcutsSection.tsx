@@ -5,48 +5,9 @@ import { hotkeyText } from "../../../shared/dictation/keys";
 import type { DictationPatch } from "../../../shared/dictation/settings";
 import { patchDictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
-import { explainerFrames, HOLD_TIME_OPTIONS, MODE_OPTIONS, modeRules, modeTitle, resetNoticeText, shortcutLead } from "./shortcuts-model";
+import { MODE_OPTIONS, resetNoticeText, shortcutLead } from "./shortcuts-model";
 
 const patch = (p: DictationPatch) => patchDictation(p);
-
-const FRAME_LABEL = { hold: "Hold, then let go", tap: "Tap, then tap again", double: "Press twice quickly" } as const;
-
-/** The keycap and the timeline for one kind of press. Static under reduced motion. */
-function Frame({ kind }: { kind: "hold" | "tap" | "double" }) {
-  const label = FRAME_LABEL[kind];
-  return (
-    <figure className="dict-frame" data-kind={kind}>
-      <span className="dict-frame__cap" aria-hidden="true">
-        <i />
-        {kind === "double" && <i />}
-      </span>
-      <figcaption>{label}</figcaption>
-    </figure>
-  );
-}
-
-function Explainer({ s }: { s: DictationStatus }) {
-  const c = s.settings;
-  const rules = modeRules(c.mode, c.holdMs);
-  return (
-    <SettingsSection title={`How ${modeTitle(c.mode)} works`} description="One shortcut, and what each kind of press does.">
-      <div className="lm-row dict-frames" aria-hidden={false}>
-        {explainerFrames(c.mode).map((k) => (
-          <Frame key={k} kind={k} />
-        ))}
-      </div>
-      {!s.supported && (
-        <SettingRow
-          label="Not available on this computer yet"
-          description="Shortcuts need a system-wide key listener, which this platform does not have yet. The settings are kept for when it arrives."
-        />
-      )}
-      {rules.map((r) => (
-        <SettingRow key={r.label} label={r.label} description={r.text} control={<span className="dict-badge">{r.badge}</span>} />
-      ))}
-    </SettingsSection>
-  );
-}
 
 function AdvancedKeysDialog({ ask, close }: { ask: { hotkey: string; resolve(ok: boolean): void } | null; close(ok: boolean): void }) {
   return (
@@ -104,12 +65,6 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
         description="How the shortcut starts and stops a dictation."
         control={<Select label="Shortcut mode" value={c.mode} onChange={(m) => void patch({ mode: m as typeof c.mode })} options={MODE_OPTIONS} />}
       />
-      <SettingRow
-        className="lm-row--control"
-        label="Hold time"
-        description="A press shorter than this is ignored. No tone, nothing pasted."
-        control={<Select label="Hold time" value={String(c.holdMs)} onChange={(ms) => void patch({ holdMs: Number(ms) as typeof c.holdMs })} options={HOLD_TIME_OPTIONS} />}
-      />
       {(c.mode === "toggle" || c.mode === "tap-or-hold") && <CancelKeyRow s={s} />}
     </SettingsSection>
   );
@@ -119,12 +74,6 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
   const c = s.settings;
   return (
     <SettingsSection title="Other shortcuts">
-      <SettingRow
-        className="lm-row--control"
-        label="Dictate without processing"
-        description="The same dictation with clean-up and replacements off. Not set until you record one."
-        control={<HotkeyRecorder slot="raw" label="Dictate without processing" value={c.rawHotkey} remove status={s} save={(rawHotkey) => patch({ rawHotkey })} confirmAdvanced={confirm} />}
-      />
       <SettingRow
         className="lm-row--control"
         label="Paste last dictation"
@@ -145,7 +94,7 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
   );
 }
 
-/** Dictation shortcut, mode, hold time, cancel key, the explainer and the other shortcuts. */
+/** Dictation shortcut, mode, cancel key and the other shortcuts. */
 export function ShortcutsSections({ s }: { s: DictationStatus }) {
   const [ask, setAsk] = useState<{ hotkey: string; resolve(ok: boolean): void } | null>(null);
   const confirm = (hotkey: string) => new Promise<boolean>((resolve) => setAsk({ hotkey, resolve }));
@@ -158,8 +107,12 @@ export function ShortcutsSections({ s }: { s: DictationStatus }) {
           {resetNoticeText[notice]}
         </Banner>
       )}
+      {!s.supported && (
+        <Banner tone="info" title="Not available on this computer yet">
+          Shortcuts need a system-wide key listener, which this platform does not have yet. The settings are kept for when it arrives.
+        </Banner>
+      )}
       <Primary s={s} confirm={confirm} />
-      <Explainer s={s} />
       <AdvancedKeysDialog ask={ask} close={close} />
       <Others s={s} confirm={confirm} />
     </>

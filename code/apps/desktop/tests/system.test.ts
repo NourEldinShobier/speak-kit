@@ -21,7 +21,7 @@ const outDir = () => {
   tmpDirs.push(d);
   return d;
 };
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 const hook = <T>(l: Launched, fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
 const hide = (l: Launched) => l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());
@@ -40,52 +40,52 @@ const until = async (f: () => Promise<boolean> | boolean, ms = 15_000) => {
 };
 
 describe("global shortcuts (the OS is simulated; a real key press cannot be sent from here)", () => {
-  it("the three defaults are registered", async () => {
+  it("the two defaults are registered", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+R", "Ctrl+Alt+S", "Ctrl+Alt+Space"]);
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
+    expect(await hook<string[]>(l, "registeredShortcuts")).toEqual(["Ctrl+Alt+S", "Ctrl+Alt+Space"]);
   });
 
   it("the recorder rebinds a key, rejects a bad combination, and Escape cancels", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await settings(l, "Shortcuts");
-    const row = l.page.locator('[data-shortcut="record-toggle"]');
-    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
+    const row = l.page.locator('[data-shortcut="play-pause"]');
+    await row.getByRole("button", { name: "Change Play or pause shortcut" }).click();
     await l.page.getByTestId("recording").waitFor();
     await l.page.keyboard.press("Escape");
     await l.page.getByTestId("recording").waitFor({ state: "detached" });
 
-    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
+    await row.getByRole("button", { name: "Change Play or pause shortcut" }).click();
     await l.page.keyboard.press("KeyA"); // no modifier
     await l.page.getByTestId("shortcut-problem").getByText("Use Ctrl or Alt together with another key.").waitFor();
     await l.page.keyboard.press("Control+Alt+KeyQ");
     await row.getByText("Q", { exact: true }).waitFor();
-    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+Q");
+    await expect.poll(() => configOf(l).shortcuts["play-pause"]).toBe("Ctrl+Alt+Q");
     expect(await hook<string[]>(l, "registeredShortcuts")).toContain("Ctrl+Alt+Q");
-    expect(await hook<string[]>(l, "registeredShortcuts")).not.toContain("Ctrl+Alt+R");
+    expect(await hook<string[]>(l, "registeredShortcuts")).not.toContain("Ctrl+Alt+Space");
 
     await l.page.getByRole("button", { name: "Reset" }).click();
-    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+R");
+    await expect.poll(() => configOf(l).shortcuts["play-pause"]).toBe("Ctrl+Alt+Space");
   });
 
   it("a combination another app owns is reported with one alternative and never taken silently", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await hook(l, "foreignShortcuts", ["Ctrl+Alt+Q"]);
     await settings(l, "Shortcuts");
-    const row = l.page.locator('[data-shortcut="record-toggle"]');
-    await row.getByRole("button", { name: "Change Record a conversation shortcut" }).click();
+    const row = l.page.locator('[data-shortcut="play-pause"]');
+    await row.getByRole("button", { name: "Change Play or pause shortcut" }).click();
     await l.page.keyboard.press("Control+Alt+KeyQ");
     const problem = row.getByTestId("shortcut-problem");
     await problem.getByText("Another app is using it.").waitFor();
     await problem.getByRole("button", { name: "Use Ctrl+Alt+Shift+Q" }).click();
-    await expect.poll(() => configOf(l).shortcuts["record-toggle"]).toBe("Ctrl+Alt+Shift+Q");
+    await expect.poll(() => configOf(l).shortcuts["play-pause"]).toBe("Ctrl+Alt+Shift+Q");
   });
 
   it("a conflict at start-up shows on its row", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await hook(l, "foreignShortcuts", ["Ctrl+Alt+S"]);
     await settings(l, "Shortcuts");
     await l.page.locator('[data-shortcut="read-selection"]').getByText("Another app is using Ctrl+Alt+S.").waitFor();
@@ -97,7 +97,7 @@ describe("mini player and tray", () => {
 
   it("plays, pauses, resumes, steps, and the tray follows; finished goes away on its own", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_LATENCY_MS: "150" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const mini = newWindow(l, "mini.html");
     await hook(l, "readText", TEXT);
     const m = await mini;
@@ -125,17 +125,16 @@ describe("mini player and tray", () => {
 
   it("the tray menu has the short model: wake appears when the engine sleeps", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const labels = async () => (await hook<{ label: string }[]>(l, "trayItems")).filter((i) => i.label);
     expect((await labels()).map((i) => i.label)).toContain("Load the voice engine now");
   });
 });
 
 describe("export audio", () => {
+  /** Opens the export dialog the way the app shell is told to by the main process, then types the text to export. */
   const writeNote = async (l: Launched) => {
-    await l.page.keyboard.press("Control+K");
-    await l.page.getByRole("combobox", { name: "Type a command or search" }).fill("export audio");
-    await l.page.keyboard.press("Enter");
+    await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.send("speakkit:ui", { type: "export", text: "" }));
     await l.page.getByRole("dialog", { name: "Export audio" }).waitFor();
     await l.page.getByRole("textbox", { name: "Text to export" }).fill("Exporting is simple. Each sentence is rendered once. Then the file is saved.");
   };
@@ -143,7 +142,7 @@ describe("export audio", () => {
   it("WAV: renders with progress, saves the file, shows where, and a toast follows when the window is hidden", async () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "250" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await writeNote(l);
     await l.page.getByRole("textbox", { name: "File name" }).fill("My note");
     expect(await l.page.getByTestId("export-estimate").textContent()).toMatch(/About \d+ KB/);
@@ -163,7 +162,7 @@ describe("export audio", () => {
   it("MP3: encoded in the worker thread, with an MPEG frame header", async () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "mp3", mp3Kbps: 128, folder: dir } } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await writeNote(l);
     await l.page.getByRole("textbox", { name: "File name" }).fill("Spoken");
     await l.page.getByRole("button", { name: "Export", exact: true }).click();
@@ -177,7 +176,7 @@ describe("export audio", () => {
   it("an existing file asks: Keep both writes beside it; Replace overwrites", async () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await writeNote(l);
     await l.page.getByRole("textbox", { name: "File name" }).fill("Same");
     await l.page.getByRole("button", { name: "Export", exact: true }).click();
@@ -201,14 +200,11 @@ describe("export audio", () => {
     expect(readdirSync(dir).sort()).toEqual(["Same (2).wav", "Same.wav"]);
   }, 90_000);
 
-  it("Cancel export stops the job and leaves no file; the palette opens the dialog too", async () => {
+  it("Cancel export stops the job and leaves no file", async () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "700" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
-    await l.page.keyboard.press("Control+K");
-    await l.page.getByRole("combobox").fill("export audio");
-    await l.page.keyboard.press("Enter");
-    await l.page.getByRole("dialog", { name: "Export audio" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
+    await writeNote(l);
     await l.page.getByRole("textbox", { name: "Text to export" }).fill("A long reading. With several sentences. Rendered slowly. For the cancel test.");
     await l.page.getByRole("button", { name: "Export", exact: true }).click();
     await l.page.getByTestId("export-progress").waitFor();
@@ -220,7 +216,7 @@ describe("export audio", () => {
   it("Quit lists the exports that would stop", async () => {
     const dir = outDir();
     const l = await start({ config: { ...DONE, exportPrefs: { format: "wav", mp3Kbps: 192, folder: dir } }, env: { SPEAKKIT_FAKE_LATENCY_MS: "700" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await writeNote(l);
     await l.page.getByRole("button", { name: "Export", exact: true }).click();
     await l.page.getByTestId("export-progress").waitFor();
@@ -235,7 +231,7 @@ describe("export audio", () => {
 describe("updates (electron-updater is replaced by a fake that reports a new version)", () => {
   it("Check, download, Install when I quit, Restart now: never forced, one pill, one card", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_UPDATE: "0.2.0" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     expect(await l.page.getByTestId("update-pill").count()).toBe(0);
     await settings(l, "About");
     await l.page.getByRole("button", { name: "Check for updates" }).click();
@@ -256,22 +252,13 @@ describe("updates (electron-updater is replaced by a fake that reports a new ver
 
   it("a source checkout reports that it does not update itself", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await settings(l, "About");
     await l.page.getByText(/runs from a folder, so it does not update itself/).waitFor();
   });
 });
 
-describe("palette, engines and the extension", () => {
-  it("Engines lists the server's engines with their state and a Load now action", async () => {
-    const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
-    await l.page.getByRole("link", { name: "Engines" }).click();
-    const kokoro = l.page.locator("[data-engine=kokoro]");
-    await kokoro.getByText("Not in memory (0 MB). It loads when you press play.").waitFor();
-    await kokoro.getByRole("button", { name: "Load now" }).click();
-    await until(async () => (await kokoro.getAttribute("data-state")) === "ready" || (await kokoro.getAttribute("data-state")) === "loading");
-  });
-
+describe("the extension", () => {
   it("Install the extension reveals the folder and shows the three steps", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("link", { name: "Settings" }).click();
@@ -293,11 +280,11 @@ const bridge = <T = unknown>(l: Launched, fn: string, ...a: unknown[]) =>
 describe("permissions bridge", () => {
   it("answers through the preload bridge: Windows has a microphone switch and no other permission, and a bad id is refused", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const status = await bridge<Status>(l, "status");
     expect(status.platform).toBe(process.platform === "darwin" ? "darwin" : "win32");
     if (process.platform === "win32") {
-      expect(status.states).toMatchObject({ accessibility: "not-needed", "input-monitoring": "not-needed", "screen-recording": "not-needed" });
+      expect(status.states).toMatchObject({ accessibility: "not-needed", "input-monitoring": "not-needed" });
       expect(status.states.microphone).toMatch(/^(granted|denied|not-determined|restricted|unknown)$/);
       expect(await bridge(l, "openSettings", "accessibility")).toBe(false);
     }
@@ -309,7 +296,7 @@ describe("permissions bridge", () => {
 describe("shutdown", () => {
   it("Speak Kit.exe --quit asks the running instance to exit and the port closes", async () => {
     const first = await start({ config: DONE });
-    await first.page.getByRole("heading", { name: "Home" }).waitFor();
+    await first.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const proc = first.app.process();
     const exited = new Promise<void>((r) => (proc.exitCode !== null ? r() : proc.once("exit", () => r())));
     await launch({ userData: first.userData, port: first.port, args: ["--quit"] }).catch(() => null);

@@ -1,41 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  checkFile,
-  clock,
-  cues,
-  failures,
-  findMatches,
-  plainText,
-  provisionalTitle,
-  render,
-  safeName,
-  saveExport,
-  removeIfUnchanged,
-  sha256,
-  SearchIndex,
-  snippetAround,
-  tokenize,
-  freePath,
-  knownExtension,
-  sniff,
-} from "../src";
-import { MemFs } from "./fakes";
-
-const fwd = (p: string) => p.replaceAll("\\", "/");
-
-const doc = {
-  title: "Budget call",
-  createdAt: Date.UTC(2026, 10, 12, 14, 5),
-  durationSec: 3723,
-  language: "en",
-  model: "m",
-  source: "file" as const,
-  sourceName: "call.m4a",
-  segments: [
-    { start: 0, end: 4.5, text: "Hello and welcome." },
-    { start: 65, end: 70, text: "  We talk about the invoice.  " },
-  ],
-};
+import { checkFile, clock, failures, findMatches, plainText, provisionalTitle, SearchIndex, snippetAround, tokenize, knownExtension, sniff } from "../src";
 
 describe("clock", () => {
   test("formats minutes and hours", () => {
@@ -43,128 +7,14 @@ describe("clock", () => {
   });
 });
 
-describe("render", () => {
-  test("txt", () => {
-    expect(render("txt", doc)).toBe("Budget call\n2026-11-12 14:05\n\n[0:00] Hello and welcome.\n[1:05] We talk about the invoice.\n");
-  });
-  test("md", () => {
-    expect(render("md", doc)).toBe(
-      "# Budget call\n\n- Date: 2026-11-12 14:05\n- Length: 1:02:03\n- Language: en\n- Source: call.m4a\n\n**0:00** Hello and welcome.\n\n**1:05** We talk about the invoice.\n",
-    );
-    expect(render("md", { ...doc, source: "microphone" })).toContain("- Source: microphone");
-    expect(render("md", { ...doc, sourceName: undefined as never })).toContain("- Source: audio file");
-  });
-  test("srt", () => {
-    expect(render("srt", doc)).toBe("1\n00:00:00,000 --> 00:00:04,500\nHello and welcome.\n\n2\n00:01:05,000 --> 00:01:10,000\nWe talk about the invoice.\n");
-  });
-  test("vtt", () => {
-    expect(render("vtt", { ...doc, segments: [{ start: 3661.25, end: 3662, text: "a --> b" }] })).toBe("WEBVTT\n\n01:01:01.250 --> 01:01:02.000\na -> b\n");
-  });
-  test("json", () => {
-    const j = JSON.parse(render("json", doc));
-    expect(j).toMatchObject({ title: "Budget call", durationSec: 3723, language: "en", model: "m", source: "file" });
-    expect(j.segments).toHaveLength(2);
-  });
-  test("plain text is one paragraph per segment without empties", () => {
-    expect(plainText([...doc.segments, { start: 9, end: 10, text: "   " }])).toBe("Hello and welcome.\n\nWe talk about the invoice.");
-  });
-});
-
-describe("cues", () => {
-  test("a short segment is one cue, at least half a second long", () => {
-    expect(cues([{ start: 10, end: 10, text: "Hi" }])).toEqual([{ start: 10, end: 10.5, text: "Hi" }]);
-  });
-  test("an empty segment gives no cue", () => {
-    expect(cues([{ start: 0, end: 5, text: "   " }])).toEqual([]);
-  });
-  test("a long segment is cut by sentence and the time is shared by length", () => {
-    const text = "This is the first sentence of a long talk. Here is a second one that follows it closely! And a third?";
-    const out = cues([{ start: 0, end: 30, text }]);
-    expect(out.map((c) => c.text)).toEqual(["This is the first sentence of a long talk.", "Here is a second one that follows it closely!", "And a third?"]);
-    expect(out[0]!.start).toBe(0);
-    expect(out.at(-1)!.end).toBeCloseTo(30, 5);
-    for (let i = 1; i < out.length; i++) expect(out[i]!.start).toBeCloseTo(out[i - 1]!.end, 5);
-  });
-  test("short sentences are joined into one cue", () => {
-    const out = cues([{ start: 0, end: 20, text: "Yes. No. Maybe so. Well, we will see about that later on today at length." }]);
-    expect(out[0]!.text).toBe("Yes. No. Maybe so.");
-  });
-  test("a cue pushed to half a second never overlaps the next", () => {
-    const out = cues([
-      { start: 0, end: 0.1, text: "a" },
-      { start: 0.2, end: 3, text: "b" },
-    ]);
-    expect(out[0]!.end).toBe(0.2);
-  });
-});
-
-describe("safeName", () => {
-  test.each([
-    ["Q3: plan/review?", "Q3 plan review"],
-    ["  spaced   out  ", "spaced out"],
-    ["trailing dots...", "trailing dots"],
-    ["CON", "CON_"],
-    ["nul.txt", "nul.txt_"],
-    ["", "Transcript"],
-    ["???", "Transcript"],
-    [".hidden", "hidden"],
-    ["a\u0001b", "a b"],
-  ])("%s", (input, out) => expect(safeName(input)).toBe(out));
-  test("is cut to 100 characters without splitting a character", () => {
-    expect(Array.from(safeName("é".repeat(150)))).toHaveLength(100);
-    expect(Array.from(safeName("😀".repeat(150)))).toHaveLength(100);
-  });
-  test("a fallback can be given", () => {
-    expect(safeName("***", "Recording")).toBe("Recording");
-  });
-});
-
-describe("exports on disk", () => {
-  test("never overwrites: a taken name gets a number", async () => {
-    const fs = new MemFs();
-    fs.files.set("/out/a.md", new Uint8Array([1]));
-    fs.files.set("/out/a (2).md", new Uint8Array([1]));
-    expect(fwd(await freePath(fs, "/out", "a", "md"))).toBe("/out/a (3).md");
-    const saved = await saveExport(fs, "/out", "a", "md", "text");
-    expect({ ...saved, path: fwd(saved.path) }).toMatchObject({ path: "/out/a (3).md", kind: "new", sha256: sha256("text") });
-    expect(fs.files.get("/out/a.md")).toEqual(new Uint8Array([1]));
-  });
-
-  test("a file from the last export that is unchanged is rewritten in place", async () => {
-    const fs = new MemFs();
-    const first = await saveExport(fs, "/out", "T", "txt", "v1");
-    const second = await saveExport(fs, "/out", "T", "txt", "v2", first);
-    expect({ ...second, path: fwd(second.path) }).toMatchObject({ path: "/out/T.txt", kind: "replaced", sha256: sha256("v2") });
-    expect(fs.text("/out/T.txt")).toBe("v2");
-  });
-
-  test("a file the person changed is left alone and the export goes to a copy", async () => {
-    const fs = new MemFs();
-    const first = await saveExport(fs, "/out", "T", "txt", "v1");
-    fs.files.set("/out/T.txt", new TextEncoder().encode("my edits"));
-    const second = await saveExport(fs, "/out", "T", "txt", "v2", first);
-    expect({ ...second, path: fwd(second.path) }).toMatchObject({ path: "/out/T (2).txt", kind: "copy" });
-    expect(fs.text("/out/T.txt")).toBe("my edits");
-    expect(fs.text("/out/T (2).txt")).toBe("v2");
-  });
-
-  test("a file that was moved away is written fresh under a free name", async () => {
-    const fs = new MemFs();
-    const first = await saveExport(fs, "/out", "T", "txt", "v1");
-    fs.files.delete("/out/T.txt");
-    const second = await saveExport(fs, "/out", "T", "txt", "v2", first);
-    expect({ ...second, path: fwd(second.path) }).toMatchObject({ path: "/out/T.txt", kind: "new" });
-  });
-
-  test("removeIfUnchanged deletes an untouched file, keeps a changed one, accepts a missing one", async () => {
-    const fs = new MemFs();
-    const f = await saveExport(fs, "/out", "T", "txt", "v1");
-    expect(await removeIfUnchanged(fs, f)).toBe(true);
-    expect(fs.files.has("/out/T.txt")).toBe(false);
-    expect(await removeIfUnchanged(fs, f)).toBe(true);
-    fs.files.set("/out/T.txt", new TextEncoder().encode("changed"));
-    expect(await removeIfUnchanged(fs, f)).toBe(false);
-    expect(fs.text("/out/T.txt")).toBe("changed");
+describe("plain text", () => {
+  test("is one paragraph per segment without empties", () => {
+    const segments = [
+      { start: 0, end: 4.5, text: "Hello and welcome." },
+      { start: 65, end: 70, text: "  We talk about the invoice.  " },
+      { start: 9, end: 10, text: "   " },
+    ];
+    expect(plainText(segments)).toBe("Hello and welcome.\n\nWe talk about the invoice.");
   });
 });
 
@@ -301,13 +151,12 @@ describe("formats", () => {
 
 describe("provisional title", () => {
   test("an import is named by its file", () => {
-    expect(provisionalTitle({ source: "file", name: "weekly_sync_call.m4a", at: 0 })).toBe("weekly sync call");
-    expect(provisionalTitle({ source: "file", name: "x".repeat(300) + ".wav", at: 0 })).toHaveLength(120);
+    expect(provisionalTitle({ name: "weekly_sync_call.m4a", at: 0 })).toBe("weekly sync call");
+    expect(provisionalTitle({ name: "x".repeat(300) + ".wav", at: 0 })).toHaveLength(120);
   });
-  test("a recording is named by its start time", () => {
+  test("a name with nothing left of it is replaced by the time of the import", () => {
     const at = new Date(2026, 10, 3, 9, 7).getTime();
-    expect(provisionalTitle({ source: "microphone", at })).toBe("Conversation 3 Nov, 09:07");
-    expect(provisionalTitle({ source: "file", name: ".wav", at })).toBe("Conversation 3 Nov, 09:07");
-    expect(provisionalTitle({ source: "file", at })).toBe("Conversation 3 Nov, 09:07");
+    expect(provisionalTitle({ name: ".wav", at })).toBe("Transcript 3 Nov, 09:07");
+    expect(provisionalTitle({ at })).toBe("Transcript 3 Nov, 09:07");
   });
 });

@@ -30,8 +30,6 @@ export interface TrayContext {
     /** Key chord of Paste last, shown beside the row. */ pasteLast?: string;
     /** The last dictations, newest first. */ recent?: string[];
   };
-  /** The manual recorder: ready, starting, recording, saving what was recorded, or its transcript being made. */
-  recorder?: { phase: "ready" | "starting" | "recording" | "saving" | "transcribing" | "done" };
   /** The downloaded speech models, for the quick switch. Absent when none is downloaded. */
   speechModels?: { models: { id: string; name: string; inUse: boolean }[]; switching?: { name: string }; recording: boolean };
 }
@@ -65,8 +63,6 @@ export type TrayAction =
   | "paste-last"
   | "pause-shortcuts"
   | "dictation-settings"
-  | "record-start"
-  | "record-stop"
   | "dictation-copy-0"
   | "dictation-copy-1"
   | "dictation-copy-2"
@@ -99,23 +95,6 @@ export const recentLabel = (text: string): string => {
   const one = text.replaceAll(/\s+/g, " ").trim();
   return one.length > RECENT_CHARS ? `${one.slice(0, RECENT_CHARS - 1)}…` : one;
 };
-
-const WAITING = { starting: "tray.recordStarting", saving: "tray.recordSaving" } as const;
-
-/** One row that follows the recorder: it starts a recording when ready, stops it while recording, and waits (disabled) while the recording is saved and transcribed. */
-function recorderRow(phase: NonNullable<TrayContext["recorder"]>["phase"], item: (a: TrayAction, label: string, x?: Partial<Extract<TrayItem, { type: "item" }>>) => TrayItem): TrayItem {
-  if (phase === "ready") return item("record-start", at("tray.record"));
-  if (phase === "recording") return item("record-stop", at("tray.recordStop"));
-  if (phase === "done") return item("record-start", at("tray.recordDone"));
-  if (phase === "transcribing") return item("record-start", at("tray.record"));
-  return item("record-start", at(WAITING[phase]), { enabled: false });
-}
-
-/** What a press of the record shortcut does: it stops a recording, starts one when idle, and does nothing only while a recording is starting or being saved (a transcript being made does not block a new recording). */
-export function recordToggle(phase: NonNullable<TrayContext["recorder"]>["phase"]): "start" | "stop" | "none" {
-  if (phase === "recording") return "stop";
-  return phase === "starting" || phase === "saving" ? "none" : "start";
-}
 
 /** A row of the Speech model submenu: a model to switch to, or a plain row. */
 export type ModelRow = { type: "header"; label: string } | { type: "model"; id: string; label: string; checked: boolean; enabled: boolean } | { type: "action"; action: TrayAction; label: string };
@@ -164,7 +143,6 @@ export function trayMenuModel(c: TrayContext): TrayItem[] {
   const paused = c.reader.status === "paused";
   const rows: TrayItem[] = c.notice ? [item("open", c.notice), sep, item("open", at("tray.open"))] : [item("open", at("tray.open"))];
   rows.push(...dictationRows(c, item));
-  if (c.recorder) rows.push(recorderRow(c.recorder.phase, item));
   rows.push(...speechModelItems(c));
   if (reading) rows.push(item("pause", at("tray.pause"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop")));
   else if (paused) rows.push(item("resume", at("tray.resume"), { hint: c.shortcuts["play-pause"] }), item("stop", at("tray.stop")));

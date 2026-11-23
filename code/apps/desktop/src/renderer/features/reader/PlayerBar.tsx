@@ -1,11 +1,7 @@
-import { Fragment, type ReactElement } from "react";
 import { Icon, IconButton, Popover, Slider } from "@speakkit/ui";
 import type { PlayerState, Voice } from "@speakkit/protocol";
 import { clock } from "../library";
-import { CustomiseToolbar } from "./CustomiseToolbar";
 import { SpeedControls, VoiceList } from "./Controls";
-import type { Panel } from "./state";
-import { FOOTER_IDS, type FooterId } from "./toolbar";
 
 const SLEEP_CHOICES = [5, 15, 30, 45, 60];
 
@@ -19,11 +15,8 @@ interface BarProps {
   /** ms left on the sleep timer, 0 when off */
   sleepLeftMs: number;
   disabled: boolean;
-  panel: Panel;
   /** Output level, 0 to 1. */
   volume: number;
-  /** Right-hand controls the person turned off. */
-  hidden: readonly FooterId[];
   onToggle(): void;
   onSkip(deltaMs: number): void;
   onBlock(dir: 1 | -1): void;
@@ -31,9 +24,7 @@ interface BarProps {
   onSpeed(v: number): void;
   onVoice(id: string): void;
   onSleep(minutes: number | null): void;
-  onOutline(): void;
   onVolume(v: number): void;
-  onShown(id: FooterId, shown: boolean): void;
 }
 
 /** `name` is the accessible name when the visible label alone ("1.5x") does not say what the button is; it contains the visible label. */
@@ -134,26 +125,13 @@ function Transport(p: BarProps & { playing: boolean; busy: boolean }) {
   );
 }
 
-/** Left: transport. Middle: time, position slider, end time. Right: speed, voice, sleep timer, volume, queue and the "…" button that customises them. */
+/** Left: transport. Middle: time, position slider, end time. Right: speed, voice, sleep timer and volume. */
 export function PlayerBar(p: BarProps) {
   const s = p.state;
   const busy = s.status === "preparing";
   const playing = s.status === "playing" || busy;
   const total = s.totalMs || p.estimatedTotalMs;
   const frac = total ? Math.min(1, s.elapsedMs / total) : 0;
-  const items: Record<FooterId, ReactElement> = {
-    speed: (
-      <Popover side="top" align="end" width={300} title="Speed" trigger={pillTrigger(`${p.speed}x`, `Speed ${p.speed}x`)}>
-        <div className="rd-pop">
-          <SpeedControls speed={p.speed} onSpeed={p.onSpeed} />
-        </div>
-      </Popover>
-    ),
-    voice: <VoicePopover voices={p.voices} voiceId={p.voiceId} onVoice={p.onVoice} />,
-    sleep: <SleepPopover leftMs={p.sleepLeftMs} onSleep={p.onSleep} />,
-    volume: <VolumePopover volume={p.volume} onVolume={p.onVolume} />,
-    queue: <IconButton name="list" label="Queue" aria-pressed={p.panel === "outline"} onClick={p.onOutline} />,
-  };
   return (
     <footer className="rd-bar" aria-label="Player">
       <Transport {...p} playing={playing} busy={busy} />
@@ -163,10 +141,14 @@ export function PlayerBar(p: BarProps) {
         <span data-testid="total">{clock(total)}</span>
       </div>
       <div className="rd-bar__right">
-        {FOOTER_IDS.filter((id) => !p.hidden.includes(id)).map((id) => (
-          <Fragment key={id}>{items[id]}</Fragment>
-        ))}
-        <CustomiseToolbar label="Customise player toolbar" ids={FOOTER_IDS} hidden={p.hidden} side="top" onShown={p.onShown} />
+        <Popover side="top" align="end" width={300} title="Speed" trigger={pillTrigger(`${p.speed}x`, `Speed ${p.speed}x`)}>
+          <div className="rd-pop">
+            <SpeedControls speed={p.speed} onSpeed={p.onSpeed} />
+          </div>
+        </Popover>
+        <VoicePopover voices={p.voices} voiceId={p.voiceId} onVoice={p.onVoice} />
+        <SleepPopover leftMs={p.sleepLeftMs} onSleep={p.onSleep} />
+        <VolumePopover volume={p.volume} onVolume={p.onVolume} />
       </div>
     </footer>
   );

@@ -54,15 +54,10 @@ export interface ModelCard {
   diskBytes: number;
 }
 
+/** The model Speak Kit picks when the person chooses this dictation language. */
 export interface TableRow {
   language: string;
   recommended: string;
-  alsoWorks: string[];
-  /** How the recommended model did on our recordings in this language; absent for a language that was not measured. */
-  figure?: AccuracyFigure;
-  /** The model recommended on a computer without a graphics card, and the measured seconds it takes there for ten seconds of speech. */
-  cpuOnly?: string;
-  cpuSeconds?: number;
 }
 
 export interface DeviceView {
@@ -92,7 +87,7 @@ export interface SpeechModelsView {
   /** The model in use first, then installed ones, then the rest. */
   models: ModelCard[];
   table: TableRow[];
-  /** Model id to name, for the table. */
+  /** Model id to name. */
   names: Record<string, string>;
   dictationLanguage: string;
   /** What the figures rest on. */
@@ -105,7 +100,6 @@ export interface SpeechModelsView {
   idleMinutes: number;
   device: DeviceView;
   disk: { total: number; folder: string };
-  releaseOnClose: boolean;
   autoSwitch: { enabled: boolean; rules: SwitchRuleView[]; skippedRuleIds: string[] };
   switching?: string;
   recording: boolean;
@@ -120,11 +114,6 @@ export interface SpeechModelsView {
 
 export type SwitchOutcome = { ok: true } | { ok: false; reason: string; message: string };
 export type ImportOutcome = { ok: true; id: string; name: string; alreadyThere: boolean } | { ok: false; reason: string; message: string } | { cancelled: true };
-export interface FoundView {
-  id: string;
-  name: string;
-  path: string;
-}
 
 export interface SpeechModelsBridge {
   view(): Promise<SpeechModelsView>;
@@ -143,9 +132,6 @@ export interface SpeechModelsBridge {
   /** Opens the file dialog to find an imported model whose copy is missing. */
   locateFile(id: string): Promise<ImportOutcome>;
   removeImported(id: string): Promise<SpeechModelsView>;
-  /** Read-only scan of the usual folders for files that are exactly a catalog model. */
-  scanDisk(): Promise<FoundView[]>;
-  adoptFound(ids: string[]): Promise<SpeechModelsView>;
   dismissNewer(id: string): Promise<SpeechModelsView>;
   continueWithoutModel(): Promise<SpeechModelsView>;
   /** Measures what the loaded model takes in memory now. */
@@ -171,8 +157,6 @@ export const SPEECH_MODEL_ARGS = {
   importFile: v.tuple([v.picklist(["multilingual", "english"]), text(60)]),
   locateFile: v.tuple([id]),
   removeImported: v.tuple([id]),
-  scanDisk: v.tuple([]),
-  adoptFound: v.tuple([v.pipe(v.array(id), v.maxLength(8))]),
   dismissNewer: v.tuple([id]),
   continueWithoutModel: v.tuple([]),
   measureMemory: v.tuple([]),

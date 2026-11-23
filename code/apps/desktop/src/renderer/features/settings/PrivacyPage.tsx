@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Banner, Button, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
-import { NETWORK_HOSTS, NO_TELEMETRY, WHEN_LABEL } from "../../../shared/settings/network";
+import { NETWORK_HOSTS, WHEN_LABEL } from "../../../shared/settings/network";
 import { MIC_ACCESS_TEXT, type MicAccess } from "../../../shared/settings/permissions";
 import { useT } from "../../i18n";
 import { api, Page } from "../../ui";
@@ -30,7 +30,7 @@ function useMic(): MicAccess | null {
 export function NetworkTable() {
   const { t } = useT();
   return (
-    <table className="sk-notify" data-testid="network-table">
+    <table className="sk-hosts" data-testid="network-table">
       <thead>
         <tr>
           <th scope="col">{t("privacy.address")}</th>
@@ -57,9 +57,6 @@ export function PrivacyPage({ s }: { s: AppState }) {
   const blocked = mic === "denied" || mic === "restricted";
   return (
     <Page title={t("privacy.title")} lead={t("privacy.lead")}>
-      <SettingsSection title={t("privacy.data")}>
-        <SettingRow {...rowAttr("privacy/telemetry")} label={t("privacy.telemetry")} description={NO_TELEMETRY} control={<span>{t("privacy.telemetryOff")}</span>} />
-      </SettingsSection>
       <SettingsSection title={t("privacy.permissions")}>
         <SettingRow
           {...rowAttr("privacy/microphone")}

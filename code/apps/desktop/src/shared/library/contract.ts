@@ -28,14 +28,6 @@ export interface Progress {
   fraction: number;
 }
 
-export const BookmarkSchema = v.object({
-  /** index of the bookmarked sentence (reader sentence numbering) */
-  sentence: v.pipe(v.number(), v.integer(), v.minValue(0)),
-  /** the start of the sentence, so the list reads without opening the text */
-  label: v.pipe(v.string(), v.maxLength(120)),
-});
-export type Bookmark = v.InferOutput<typeof BookmarkSchema>;
-
 export interface DocMeta {
   id: string;
   title: string;
@@ -49,12 +41,8 @@ export interface DocMeta {
   openedAt?: number;
   wordCount: number;
   pages?: number;
-  /** per-document voice, overrides the app default */
-  voice?: string;
   progress: Progress;
   finished: boolean;
-  /** places the reader saved in the outline panel, in text order */
-  bookmarks?: Bookmark[];
   /** a PDF without a text layer: the reader offers local OCR */
   needsOcr?: boolean;
 }
@@ -83,14 +71,12 @@ export const LIBRARY_ARGS = {
   list: v.tuple([]),
   get: v.tuple([id]),
   search: v.tuple([v.pipe(v.string(), v.maxLength(200))]),
-  importText: v.tuple([v.pipe(v.string(), v.maxLength(MAX_PASTE_CHARS)), v.optional(title), v.optional(id)]),
+  importText: v.tuple([v.pipe(v.string(), v.maxLength(MAX_PASTE_CHARS)), v.optional(title)]),
   importBytes: v.tuple([v.pipe(v.string(), v.minLength(1), v.maxLength(255)), v.instance(Uint8Array)]),
   pickFiles: v.tuple([]),
   importUrl: v.tuple([v.pipe(v.string(), v.maxLength(2048))]),
   rename: v.tuple([id, title]),
-  setVoice: v.tuple([id, v.nullable(id)]),
   setFinished: v.tuple([id, v.boolean()]),
-  setBookmarks: v.tuple([id, v.pipe(v.array(BookmarkSchema), v.maxLength(500))]),
   setProgress: v.tuple([id, v.object({ sentence: v.pipe(v.number(), v.integer(), v.minValue(0)), fraction: v.pipe(v.number(), v.minValue(0), v.maxValue(1)) })]),
   markOpened: v.tuple([id]),
   remove: v.tuple([id]),
@@ -106,15 +92,13 @@ export interface LibraryApi {
   get(id: string): Promise<(DocMeta & DocContent) | null>;
   /** ids of documents whose title, origin or text contains every word of the query */
   search(query: string): Promise<SearchHit[]>;
-  importText(text: string, title?: string, voice?: string): Promise<ImportResult>;
+  importText(text: string, title?: string): Promise<ImportResult>;
   importBytes(name: string, bytes: Uint8Array): Promise<ImportResult>;
   /** Opens the system file dialog and imports the chosen files; resolves to one result per file. */
   pickFiles(): Promise<ImportResult[]>;
   importUrl(url: string): Promise<ImportResult>;
   rename(id: string, title: string): Promise<DocMeta | null>;
-  setVoice(id: string, voice: string | null): Promise<DocMeta | null>;
   setFinished(id: string, finished: boolean): Promise<DocMeta | null>;
-  setBookmarks(id: string, bookmarks: Bookmark[]): Promise<DocMeta | null>;
   setProgress(id: string, progress: Progress): Promise<DocMeta | null>;
   markOpened(id: string): Promise<DocMeta | null>;
   /** Removes the reading from the library; it stays restorable until the app quits. */

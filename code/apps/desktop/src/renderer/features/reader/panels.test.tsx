@@ -16,11 +16,8 @@ const outline = (over: Partial<Parameters<typeof OutlinePanel>[0]> = {}) =>
         { label: "Intro", block: 0, level: 1 },
         { label: "Part two", block: 4, level: 2 },
       ]}
-      bookmarks={[]}
       current={5}
       onPick={noop}
-      onPickBookmark={noop}
-      onRemoveBookmark={noop}
       onClose={noop}
       {...over}
     />,
@@ -34,18 +31,10 @@ describe("OutlinePanel", () => {
     expect(html).not.toMatch(/aria-current="true"[^>]*>Intro/);
   });
 
-  it("says when there are no headings and no bookmarks", () => {
+  it("says when there are no headings", () => {
     const html = outline({ items: [] });
     expect(html).toContain("This reading has no headings.");
-    expect(html).toContain("No bookmarks yet.");
-  });
-
-  it("lists bookmarks with a remove button each", () => {
-    const html = outline({ bookmarks: [{ sentence: 2, label: "The second place." }] });
-    expect(html).toContain('aria-label="Bookmarks"');
-    expect(html).toContain("The second place.");
-    expect(html).toContain('aria-label="Remove bookmark: The second place."');
-    expect(html).not.toContain("No bookmarks yet.");
+    expect(html).not.toContain("Bookmarks");
   });
 });
 

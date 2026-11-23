@@ -23,7 +23,7 @@ const model = (over: Partial<UiModel> = {}): UiModel => ({
   ...over,
 });
 
-const launcher: UiModel["launcher"] = { enabled: true, side: "right", idle: "peek", openOn: "hover", closeDelayMs: 300, widerWhileReading: true, y: 0.42 };
+const launcher: UiModel["launcher"] = { enabled: true, y: 0.42 };
 
 describe("dockVisible", () => {
   test.each([

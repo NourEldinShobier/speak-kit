@@ -7,7 +7,6 @@ import { openConfig } from "./config";
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(path.join(tmpdir(), "speakkit-config-"));
-  vi.stubEnv("SPEAKKIT_PORT", "");
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -19,7 +18,7 @@ describe("openConfig", () => {
   it("sets a corrupt file aside as config.json.bad and starts from defaults", async () => {
     writeFileSync(path.join(dir, "config.json"), '{"setupDone": tru');
     const c = await openConfig(dir);
-    expect(c.config).toMatchObject({ setupDone: false, preferredPort: 47615 });
+    expect(c.config).toMatchObject({ setupDone: false });
     expect(c.recovered).toBe(path.join(dir, "config.json.bad"));
     expect(readFileSync(path.join(dir, "config.json.bad"), "utf8")).toBe('{"setupDone": tru');
     c.config.setupDone = true;
@@ -35,12 +34,12 @@ describe("openConfig", () => {
   it("starts from defaults when there is no file", async () => {
     const { config, path: file } = await openConfig(dir);
     expect(file).toBe(path.join(dir, "config.json"));
-    expect(config).toMatchObject({ setupDone: false, preferredPort: 47615, voice: "af_heart", speed: 1 });
+    expect(config).toMatchObject({ setupDone: false, voice: "af_heart", speed: 1 });
   });
 
   it("repairs a hand-edited file field by field instead of failing", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, preferredPort: "high", speed: 1.5 }));
-    expect((await openConfig(dir)).config).toMatchObject({ setupDone: true, preferredPort: 47615, speed: 1.5 });
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, speed: "fast" }));
+    expect((await openConfig(dir)).config).toMatchObject({ setupDone: true, speed: 1 });
   });
 
   it("loads a config of an earlier version that uses a cloned voice and starts with the default voice, without an error", async () => {
@@ -59,28 +58,26 @@ describe("openConfig", () => {
     expect((await openConfig(dir)).config).toMatchObject({ setupDone: true, voice: "bf_emma" });
   });
 
-  it("lets SPEAKKIT_PORT override the port for this run without writing it to the file", async () => {
-    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ preferredPort: 50000 }));
-    vi.stubEnv("SPEAKKIT_PORT", "48123");
+  it("loads a file that still has the removed port setting and gives it no effect", async () => {
+    writeFileSync(path.join(dir, "config.json"), JSON.stringify({ setupDone: true, preferredPort: 50000, speed: 1.5 }));
     const c = await openConfig(dir);
-    expect(c.config.preferredPort).toBe(48123);
-    c.config.setupDone = true;
-    c.save();
-    expect(onDisk()).toMatchObject({ setupDone: true, preferredPort: 50000 });
+    expect(c.recovered).toBeNull();
+    expect(c.config).toMatchObject({ setupDone: true, speed: 1.5 });
+    expect(c.config).not.toHaveProperty("preferredPort");
   });
 });
 
 describe("settings repair and backup", () => {
-  const raw = JSON.stringify({ setupDone: true, idleUnload: "soon", updateChannel: "early" });
+  const raw = JSON.stringify({ setupDone: true, appearance: "neon", updateChannel: "early" });
 
   it("names the invalid field, keeps the others, and backs up the exact original bytes once before the first save", async () => {
     writeFileSync(path.join(dir, "config.json"), raw);
     const c = await openConfig(dir);
-    expect(c.notice).toEqual({ kind: "repaired", fields: ["idleUnload"] });
-    expect(c.config).toMatchObject({ idleUnload: "5", updateChannel: "early" });
+    expect(c.notice).toEqual({ kind: "repaired", fields: ["appearance"] });
+    expect(c.config).toMatchObject({ appearance: "system", updateChannel: "early" });
     c.save();
     expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);
-    expect(onDisk()).toMatchObject({ idleUnload: "5", configVersion: 1 });
+    expect(onDisk()).toMatchObject({ appearance: "system", configVersion: 1 });
     writeFileSync(path.join(dir, "config.json"), "{}");
     c.save();
     expect(readFileSync(path.join(dir, "config.backup.json"), "utf8")).toBe(raw);

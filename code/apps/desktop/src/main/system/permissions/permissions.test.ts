@@ -5,17 +5,17 @@ import { guideFor, hotkeyPermissionsReady } from "../../../shared/permissions/gu
 import { macAdapter, noPermissionsAdapter, windowsAdapter, type Prefs } from "./adapters";
 import { createPermissions, type PermissionsAdapter } from "./service";
 
-const all = (s: PermissionState): Record<PermissionId, PermissionState> => ({ accessibility: s, "input-monitoring": s, microphone: s, "screen-recording": s });
+const all = (s: PermissionState): Record<PermissionId, PermissionState> => ({ accessibility: s, "input-monitoring": s, microphone: s });
 
-function fakePrefs(over: Partial<{ trusted: boolean; mic: string; screen: string; askMic: boolean }> = {}) {
+function fakePrefs(over: Partial<{ trusted: boolean; mic: string; askMic: boolean }> = {}) {
   const log: string[] = [];
-  const s = { trusted: false, mic: "not-determined", screen: "denied", askMic: true, ...over };
+  const s = { trusted: false, mic: "not-determined", askMic: true, ...over };
   const prefs: Prefs = {
     isTrustedAccessibilityClient(prompt) {
       log.push(`trusted(${prompt})`);
       return s.trusted;
     },
-    getMediaAccessStatus: (k) => (k === "microphone" ? s.mic : s.screen),
+    getMediaAccessStatus: () => s.mic,
     askForMediaAccess: async () => (log.push("askMic"), s.askMic),
   };
   return { prefs, log, s };
@@ -23,11 +23,10 @@ function fakePrefs(over: Partial<{ trusted: boolean; mic: string; screen: string
 
 describe("macOS permissions adapter", () => {
   it("reads each permission from its own source", async () => {
-    const { prefs, s } = fakePrefs({ mic: "granted", screen: "restricted" });
+    const { prefs, s } = fakePrefs({ mic: "granted" });
     let input: "granted" | "denied" | "unknown" = "denied";
     const a = macAdapter(prefs, async () => ({ status: () => input, request: () => true }));
     expect(await a.read("microphone")).toBe("granted");
-    expect(await a.read("screen-recording")).toBe("restricted");
     expect(await a.read("input-monitoring")).toBe("denied");
     input = "unknown";
     expect(await a.read("input-monitoring")).toBe("not-determined");
@@ -41,14 +40,13 @@ describe("macOS permissions adapter", () => {
     expect(await macAdapter(prefs, async () => ({ status: () => "granted", request: () => true })).read("microphone")).toBe("unknown");
   });
 
-  it("shows the system prompt where there is one and none for Screen Recording", async () => {
+  it("shows the system prompt of each permission", async () => {
     const { prefs, log } = fakePrefs();
     let requested = 0;
     const a = macAdapter(prefs, async () => ({ status: () => "unknown", request: () => (requested++, true) }));
     expect(await a.prompt("accessibility")).toBe(true);
     expect(await a.prompt("microphone")).toBe(true);
     expect(await a.prompt("input-monitoring")).toBe(true);
-    expect(await a.prompt("screen-recording")).toBe(false);
     expect(log).toEqual(["trusted(true)", "askMic"]);
     expect(requested).toBe(1);
   });
@@ -70,11 +68,10 @@ describe("macOS permissions adapter", () => {
 
   it("opens the Privacy pane of each permission", () => {
     const a = macAdapter(fakePrefs().prefs, async () => ({ status: () => "granted", request: () => true }));
-    expect(["accessibility", "input-monitoring", "microphone", "screen-recording"].map((id) => a.settingsUrl(id as PermissionId))).toEqual([
+    expect(["accessibility", "input-monitoring", "microphone"].map((id) => a.settingsUrl(id as PermissionId))).toEqual([
       "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
       "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
       "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
-      "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
     ]);
   });
 });
@@ -84,7 +81,6 @@ describe("Windows and other platforms", () => {
     const a = windowsAdapter(fakePrefs({ mic: "denied" }).prefs);
     expect(await a.read("microphone")).toBe("denied");
     expect(await a.read("accessibility")).toBe("not-needed");
-    expect(await a.read("screen-recording")).toBe("not-needed");
     expect(await a.prompt("microphone")).toBe(false);
     expect(a.settingsUrl("microphone")).toBe("ms-settings:privacy-microphone");
     expect(a.settingsUrl("accessibility")).toBeNull();
@@ -107,7 +103,7 @@ function service(states: Partial<Record<PermissionId, PermissionState>>, prompts
       return current[id];
     },
     prompt: async (id) => prompts.includes(id),
-    settingsUrl: (id) => (id === "screen-recording" ? null : `settings:${id}`),
+    settingsUrl: (id) => (id === "input-monitoring" ? null : `settings:${id}`),
   };
   const p = createPermissions({ adapter, openUrl: async (u) => void opened.push(u), onChange: (s) => void changes.push(s) });
   return { p, current, opened, changes };
@@ -157,7 +153,7 @@ describe("permissions service", () => {
 
   it("returns false when there is no pane or opening it fails", async () => {
     const t = service({});
-    expect(await t.p.openSettings("screen-recording")).toBe(false);
+    expect(await t.p.openSettings("input-monitoring")).toBe(false);
     const failing = createPermissions({
       adapter: { platform: "darwin", read: async () => "denied", prompt: async () => false, settingsUrl: () => "x" },
       openUrl: async () => {
@@ -192,10 +188,6 @@ describe("first-use guide", () => {
   it("never treats an unknown or restricted state as granted", () => {
     expect(guideFor(all("unknown"), "dictation").next?.id).toBe("microphone");
     expect(guideFor(all("restricted"), "dictation").next?.action).toBe("open-settings");
-  });
-
-  it("sends Screen Recording to settings even before it was asked", () => {
-    expect(guideFor(all("not-determined"), "screen-reading").next).toEqual({ id: "screen-recording", state: "not-determined", action: "open-settings" });
   });
 });
 

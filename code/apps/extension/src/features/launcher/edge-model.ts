@@ -1,10 +1,12 @@
-import type { PlayerStatus, Settings } from "@speakkit/protocol";
+import type { PlayerStatus } from "@speakkit/protocol";
 import { clock } from "../../shared/format";
 import type { UiModel } from "../../shared/ui-types";
 
 /** What the edge launcher shows for each player status, and where its tab and pill sit: tables and pure functions. edge.ts builds the elements. */
 
 export const ACTIVE: PlayerStatus[] = ["preparing", "playing", "paused"];
+/** The pill closes this long after the pointer leaves it. */
+export const CLOSE_DELAY_MS = 1500;
 export const TAB_HEIGHT = 76;
 export const MARGIN = 8;
 /** The collapsed reading state: a 12 px wide tab (width set in launcher.css) that holds only a progress rail, centred on the viewport height. */
@@ -22,11 +24,8 @@ export const PLAY_VIEW: Record<PlayerStatus, { label: string; icon: PlayIcon }> 
   paused: { label: "Resume", icon: "player-play" },
 };
 
-/** `sk-left` when the launcher sits on the left edge. */
-export const sideClass = (l: Settings["launcher"]) => (l.side === "left" ? " sk-left" : "");
-
-export const tabClass = (l: Settings["launcher"], reading: boolean) =>
-  `sk-tab${sideClass(l)}${reading && l.widerWhileReading ? " is-reading" : ""}${!reading && l.idle === "hidden" ? " is-ghost" : ""}`;
+/** The tab sits on the right edge; while reading it is the slim progress rail. */
+export const tabClass = (reading: boolean) => (reading ? "sk-tab is-reading" : "sk-tab");
 
 /** Top of the tab: the saved height `y` (0 to 1 of the viewport) kept fully on screen. */
 export const tabTop = (y: number, vh: number): number => Math.min(Math.max(MARGIN, y * vh), Math.max(MARGIN, vh - TAB_HEIGHT - MARGIN));

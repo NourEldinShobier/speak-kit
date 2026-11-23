@@ -68,10 +68,6 @@ describe("POST /v1/export", () => {
       done: 2,
       total: 2,
       durationMs: 9500,
-      sentenceMs: [
-        [0, 3000],
-        [3500, 9500],
-      ],
     });
     const audio = await call(ctx, "GET", `/v1/export/${created.id}/audio`);
     expect(audio.headers.get("content-type")).toBe("audio/wav");

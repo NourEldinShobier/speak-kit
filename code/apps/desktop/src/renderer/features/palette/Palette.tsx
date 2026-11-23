@@ -119,7 +119,7 @@ function usePalette(onRun: (c: Command) => void, onClose: () => void) {
   const tr = useT();
   const all = useMemo(() => buildCommands(voices, docs, tr), [voices, docs, tr]);
   const view = useMemo(() => paletteView(all, q, recent), [all, q, recent]);
-  const suggestions = useMemo(() => all.filter((c) => c.id === "page-dictation" || c.id === "export" || (voices[0] && c.id === `v-${voices[0].id}`)), [all, voices]);
+  const suggestions = useMemo(() => all.filter((c) => c.id === "page-dictation" || c.id === "page-library" || (voices[0] && c.id === `v-${voices[0].id}`)), [all, voices]);
   const flat = view.flat;
   useEffect(() => setAt(0), [q]);
 

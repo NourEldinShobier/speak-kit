@@ -33,7 +33,6 @@ describe("service worker router", () => {
     const { KNOWN_TYPES } = await wake();
     expect([...KNOWN_TYPES].sort()).toEqual(
       [
-        "auth-check",
         "dismiss",
         "frame",
         "get-health",

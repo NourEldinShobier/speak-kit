@@ -50,7 +50,6 @@ export const inboundSchema = v.variant("t", [
   v.object({ t: v.literal("dismiss"), on: v.boolean() }),
   v.object({ t: v.literal("frame") }),
   v.object({ t: v.literal("get-health"), force: v.optional(v.boolean()) }),
-  v.object({ t: v.literal("auth-check"), port: v.optional(int(1, 65535)), token: v.optional(v.pipe(v.string(), v.maxLength(500))) }),
   v.object({ t: v.literal("get-voices") }),
   v.object({ t: v.literal("get-queue") }),
   v.object({ t: v.literal("read"), mode, tabId: v.optional(v.number()), queue: v.optional(v.boolean()) }),

@@ -13,14 +13,6 @@ export const OUTPUT_HELP: Record<DictationConfig["output"], string> = {
   copy: "Only copies the text. Nothing is typed into the app.",
 };
 
-export const KEEP_READY_MINUTES = [
-  { value: "0", label: "While dictation is on" },
-  { value: "5", label: "5 minutes" },
-  { value: "15", label: "15 minutes" },
-  { value: "30", label: "30 minutes" },
-  { value: "60", label: "1 hour" },
-];
-
 /** The line under the microphone row, and whether it is a problem. `link` means the operating system privacy page can be opened. */
 export function micLine(mic: MicStatus, canOpenPrivacy: boolean): { text: string; problem: boolean; link: boolean } {
   switch (mic.kind) {

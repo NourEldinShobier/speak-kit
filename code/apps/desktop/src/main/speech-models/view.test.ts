@@ -81,49 +81,19 @@ describe("speech models view", () => {
     expect(mac.table.find((r) => r.language === "en")!.recommended).toBe(LARGE);
   });
 
-  it("has exactly one recommended model per language row, with its measured figure, and marks it on the card", () => {
+  it("has exactly one recommended model per language row and marks it on the card", () => {
     const v = buildView(input());
     expect(v.models.find((m) => m.id === LARGE)!.recommendedFor).toEqual(["en"]);
     expect(v.models.find((m) => m.id === PARAKEET)!.recommendedFor).toEqual([]);
     expect(v.models.find((m) => m.id === TURBO)!.recommendedFor).toContain("de");
     expect(v.models.find((m) => m.id === TURBO)!.recommendedFor).not.toContain("en");
-    expect(v.table.find((r) => r.language === "en")).toEqual({
-      language: "en",
-      recommended: LARGE,
-      alsoWorks: [
-        TURBO,
-        PARAKEET,
-        "tiny-q5_1",
-        "tiny",
-        "base-q5_1",
-        "base",
-        "small-q5_1",
-        "small",
-        "medium-q5_0",
-        "medium",
-        "large-v3",
-        "large-v3-turbo-q8_0",
-        "large-v3-turbo",
-        "distil-large-v3",
-        "parakeet-tdt-0.6b-v3-q8_0",
-        "parakeet-ultra-q8_0",
-      ],
-      figure: { language: "en", wrong: 7, of: 79 },
-      cpuOnly: PARAKEET,
-      cpuSeconds: 2.5,
-    });
-    expect(v.table.find((r) => r.language === "fr")).toEqual({
-      language: "fr",
-      recommended: TURBO,
-      alsoWorks: ["tiny-q5_1", "tiny", "base-q5_1", "base", "small-q5_1", "small", "medium-q5_0", "medium", "large-v3-q5_0", "large-v3", "large-v3-turbo-q8_0", "large-v3-turbo"],
-      cpuOnly: "base-q5_1",
-      cpuSeconds: 4.5,
-    });
+    expect(v.table.find((r) => r.language === "en")).toEqual({ language: "en", recommended: LARGE });
+    expect(v.table.find((r) => r.language === "fr")).toEqual({ language: "fr", recommended: TURBO });
   });
 
   it("recommends on a computer without a card the fastest usable model for a language no model is quick in, with its speed", () => {
     const v = buildView(input({ hardware: CPU_ONLY, language: "ar" }));
-    expect(v.table.find((r) => r.language === "ar")).toMatchObject({ recommended: "small-q5_1", cpuOnly: "small-q5_1", cpuSeconds: 16.8 });
+    expect(v.table.find((r) => r.language === "ar")).toEqual({ language: "ar", recommended: "small-q5_1" });
     expect(v.models.find((m) => m.id === "small-q5_1")).toMatchObject({ speedSeconds: 16.8 });
   });
 
@@ -234,9 +204,9 @@ describe("speech models view", () => {
     expect(v.models.find((m) => m.id === PARAKEET)!.languageNote).toBe("switched to English");
   });
 
-  it("shows the idle choice, the release setting, and the switching state", () => {
-    const v = buildView(input({ config: parseEnginesConfig({ idleMinutes: 30, releaseOnClose: true }), switching: PARAKEET, recording: true, platform: "darwin", dictationSupported: false }));
-    expect(v).toMatchObject({ idleMinutes: 30, releaseOnClose: true, switching: PARAKEET, recording: true, platform: "darwin", dictationSupported: false });
+  it("shows the idle choice and the switching state", () => {
+    const v = buildView(input({ config: parseEnginesConfig({ idleMinutes: 30 }), switching: PARAKEET, recording: true, platform: "darwin", dictationSupported: false }));
+    expect(v).toMatchObject({ idleMinutes: 30, switching: PARAKEET, recording: true, platform: "darwin", dictationSupported: false });
   });
 
   it("shows the dictation language as the model handles it", () => {

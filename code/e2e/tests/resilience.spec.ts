@@ -128,7 +128,7 @@ test.describe("the app changes under a running extension", () => {
     }
   });
 
-  test("the app comes back on another port: the extension says it is not running until it is paired with the new port", async ({ ext, app }) => {
+  test("the app comes back on another port: the extension says it is not running until it knows the new port", async ({ ext, app }) => {
     ext.allowed.push(/ERR_CONNECTION_REFUSED|Failed to fetch/);
     await ext.pair(app);
     const page = await ext.open("/article");
@@ -143,11 +143,9 @@ test.describe("the app changes under a running extension", () => {
       await expect(popup.locator(".pp")).toHaveAttribute("data-view", "offline", { timeout: 10_000 });
       await readTab(ext, page);
       await expect.poll(async () => (await stateOf(ext)).code, { timeout: 15_000 }).toBe("app-not-running");
+      await ext.setPort(moved.port);
       const opt = await ext.ctx.newPage();
       await opt.goto(ext.url("options"));
-      await opt.locator("#port").fill(String(moved.port));
-      await opt.locator("#port").press("Enter");
-      await expect.poll(async () => (await ext.settings()).port).toBe(moved.port);
       await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "ok", { timeout: 15_000 });
       await popup.reload();
       await expect(popup.locator(".pp")).toHaveAttribute("data-view", "idle", { timeout: 10_000 });

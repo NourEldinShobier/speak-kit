@@ -1,9 +1,9 @@
 import { useCallback, useMemo, type Dispatch } from "react";
 import type { PlayerCommand, PlayerState } from "@speakkit/protocol";
-import type { Bookmark, DocMeta } from "../../../shared/library/contract";
+import type { DocMeta } from "../../../shared/library/contract";
 import { api } from "../../ui";
 import { library } from "../library";
-import { buildDoc, findMatches, outline, toggleBookmark, type ReaderDoc, type ReaderSentence } from "./model";
+import { buildDoc, findMatches, outline, type ReaderDoc, type ReaderSentence } from "./model";
 import type { ReaderRefs } from "./useReaderControl";
 import { rangeIn } from "./useHighlights";
 import type { ReaderAction, ReaderUi } from "./state";
@@ -18,20 +18,6 @@ interface Args {
   dispatch: Dispatch<ReaderAction>;
   command(c: PlayerCommand): void;
   startAt(index: number): void;
-}
-
-/** The bookmarks of the open reading: toggled from the toolbar or the clicked sentence, saved as they change. */
-function useBookmarks(meta: DocMeta, doc: ReaderDoc, dispatch: Dispatch<ReaderAction>) {
-  const bookmarks: Bookmark[] = meta.bookmarks ?? [];
-  const saveBookmarks = (next: Bookmark[]) => {
-    dispatch({ type: "bookmarks", bookmarks: next });
-    void library.setBookmarks(meta.id, next);
-  };
-  const bookmarkSentence = (index: number) => {
-    const text = doc.sentences[index]?.text;
-    if (text) saveBookmarks(toggleBookmark(bookmarks, index, text));
-  };
-  return { bookmarks, saveBookmarks, bookmarkSentence };
 }
 
 /** Scrolling with the reading: back to the current sentence, and the flag that says the person scrolled away. */
@@ -60,12 +46,11 @@ function useFollowControls({ sentence, refs, status, dispatch }: { sentence: Rea
   };
 }
 
-/** Moving around the text: find, jump to a block or bookmark, read from a clicked sentence, scroll back to the current sentence. */
+/** Moving around the text: find, jump to a block, read from a clicked sentence, scroll back to the current sentence. */
 export function useReaderNav({ meta, doc, ui, st, refs, active, dispatch, command, startAt }: Args) {
   const sentence = active ? doc.sentences[st.sentenceIndex] : undefined;
   const matches = useMemo(() => (ui.find.open ? findMatches(doc.blocks, ui.find.query) : []), [doc, ui.find.open, ui.find.query]);
   const outlineItems = useMemo(() => outline(doc.blocks, meta.format === "pdf"), [doc, meta.format]);
-  const marks = useBookmarks(meta, doc, dispatch);
 
   const follow = useFollowControls({ sentence, refs, status: st.status, dispatch });
 
@@ -80,11 +65,9 @@ export function useReaderNav({ meta, doc, ui, st, refs, active, dispatch, comman
     sentence,
     matches,
     outlineItems,
-    ...marks,
     ...follow,
     goTo,
     jumpTo: (block: number) => goTo(block, doc.firstSentence[block] ?? -1),
-    goToBookmark: (index: number) => doc.sentences[index] && goTo(doc.sentences[index].block, index),
     stepFind: (dir: 1 | -1) => {
       if (!matches.length) return;
       const current = (ui.find.current + dir + matches.length) % matches.length;

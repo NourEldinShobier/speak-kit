@@ -11,16 +11,15 @@ test.describe("pairing and connection", () => {
     expect(local["speakkit.token"]).toBe(app.token);
     const sync = JSON.stringify(await ext.sw.evaluate(() => chrome.storage.sync.get(null)));
     expect(sync).not.toContain(app.token);
-    expect((await ext.settings()).port).toBe(app.port);
+    expect((await ext.sw.evaluate(() => chrome.storage.local.get("speakkit.port")))["speakkit.port"]).toBe(app.port);
   });
 
-  test("a wrong token is rejected and the page offers re-pairing", async ({ ext, app }) => {
+  test("a wrong token is rejected and the token field waits for the right one", async ({ ext, app }) => {
     const opt = await ext.pair({ port: app.port, token: "not-the-token-0000" }, false);
     await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "token", { timeout: 10_000 });
     await expect(opt.getByText("Pairing token rejected")).toBeVisible();
-    await expect(opt.getByRole("button", { name: "Re-pair" })).toBeVisible();
-    // Fix it by typing the right one.
-    await opt.getByRole("button", { name: "Re-pair" }).click();
+    await expect(opt.locator("#token")).toHaveValue("");
+    // Fix it by pasting the right one.
     await opt.locator("#token").fill(app.token);
     await opt.locator("#token").press("Enter");
     await expect(opt.locator(".op-conn")).toHaveAttribute("data-state", "ok", { timeout: 10_000 });
@@ -53,12 +52,5 @@ test.describe("pairing and connection", () => {
     } finally {
       await slow.stop();
     }
-  });
-
-  test("the port field rejects values outside 1024-65535", async ({ ext }) => {
-    const opt = await ext.ctx.newPage();
-    await opt.goto(ext.url("options"));
-    await opt.locator("#port").fill("80");
-    await expect(opt.getByText("Use a port between 1024 and 65535.")).toBeVisible();
   });
 });

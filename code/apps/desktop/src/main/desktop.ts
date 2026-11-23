@@ -10,7 +10,6 @@ import type { Ctx } from "./context";
 import { desktopTestHook } from "./desktop-test-hook";
 import { createDesktopToasts, engineAnnouncer } from "./desktop-toasts";
 import { setupShortcuts } from "./desktop-shortcuts";
-import { engineHandlers } from "./engines";
 import { desktopAutomation } from "./automation";
 import { desktopStreams } from "./automation/streams";
 import { createExports } from "./export/service";
@@ -18,11 +17,7 @@ import { installExtension } from "./extension";
 import { createReading } from "./reader/service";
 import { setupTray } from "./desktop-tray";
 import { createUpdates } from "./updates-service";
-import { setupControl } from "./control";
 import { registerDictationIpc } from "./dictation/ipc";
-import { testEnv } from "./test-env";
-import { fixedInstalledApps } from "./installed-apps";
-import { realInstalledApps } from "./installed-apps/real";
 import { hotkeyPermissionsReady } from "../shared/permissions/guide";
 import { setupPermissions } from "./system/permissions";
 import { registerSpeechModelsIpc } from "./speech-models/ipc";
@@ -44,8 +39,6 @@ interface DesktopOptions {
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
   fakeUpdate?: string | undefined;
-  /** The app version, for the control server. */
-  version: string;
   /** Where dictation keeps its history and models, and its speech worker. */
   dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "pageSite" | "readKey" | "hasKey"> & {
     /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
@@ -57,10 +50,9 @@ interface DesktopOptions {
   voiceChat: Pick<VoiceChat, "complete">;
 }
 
-const shortcutActions = (reading: ReturnType<typeof createReading>, toggleRecording: () => void): Record<ShortcutId, () => void> => ({
+const shortcutActions = (reading: ReturnType<typeof createReading>): Record<ShortcutId, () => void> => ({
   "read-selection": () => void reading.readSelection(),
   "play-pause": () => reading.controller.command({ type: "toggle" }),
-  "record-toggle": toggleRecording,
 });
 
 const readerHandlers = (reading: ReturnType<typeof createReading>) =>
@@ -78,8 +70,7 @@ function stopForRestart(reading: ReturnType<typeof createReading>, exports: Retu
 
 /** The dictation IPC, and the permissions the hotkey needs. */
 function wireDictation(parent: DesktopOptions["parent"], dictation: DictationService): void {
-  const fixture = testEnv().installedApps;
-  registerDictationIpc(dictation, (c) => parent()?.webContents === c, fixture === undefined ? realInstalledApps() : fixedInstalledApps(fixture));
+  registerDictationIpc(dictation, (c) => parent()?.webContents === c);
   registerSpeechModelsIpc(dictation.speech, (c) => parent()?.webContents === c);
   watchPermissions(parent, dictation);
 }
@@ -95,18 +86,14 @@ function watchPermissions(parent: DesktopOptions["parent"], dictation: Dictation
 }
 
 /** The IPC methods the desktop features add. */
-function desktopHandlers(
-  ctx: Ctx,
-  f: {
-    reading: ReturnType<typeof createReading>;
-    exports: ReturnType<typeof createExports>;
-    updates: ReturnType<typeof createUpdates>;
-    shortcuts: ReturnType<typeof setupShortcuts>;
-    test: boolean;
-  },
-) {
+function desktopHandlers(f: {
+  reading: ReturnType<typeof createReading>;
+  exports: ReturnType<typeof createExports>;
+  updates: ReturnType<typeof createUpdates>;
+  shortcuts: ReturnType<typeof setupShortcuts>;
+  test: boolean;
+}) {
   return {
-    ...engineHandlers(ctx),
     ...f.exports.handlers,
     ...f.updates.handlers,
     ...f.shortcuts.handlers,
@@ -115,9 +102,8 @@ function desktopHandlers(
   } satisfies Partial<Api>;
 }
 
-/** Stops every feature; resolves once the control server is down. */
+/** Stops every feature. */
 function disposeAll(p: {
-  control: { dispose(): Promise<void> };
   shortcuts: { unregisterAll(): void };
   reading: { dispose(): void };
   exports: { dispose(): void };
@@ -125,8 +111,7 @@ function disposeAll(p: {
   tray: { dispose(): void };
   dictation: { dispose(): unknown };
   transcripts: { dispose(): unknown };
-}): Promise<void> {
-  const controlDown = p.control.dispose();
+}): void {
   p.shortcuts.unregisterAll();
   p.reading.dispose();
   p.exports.dispose();
@@ -134,7 +119,6 @@ function disposeAll(p: {
   p.tray.dispose();
   void p.dictation.dispose();
   void p.transcripts.dispose();
-  return controlDown;
 }
 
 /**
@@ -152,22 +136,17 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
   let installedByTest = 0;
   const stopWork = () => stopForRestart(reading, exports);
   const updates = createUpdates(ctx, toasts, () => tray.refresh(), stopWork, __TEST_CODE__ && o.fakeUpdate ? () => fakeUpdater(o.fakeUpdate!, () => void installedByTest++) : undefined);
-  const shortcuts = setupShortcuts(
-    ctx,
-    shortcutActions(reading, () => transcripts.toggleRecording()),
-    o.test,
-  );
+  const shortcuts = setupShortcuts(ctx, shortcutActions(reading), o.test);
   // The dictation service reaches the tray only through this callback, so the tray can be built after it.
   const dictation = new DictationService(ctx, { ...o.dictation, distDir: o.distDir, parent: o.parent, test: o.test }, () => tray.refresh());
   const notes = transcriptNotes({ on: () => ctx.config.transcripts.notes, writer: `OpenAI ${NOTES_MODEL}`, complete: (s, u, sig) => o.voiceChat.complete(s, u, sig) });
-  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, onChange: () => tray.refresh(), notes });
-  const tray = setupTray(ctx, { reading, exports, updates, dictation, transcripts, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
+  const transcripts = setupTranscripts(ctx, { distDir: o.distDir, parent: o.parent, dictation, test: o.test, notes });
+  const tray = setupTray(ctx, { reading, exports, updates, dictation, notice: o.trayNotice, requestQuit: o.requestQuit, retryEngine: o.retryEngine });
   Object.assign(ctx.state, { reader: IDLE_READER, update: ctx.state.update ?? UPDATE_UNSUPPORTED });
   wireDictation(o.parent, dictation);
-  const control = setupControl(ctx, { reading, automation: automation.host, dictation, transcripts: transcripts.handlers, dataDir: o.dictation.dataDir, version: o.version });
 
   return {
-    handlers: desktopHandlers(ctx, { reading, exports, updates, shortcuts, test: o.test }),
+    handlers: desktopHandlers({ reading, exports, updates, shortcuts, test: o.test }),
     /** What scripts and AI apps may do; the server calls it. */
     automation: automation.host,
     /** Live transcription for other apps on the engine dictation holds. */
@@ -188,8 +167,7 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     refreshTray: () => tray.refresh(),
     /** The system would not create the tray icon. */
     trayMissing: () => tray.failed(),
-    /** Resolves once the control server is down and its discovery file is gone. */
-    dispose: () => disposeAll({ control, shortcuts, reading, exports, updates, tray, dictation, transcripts }),
+    dispose: () => disposeAll({ shortcuts, reading, exports, updates, tray, dictation, transcripts }),
     testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest }),
   };
 }

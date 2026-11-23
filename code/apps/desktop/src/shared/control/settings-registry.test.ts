@@ -1,38 +1,38 @@
 import { describe, expect, it } from "vite-plus/test";
 import { areaChange } from "../settings/area-change";
-import { checkPickedFolder, validateChange } from "./settings-registry";
+import { validateChange } from "./settings-registry";
 
 describe("validateChange beyond app settings", () => {
   it("splits a change by who stores it", () => {
     const r = validateChange({
       voice: "af_bella",
       "dictation.mode": "toggle",
-      "transcripts.textDays": 90,
-      "engines.releaseOnClose": true,
-      "shortcuts.record-toggle": "ctrl+alt+s",
+      "transcripts.language": "de",
+      "engines.idleMinutes": 30,
+      "shortcuts.play-pause": "ctrl+alt+x",
       launchAtLogin: true,
-      port: 47700,
     });
     expect(r).toEqual({
       ok: true,
       resetShortcuts: false,
       app: { voice: "af_bella" },
       dictation: { mode: "toggle" },
-      areas: { transcripts: { textDays: 90 }, engines: { releaseOnClose: true } },
-      shortcuts: { "record-toggle": "Ctrl+Alt+S" },
-      system: { launchAtLogin: true, port: 47700 },
+      areas: { transcripts: { language: "de" }, engines: { idleMinutes: 30 } },
+      shortcuts: { "play-pause": "Ctrl+Alt+X" },
+      system: { launchAtLogin: true },
     });
   });
 
   it.each([
-    [{ "transcripts.keepAudio": "maybe" }, "transcripts.keepAudio"],
     [{ "meetings.nothing": 1 }, "meetings."],
     [{ "engines.device": "tpu" }, "engines.device"],
     [{ "shortcuts.nothing": "Ctrl+Alt+S" }, "shortcuts.nothing: not a shortcut."],
     [{ "shortcuts.stop": "Ctrl+Alt+X" }, "shortcuts.stop: not a shortcut."],
-    [{ "shortcuts.record-toggle": "S" }, "shortcuts.record-toggle: not a usable shortcut."],
-    [{ "shortcuts.record-toggle": 5 }, "shortcuts.record-toggle: not a usable shortcut."],
-    [{ port: 80 }, "port"],
+    [{ "shortcuts.play-pause": "S" }, "shortcuts.play-pause: not a usable shortcut."],
+    [{ "shortcuts.play-pause": 5 }, "shortcuts.play-pause: not a usable shortcut."],
+    [{ "shortcuts.record-toggle": "Ctrl+Alt+R" }, "shortcuts.record-toggle: not a shortcut."],
+    [{ port: 47700 }, "port"],
+    [{ preferredPort: 47700 }, "preferredPort"],
     [{ launchAtLogin: "yes" }, "launchAtLogin"],
     [{ "transcripts.__proto__": {} }, "transcripts.__proto__ is not a setting."],
     [{ "constructor.x": 1 }, "constructor.x"],
@@ -42,14 +42,9 @@ describe("validateChange beyond app settings", () => {
     expect(r.ok === false && r.message).toContain(text);
   });
 
-  it("lets the command line change only what it lists", () => {
-    expect(validateChange({ "transcripts.textDays": 90 }, ["voice"])).toEqual({ ok: false, message: "transcripts.textDays cannot be changed from the command line." });
-    expect(validateChange({ port: 47700 }, ["voice"]).ok).toBe(false);
-  });
-
-  it("accepts a chosen folder for transcripts only from a chooser", () => {
-    expect(validateChange({ "transcripts.folder": "D:/Talks" }).ok).toBe(false);
-    expect(checkPickedFolder("transcripts", "D:/Talks")).toEqual({ ok: true, patch: { folder: "D:/Talks" } });
+  it.each(["textDays", "keepAudio", "audioDays", "trashDays", "folder"])("refuses the removed transcripts setting %s", (key) => {
+    const r = validateChange({ [`transcripts.${key}`]: 1 });
+    expect(r.ok === false && r.message).toContain(`transcripts.${key}`);
   });
 
   it("restores voiceChatVoice", () => {
@@ -59,6 +54,6 @@ describe("validateChange beyond app settings", () => {
 
 describe("areaChange", () => {
   it("names each key under its area", () => {
-    expect(areaChange("transcripts", { notes: true, folder: "x" })).toEqual({ "transcripts.notes": true, "transcripts.folder": "x" });
+    expect(areaChange("transcripts", { notes: true, language: "de" })).toEqual({ "transcripts.notes": true, "transcripts.language": "de" });
   });
 });

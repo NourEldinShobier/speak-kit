@@ -1,4 +1,4 @@
-import { appendFile, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 /** The file system as the store sees it. `write` is atomic: the old file stays whole until the new one is complete. */
@@ -8,8 +8,6 @@ export interface Fs {
   /** Not an error when the file is already gone. */
   remove(file: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
-  /** Adds to the end of the file, creating it; not atomic (a recording spool). */
-  append(file: string, data: Uint8Array): Promise<void>;
   exists(file: string): Promise<boolean>;
 }
 
@@ -54,15 +52,6 @@ export function nodeFs(): Fs {
     async rename(from, to) {
       await mkdir(path.dirname(to), { recursive: true });
       await rename(from, to);
-    },
-    async append(file, data) {
-      await mkdir(path.dirname(file), { recursive: true });
-      try {
-        await appendFile(file, data);
-      } catch (e) {
-        if (code(e) === "ENOSPC" || code(e) === "EDQUOT") throw new DiskFullError();
-        throw e;
-      }
     },
     exists: (file) =>
       stat(file).then(

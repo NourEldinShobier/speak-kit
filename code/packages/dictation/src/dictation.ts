@@ -117,8 +117,7 @@ class Runtime implements Dictation {
     const owner = this.deps.micOwner?.();
     const c = this.session.capture.kind;
     if (!owner || (c !== "idle" && c !== "armed")) return false;
-    const { hotkey, rawKey } = this.settings;
-    const begins = event.type === "start" || (event.type === "key" && event.down && !!event.key && [hotkey, rawKey].includes(event.key));
+    const begins = event.type === "start" || (event.type === "key" && event.down && !!event.key && event.key === this.settings.hotkey);
     if (begins) this.flash({ error: "mic-in-use", owner });
     return begins;
   }
@@ -147,7 +146,7 @@ class Runtime implements Dictation {
       case "start-recording":
         return this.startRecording(effect.id, effect.prerollMs);
       case "finish-recording":
-        return this.finishRecording(effect.id, effect.raw === true);
+        return this.finishRecording(effect.id);
       case "discard-recording":
         return this.discardRecording(effect.id, effect.cancelled, effect.why);
       default:
@@ -261,7 +260,7 @@ class Runtime implements Dictation {
     settle?.(r);
   }
 
-  private finishRecording(id: number, raw: boolean): void {
+  private finishRecording(id: number): void {
     this.pending++;
     const clip: Promise<Clip | undefined> = this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return undefined;
@@ -272,7 +271,7 @@ class Runtime implements Dictation {
     const job: Job = {
       clip,
       target: this.targets.get(id) ?? Promise.resolve(undefined),
-      ...((raw || this.rawCaptures.has(id)) && { raw: true }),
+      ...(this.rawCaptures.has(id) && { raw: true }),
       ...(owned && { print: (r: CaptureResult) => this.settleCapture(id, r) }),
     };
     this.targets.delete(id);

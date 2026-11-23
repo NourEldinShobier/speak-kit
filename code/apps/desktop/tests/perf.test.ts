@@ -20,8 +20,8 @@ const sum = (p: Proc[], k: "ws" | "priv") => Math.round(p.reduce((a, b) => a + b
 
 describe("startup marks", () => {
   it("main:ready, server:listening and window:shown happen in that order, within 5 s of the process start", async () => {
-    l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    l = await launch({ config: { setupDone: true, setupSkipped: false }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const marks = await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { marks(): { name: string; at: number }[] } }).__speakkit.marks());
     const at = (name: string) => marks.find((m) => m.name === name)?.at ?? NaN;
     console.log(JSON.stringify(marks));
@@ -33,8 +33,8 @@ describe("startup marks", () => {
 
 describe("desktop resource budget", () => {
   it("unloaded model + hidden window: all app processes use under 150 MB of private memory and under 200 MB of working set", async () => {
-    l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1", SPEAKKIT_DESTROY_MS: "2000" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    l = await launch({ config: { setupDone: true, setupSkipped: false }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1", SPEAKKIT_DESTROY_MS: "2000" } });
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await new Promise((r) => setTimeout(r, 2000));
     const visible = await procs(l);
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.hide());
@@ -58,8 +58,8 @@ describe("desktop resource budget", () => {
 
 describe("main process responsiveness", () => {
   it("event loop: p99 delay under 50 ms and max under 250 ms while idle, p99 above the median within 10 ms off CI; idle CPU of all processes under 5%", async () => {
-    l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0 }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    l = await launch({ config: { setupDone: true, setupSkipped: false }, env: { SPEAKKIT_FAKE_STATE: "unloaded", SPEAKKIT_TEST: "1" } });
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.app.evaluate(({ app }) => app.getAppMetrics());
     // "While idle" starts here: the app is up and shows Home. Starting the window and the server is the startup test's business and a shared runner can stall it for a second.
     await l.app.evaluate(() => (globalThis as unknown as { __speakkit: { loopReset(): void } }).__speakkit.loopReset());

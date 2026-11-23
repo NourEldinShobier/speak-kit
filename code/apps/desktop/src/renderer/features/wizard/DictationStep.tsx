@@ -131,18 +131,16 @@ function Waiting({ unsupported, failed, onBack, onNext }: { unsupported: boolean
   );
 }
 
-/** Continue on the language screen: the language is saved, then the model is used, adopted from disk, or (only now) downloaded. */
-async function startModel(view: SpeechModelsView, language: string, found: boolean): Promise<{ id: string; phase: DictationPhase } | undefined> {
-  const choice = languageChoice(view, language, found ? [view.table.find((r) => r.language === language)!.recommended] : []);
+/** Continue on the language screen: the language is saved, then the model is used or (only now) downloaded. */
+async function startModel(view: SpeechModelsView, language: string): Promise<{ id: string; phase: DictationPhase } | undefined> {
+  const choice = languageChoice(view, language);
   if (!choice) return undefined;
   void patchDictation({ language: language as never });
   const id = choice.model.id;
-  const next = afterLanguage(choice, found);
-  if (next === "download") {
+  if (afterLanguage(choice) === "download") {
     void models.download(id);
     return { id, phase: "model" };
   }
-  if (next === "adopt") await models.adoptFound([id]);
   await models.use(id);
   return { id, phase: "practice" };
 }
@@ -165,11 +163,11 @@ export function DictationStep({ resumed, onBack, onNext }: Props) {
   };
   if (phase === "practice") return <Practice onBack={() => setPhase(card && !card.installed ? "model" : "language")} onNext={onNext} onSkip={onNext} />;
   if (phase === "model" && card) return <ModelScreen view={view} card={card} onBack={() => setPhase("language")} onContinue={() => setPhase("practice")} onSkip={skip} />;
-  const onContinue = async (language: string, found: boolean) => {
-    const started = await startModel(view, language, found);
+  const onContinue = async (language: string) => {
+    const started = await startModel(view, language);
     if (!started) return;
     setChosen(started.id);
     setPhase(started.phase);
   };
-  return <LanguageScreen view={view} onBack={onBack} onSkip={skip} onContinue={(language, found) => void onContinue(language, found)} />;
+  return <LanguageScreen view={view} onBack={onBack} onSkip={skip} onContinue={(language) => void onContinue(language)} />;
 }

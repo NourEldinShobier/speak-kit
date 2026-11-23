@@ -84,9 +84,7 @@ function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
 function Overlays({ s, st, dispatch, player }: { s: AppState; st: ShellState; dispatch: Dispatch<ShellAction>; player: ReturnType<typeof usePreview> }) {
   return (
     <>
-      {st.palette && (
-        <Palette onRun={(c) => runCommand(c, { s, dispatch, halt: player.halt, preview: (v, t) => void player.toggle(v, t) })} onClose={() => dispatch({ type: "palette", open: false })} />
-      )}
+      {st.palette && <Palette onRun={(c) => runCommand(c, { dispatch, preview: (v, t) => void player.toggle(v, t) })} onClose={() => dispatch({ type: "palette", open: false })} />}
       {st.exporting && <ExportDialog s={s} open={st.exporting} onClose={() => dispatch({ type: "export", open: null })} />}
       <QuitDialog s={s} open={st.quit} playing={!!player.playing} onClose={() => dispatch({ type: "quit", open: false })} />
     </>

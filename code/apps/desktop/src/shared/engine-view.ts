@@ -17,7 +17,7 @@ interface EngineView {
   spinner: boolean;
 }
 
-/** One place that turns server health into words, used by the title bar pill, Home, Engines, Memory and the tray tooltip. */
+/** One place that turns server health into words, used by the title bar pill, Engines, Memory and the tray tooltip. */
 export function engineView(health: Health | null, serverError: DesktopError | null): EngineView {
   if (!health) return serverError ? { key: "error", label: at("engine.error"), tone: "red", spinner: false } : { key: "starting", label: at("engine.starting"), tone: "neutral", spinner: true };
   const e = health.engine;
@@ -66,13 +66,3 @@ export function trayTooltip(health: Health | null, serverError: DesktopError | n
   const v = engineView(health, serverError);
   return v.hint ? at("tray.tipEngineHint", { label: v.label, hint: at("engine.unloadedTip") }) : at("tray.tipEngine", { label: v.label });
 }
-
-/** The line under the engine name on Home: download progress, the idle explanation, or what the engine reports. */
-export function engineDetail(engine: Health["engine"] | undefined): string {
-  if (engine?.state === "downloading") return at("engine.detailDownloading", { pct: Math.round((engine.progress ?? 0) * 100) });
-  if (engine?.state === "unloaded") return at("engine.detailUnloaded");
-  return engine?.detail ?? at("engine.detailDefault");
-}
-
-/** The class of the status dot next to a pill tone on Home: green has none. */
-export const DOT_CLASS: Record<PillTone, string> = { green: "", red: "is-err", neutral: "is-idle", blue: "is-warn", orange: "is-warn" };

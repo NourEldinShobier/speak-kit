@@ -43,8 +43,8 @@ describe("readExternalEdit", () => {
     expect(r.kind === "changed" && r.keys).toEqual(["exportPrefs"]);
   });
 
-  it("leaves out the fields the caller keeps for this run", () => {
-    expect(readExternalEdit(base(), text({ preferredPort: 5555 }), ["preferredPort"])).toEqual({ kind: "same" });
+  it("ignores a setting the app no longer has", () => {
+    expect(readExternalEdit(base(), text({ preferredPort: 5555 }))).toEqual({ kind: "same" });
   });
 
   it("never takes the migration bookkeeping from an edit", () => {

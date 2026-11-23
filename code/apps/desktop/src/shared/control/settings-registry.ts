@@ -9,23 +9,11 @@ import { TranscriptsPatchSchema } from "../transcripts/settings";
 /** The feature areas that keep their settings under their own key of the settings file; a change names them `<area>.<key>`. */
 export const AREA_SCHEMAS = { transcripts: TranscriptsPatchSchema, engines: EnginesPatchSchema } as const;
 export type AreaName = keyof typeof AREA_SCHEMAS;
-export const AREA_NAMES = Object.keys(AREA_SCHEMAS) as AreaName[];
 
-/** Settings that have their own owner and are not part of `ConfigPatch`: the login item, the server port and the voice chat voice. */
-export const SYSTEM_KEYS = ["launchAtLogin", "port", "voiceChatVoice"] as const;
-const SystemSchema = v.partial(
-  v.strictObject({ launchAtLogin: v.boolean(), port: v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535)), voiceChatVoice: v.picklist(VOICE_CHAT_VOICES) }),
-);
+/** Settings that have their own owner and are not part of `ConfigPatch`: the login item and the voice chat voice. */
+export const SYSTEM_KEYS = ["launchAtLogin", "voiceChatVoice"] as const;
+const SystemSchema = v.partial(v.strictObject({ launchAtLogin: v.boolean(), voiceChatVoice: v.picklist(VOICE_CHAT_VOICES) }));
 export type SystemPatch = v.InferOutput<typeof SystemSchema>;
-
-/** The app settings the command line may change: plain values with no side effect to run. No dictation key is listed: how dictated text is stored, rewritten and pasted stays with the Settings pages. */
-export const COMMAND_LINE_KEYS = ["voice", "speed"] as const;
-
-/** The folders the person picks in the operating system's chooser; the Settings pages cannot type one, so only a chooser's own answer may name them. */
-const FolderSchema = v.pipe(v.string(), v.maxLength(1024));
-const PICKED_SCHEMAS = {
-  transcripts: v.strictObject({ ...TranscriptsPatchSchema.entries, folder: v.optional(FolderSchema) }),
-} as const;
 
 export type AreaPatches = { [A in AreaName]?: Record<string, unknown> };
 export type SettingsChange =
@@ -33,12 +21,10 @@ export type SettingsChange =
   | { ok: false; message: string };
 
 /**
- * The one validator for a change of settings, whoever asks: the Settings pages, the command line and an import all end up here.
- * Keys are the app's own (`voice`, `speed`), `dictation.<key>`, `<area>.<key>` for transcripts and engines, `shortcuts.<id>`, `launchAtLogin` or `port`; anything else, or a value the page would refuse, is refused whole and nothing is applied.
+ * The one validator for a change of settings, whoever asks: the Settings pages and an import both end up here.
+ * Keys are the app's own (`voice`, `speed`), `dictation.<key>`, `<area>.<key>` for transcripts and engines, `shortcuts.<id>` or `launchAtLogin`; anything else, or a value the page would refuse, is refused whole and nothing is applied.
  */
-export function validateChange(change: Readonly<Record<string, unknown>>, only?: readonly string[], picked = false): SettingsChange {
-  const outside = only ? Object.keys(change).find((k) => !only.includes(k)) : undefined;
-  if (outside) return { ok: false, message: `${outside} cannot be changed from the command line.` };
+export function validateChange(change: Readonly<Record<string, unknown>>): SettingsChange {
   const g = groupKeys(change);
   if (!g.ok) return g;
   const a = v.safeParse(ConfigPatchSchema, g.app);
@@ -49,7 +35,7 @@ export function validateChange(change: Readonly<Record<string, unknown>>, only?:
   if (!sys.success) return { ok: false, message: describe(sys.issues) };
   const reset = v.safeParse(v.optional(v.literal("default")), g.reset);
   if (!reset.success) return { ok: false, message: 'shortcuts: only "default" is accepted.' };
-  const areas = validateAreas(g.areas, picked);
+  const areas = validateAreas(g.areas);
   if (!areas.ok) return areas;
   const shortcuts = validateShortcuts(g.shortcuts);
   if (!shortcuts.ok) return shortcuts;
@@ -84,21 +70,14 @@ function groupKeys(change: Readonly<Bag>): { ok: true; app: Bag; dictation: Bag;
   return g;
 }
 
-function validateAreas(parts: Record<string, Bag>, picked: boolean): { ok: true; areas: AreaPatches } | Refused {
+function validateAreas(parts: Record<string, Bag>): { ok: true; areas: AreaPatches } | Refused {
   const areas: Record<string, Bag> = {};
   for (const [name, patch] of Object.entries(parts)) {
-    const schema = picked && name in PICKED_SCHEMAS ? PICKED_SCHEMAS[name as keyof typeof PICKED_SCHEMAS] : AREA_SCHEMAS[name as AreaName];
-    const r = v.safeParse(schema, patch);
+    const r = v.safeParse(AREA_SCHEMAS[name as AreaName], patch);
     if (!r.success) return { ok: false, message: describe(r.issues, `${name}.`) };
     areas[name] = r.output as Bag;
   }
   return { ok: true, areas: areas as AreaPatches };
-}
-
-/** What a folder chooser stores: the folder the person picked for transcripts, checked like any other setting; a refusal is its message. */
-export function checkPickedFolder(area: "transcripts", folder: string): { ok: true; patch: Record<string, unknown> } | Refused {
-  const c = validateChange({ [`${area}.folder`]: folder }, undefined, true);
-  return c.ok ? { ok: true, patch: c.areas[area] ?? {} } : c;
 }
 
 function validateShortcuts(given: Bag): { ok: true; shortcuts: Partial<Record<ShortcutId, string>> } | Refused {

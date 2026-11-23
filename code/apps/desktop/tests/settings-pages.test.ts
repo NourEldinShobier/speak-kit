@@ -13,12 +13,12 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((l) => l.cleanup()));
 });
 
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 const openSettings = async (l: Launched, page = "General") => {
   const nav = l.page.getByRole("navigation", { name: "Settings" });
   if (!(await nav.isVisible())) {
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Settings" }).click();
   }
   await nav.getByRole("link", { name: page, exact: true }).click();
@@ -49,7 +49,7 @@ describe("settings search and the Advanced fold", () => {
 describe("shell layout", () => {
   it("opening Dictation leaves the shell at the full window width", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await l.page.getByRole("link", { name: "Dictation", exact: true }).click();
     await l.page.getByRole("heading", { name: "Dictation", exact: true, level: 1 }).waitFor();
     const box = await l.page.evaluate(() => {
@@ -61,58 +61,24 @@ describe("shell layout", () => {
   });
 });
 
-describe("experiments", () => {
-  it("every card starts off; turning one on asks first, saves the flag and shows On", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Experiments");
-    const card = l.page.getByTestId("experiment-caption-export");
-    await card.waitFor();
-    expect(await card.getByRole("button").textContent()).toBe("Turn on");
-    await card.getByRole("button", { name: "Turn on" }).click();
-    await l.page
-      .getByRole("dialog", { name: /Turn on Caption export/ })
-      .getByRole("button", { name: "Turn on" })
-      .click();
-    await card.getByRole("button", { name: "Turn off" }).waitFor();
-    expect(configOf(l).experiments).toEqual({ "caption-export": true });
-  });
-});
-
-describe("diagnostics", () => {
-  it("the copy preview shows redacted text and Copy puts it on the clipboard", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Diagnostics");
-    await l.page.getByRole("button", { name: "Copy diagnostics" }).click();
-    const text = l.page.getByLabel("Diagnostics text");
-    await text.waitFor();
-    await l.page.waitForFunction(() => !document.querySelector('[aria-label="Diagnostics text"]')?.textContent?.startsWith("Building"));
-    const body = (await text.textContent()) ?? "";
-    expect(body).toContain("Speak Kit ");
-    expect(body).not.toContain(process.env.USERNAME ?? "\u0000none");
-    await l.page.getByRole("dialog").getByRole("button", { name: "Copy", exact: true }).click();
-    await l.page.getByRole("dialog").getByRole("button", { name: "Copied" }).waitFor();
-  });
-
-  it("the activity log starts empty with Clear disabled", async () => {
-    const l = await start({ config: DONE });
-    await openSettings(l, "Diagnostics");
-    await l.page.getByText("Nothing logged yet").waitFor();
-    expect(await l.page.getByRole("button", { name: "Clear", exact: true }).isDisabled()).toBe(true);
-  });
-
+describe("about advanced fold", () => {
   it("the log view loads", async () => {
     const l = await start({ config: DONE });
-    await openSettings(l, "Diagnostics");
+    await openSettings(l, "About");
+    await l.page
+      .getByTestId("advanced-fold")
+      .getByRole("button", { name: /Advanced/ })
+      .click();
     await l.page.waitForFunction(() => !document.querySelector('[data-testid="log-view"]')?.textContent?.startsWith("Loading"));
   });
 });
 
 describe("settings file notices", () => {
   it("an invalid saved field loads as default and shows a banner that can be dismissed", async () => {
-    const l = await start({ config: { ...DONE, idleUnload: "soon" } });
+    const l = await start({ config: { ...DONE, appearance: "neon" } });
     await openSettings(l);
     const banner = l.page.getByTestId("settings-notice");
-    await banner.getByText("idleUnload").waitFor();
+    await banner.getByText("appearance").waitFor();
     await banner.getByRole("button", { name: "Dismiss" }).click();
     await banner.waitFor({ state: "detached" });
   });
@@ -155,7 +121,7 @@ describe("the 960 px window", () => {
   it("every page of this package fits the narrow window without a horizontal scrollbar", async () => {
     const l = await start({ config: DONE });
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 700));
-    for (const name of ["General", "Accessibility", "Performance", "Storage", "Privacy", "Experiments", "Diagnostics", "About"]) {
+    for (const name of ["General", "Accessibility", "Storage", "Privacy", "About"]) {
       await openSettings(l, name);
       const over = await l.page.evaluate(() => {
         const m = document.querySelector("main")!;
@@ -167,7 +133,7 @@ describe("the 960 px window", () => {
 
   it("a settings file from a newer app keeps its warning and cannot be dismissed", async () => {
     const l = await start({ config: { ...DONE, configVersion: 999 } });
-    await l.page.getByRole("heading", { name: "Home" }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     await openSettings(l);
     const notice = l.page.getByTestId("settings-notice");
     await notice.getByText("are not saved").waitFor();

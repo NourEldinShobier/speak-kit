@@ -3,7 +3,7 @@ import { Button, LoadingLabel, SettingRow, SettingsSection, StatusPill } from "@
 import type { AppState } from "../../../shared/ipc";
 import { InstallExtension } from "../../pages";
 import { api } from "../../ui";
-import { TokenField } from "../../TokenField";
+import { CopyTokenButton } from "../../CopyTokenButton";
 import { Back, Foot, Frame } from "./Frame";
 import { connectPhase, type ConnectPhase } from "./model";
 
@@ -65,7 +65,7 @@ export function ConnectStep({ s, copied, onCopied, onBack, onSkip, onNext }: Con
       </SettingsSection>
       <SettingsSection title="2. Pair it with this app" description="Copy the token and paste it in the extension under Options > General > Pairing token.">
         <div className="sk-pad">
-          <TokenField token={s.token} regenerate confirmRegenerate onCopied={onCopied} />
+          <CopyTokenButton token={s.token} onCopied={onCopied} />
         </div>
       </SettingsSection>
       <SettingsSection title="3. Test the connection">

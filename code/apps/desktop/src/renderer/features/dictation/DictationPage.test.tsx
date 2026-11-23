@@ -70,8 +70,8 @@ describe("Settings > Dictation", () => {
   });
 
   it("shows the permission guide and points the failed hotkey at the permission that is missing", () => {
-    const states = { accessibility: "denied", "input-monitoring": "granted", microphone: "granted", "screen-recording": "not-needed" } as const;
-    perms.status = { platform: "darwin", states, guides: { dictation: guideFor(states, "dictation"), "screen-reading": guideFor(states, "screen-reading") } };
+    const states = { accessibility: "denied", "input-monitoring": "granted", microphone: "granted" } as const;
+    perms.status = { platform: "darwin", states, guides: { dictation: guideFor(states, "dictation") } };
     const out = text(page(status({ hotkeyFailed: true })));
     expect(out).toContain("Allow dictation");
     expect(out).toContain("Accessibility");
@@ -103,9 +103,6 @@ describe("Settings > Dictation", () => {
       "Change",
       "Shortcut mode",
       "Hold or double-tap",
-      "Hold time",
-      "300 ms",
-      "Dictate without processing",
       "Paste last dictation",
       "Restore default",
       "Speech model",
@@ -234,17 +231,16 @@ describe("history page", () => {
     expect(text(html)).not.toContain("Listening time");
   });
 
-  it("has the lead, the search field and the two views before the entries have loaded", () => {
+  it("has the lead, the search field and the tools before the entries have loaded", () => {
     current.status = status();
     const html = renderToStaticMarkup(<DictationHistoryPage embedded openSettings={() => undefined} />);
     const t = text(html);
     expect(html).toContain('placeholder="Search what you dictated"');
     expect(t).toContain("Clear all");
-    expect(t).toContain("Statistics");
     expect(t).toContain("Select");
-    expect(t).toContain("Final text");
-    expect(t).toContain("Side by side");
+    expect(t).toContain("Advanced");
     expect(t).toContain("Copy recent");
+    for (const gone of ["Statistics", "Final text", "Side by side"]) expect(t).not.toContain(gone);
     expect(html).toContain('aria-label="More history actions"');
   });
 

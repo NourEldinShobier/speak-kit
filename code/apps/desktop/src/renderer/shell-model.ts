@@ -38,7 +38,7 @@ export type ShellAction =
 export const MAX_RECENT = 5;
 
 export const initShell = (): ShellState => ({
-  hist: [{ page: "home", sub: "general" }],
+  hist: [{ page: "dictation", sub: "general" }],
   at: 0,
   side: true,
   palette: false,
@@ -81,7 +81,7 @@ export function recentReadings(docs: { id: string; title: string; openedAt?: num
 /** Leaves Settings for the page that was open before it (the entry just before it; sections never add entries), dropping the Settings entry. */
 function closeSettings(s: ShellState): ShellState {
   if (currentLoc(s).page !== "settings" || s.palette || s.quit || s.exporting) return s;
-  if (s.at === 0) return moveTo(s, 0, [{ page: "home", sub: "general" }, ...s.hist.slice(1)]);
+  if (s.at === 0) return moveTo(s, 0, [{ page: "dictation", sub: "general" }, ...s.hist.slice(1)]);
   return moveTo(s, s.at - 1, [...s.hist.slice(0, s.at), ...s.hist.slice(s.at + 1)]);
 }
 

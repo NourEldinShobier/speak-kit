@@ -1,20 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { findMatches, type Detail } from "@speakkit/transcripts/pure";
-import { Banner, EmptyState, Icon, Skeleton } from "@speakkit/ui";
+import { Banner, Button, EmptyState, Icon, Skeleton } from "@speakkit/ui";
 import type { Push, SettingsView } from "../../../shared/transcripts/contract";
 import { transcripts } from "./api";
-import { ExportNotice, type ExportResult } from "./ExportMenu";
-import { audioText, dateText, lengthText, segmentAt } from "./model";
+import { dateText, lengthText } from "./model";
 import { ChapterList, SummaryCard } from "./TranscriptNotes";
 import { Find, Head, Lines, PAGE } from "./TranscriptParts";
-import { audioDaysLeft } from "./TranscriptRow";
 
 interface Props {
   id: string;
   push: Push;
   settings: SettingsView | null;
   onBack(): void;
-  onDeleted(r: { id: string; title: string }): void;
+  /** Delete was pressed: the page asks for confirmation. */
+  onDelete(r: { id: string; title: string }): void;
 }
 
 type Loaded = { state: "loading" } | { state: "error" } | { state: "gone" } | { state: "ready"; detail: Detail };
@@ -38,7 +37,7 @@ function useDetail(id: string, tick: number): { loaded: Loaded; reload(): void }
 
 function factsOf(d: Detail, now: number): string {
   const when = dateText(d.createdAt, now).replace("Today, ", "today at ").replace("Yesterday, ", "yesterday at ");
-  return [d.source === "file" ? `Imported ${d.sourceName ?? "audio file"}` : "Recorded conversation", when, lengthText(d.durationSec)].join(", ");
+  return [`Imported ${d.sourceName ?? "audio file"}`, when, lengthText(d.durationSec)].join(", ");
 }
 
 const unfinishedTitle = (d: Detail): string => {
@@ -71,14 +70,7 @@ function useFinder(d: Detail, query: string) {
     setCurrent(next);
     go(matches[next]!.segment);
   };
-  const jump = (sec: number) =>
-    go(
-      segmentAt(
-        d.segments.map((s) => s.start),
-        sec,
-      ),
-    );
-  return { root, matches, current, limit, setLimit, step, jump };
+  return { root, matches, current, limit, setLimit, step };
 }
 
 function Words({ detail: d, unfinished, children }: { detail: Detail; unfinished: boolean; children: ReactNode }) {
@@ -94,33 +86,38 @@ function Words({ detail: d, unfinished, children }: { detail: Detail; unfinished
 
 function Ready({ detail: d, props, reload }: { detail: Detail; props: Props; reload(): void }) {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<ExportResult | null>(null);
+  const [copied, setCopied] = useState(false);
   const f = useFinder(d, query);
   const unfinished = d.status !== "done";
   return (
     <div className="sk-page tr-page" ref={f.root}>
       <Back onBack={props.onBack} />
-      <Head
-        detail={d}
-        facts={`${factsOf(d, Date.now())}, ${props.settings?.model.name ?? ""}`}
-        audio={audioText(d, audioDaysLeft(d, props.settings?.config.audioDays ?? 7))}
-        onResult={setResult}
-        onChanged={reload}
-        onDeleted={() => void transcripts.trash(d.id).then(() => props.onDeleted({ id: d.id, title: d.title }))}
-      />
-      <ExportNotice result={result} onClose={() => setResult(null)} />
+      <Head detail={d} facts={`${factsOf(d, Date.now())}, ${props.settings?.model.name ?? ""}`} onChanged={reload} onDelete={() => props.onDelete({ id: d.id, title: d.title })} />
+      {copied ? (
+        <Banner
+          tone="info"
+          icon="circle-check"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => setCopied(false)}>
+              Dismiss
+            </Button>
+          }
+        >
+          Copied to the clipboard.
+        </Banner>
+      ) : null}
       {unfinished ? (
         <Banner tone={d.status === "failed" ? "error" : "info"} title={unfinishedTitle(d)}>
           {d.status === "failed" ? (d.failure?.message ?? "It failed.") : "What is below is what has been transcribed so far."}
         </Banner>
       ) : null}
       <SummaryCard detail={d} reload={reload} />
-      <ChapterList detail={d} onCopied={() => setResult({ kind: "copied" })} />
-      <Find query={query} setQuery={setQuery} current={f.current} total={f.matches.length} onStep={f.step} onJump={f.jump} />
+      <ChapterList detail={d} onCopied={() => setCopied(true)} />
+      <Find query={query} setQuery={setQuery} current={f.current} total={f.matches.length} onStep={f.step} />
       <Words detail={d} unfinished={unfinished}>
         <Lines detail={d} query={query} matches={f.matches} current={f.current} limit={f.limit} setLimit={f.setLimit} />
       </Words>
-      <p className="tr-foot">Transcribed on this computer. Deleting moves the transcript to Trash for {props.settings?.config.trashDays ?? 30} days.</p>
+      <p className="tr-foot">Transcribed on this computer. Deleting removes the transcript for good.</p>
     </div>
   );
 }
@@ -131,7 +128,7 @@ const Back = ({ onBack }: { onBack(): void }) => (
   </button>
 );
 
-/** One transcript: title (renamable), Copy, Export and delete, the facts about it, search inside it with previous and next, a jump to a time, and its lines with their times. */
+/** One transcript: title (renamable) and delete, the facts about it, search inside it with previous and next, and its lines with their times. */
 export function TranscriptView(props: Props) {
   const { loaded, reload } = useDetail(props.id, props.push.tick);
   const back = <Back onBack={props.onBack} />;

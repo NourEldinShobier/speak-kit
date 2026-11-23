@@ -43,7 +43,7 @@ describe("OpenAI rewriter", () => {
     await expect(p).rejects.toThrow("aborted");
   });
 
-  it("tells the model the mode's capital and full-stop choices, and asks for capitals only when the mode wants them", () => {
+  it("tells the model the capital and full-stop choices, and asks for capitals only when they are on", () => {
     expect(instructions()).toContain("capital letters");
     expect(instructions({ capitals: "sentence", stripFinalStop: false })).toContain("capital letters");
     expect(instructions({ capitals: "keep", stripFinalStop: true })).toContain("Do not change any capital");

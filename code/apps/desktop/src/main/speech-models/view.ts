@@ -21,7 +21,7 @@ import {
 } from "@speakkit/engine";
 import type { DownloadError } from "@speakkit/engine";
 import type { EnginesConfig } from "../../shared/speech-models/config";
-import type { AccuracyFigure, DeviceView, ModelCard, SpeechModelsView, TableRow } from "../../shared/speech-models/contract";
+import type { AccuracyFigure, DeviceView, ModelCard, SpeechModelsView } from "../../shared/speech-models/contract";
 
 /** Everything the page shows is computed from these inputs, so the whole page state can be tested without Electron or an engine. */
 export interface ViewInput {
@@ -171,23 +171,8 @@ function floorOf(hw: Hardware | undefined): string | undefined {
   return fits.fits ? undefined : fits.reason;
 }
 
-function tableRow(r: LanguageRow, catalog: readonly SttModel[], cpuRows: readonly LanguageRow[]): TableRow {
-  const w = wrongWords(catalog.find((m) => m.id === r.recommended) ?? {}, r.language);
-  const cpuOnly = cpuRows.find((c) => c.language === r.language)?.recommended;
-  const cpuSeconds = tenSecondSeconds(catalog.find((m) => m.id === cpuOnly) ?? {}, "cpu");
-  return {
-    language: r.language,
-    recommended: r.recommended,
-    alsoWorks: r.alsoWorks,
-    ...(w && { figure: { language: r.language, ...w } }),
-    ...(cpuOnly && { cpuOnly }),
-    ...(cpuSeconds !== undefined && { cpuSeconds }),
-  };
-}
-
 export function buildView(i: ViewInput): SpeechModelsView {
   const rows = languageTable(i.catalog, quickGraphics(i) ? PREFERRED_MODEL : PREFERRED_MODEL_CPU);
-  const cpuRows = languageTable(i.catalog, PREFERRED_MODEL_CPU);
   const current = i.catalog.find((m) => m.id === i.selected);
   const rec = rows.find((r) => r.language === i.language)?.recommended;
   const newer = newerModelHint(i.catalog, i.installed, i.config.dismissedHints);
@@ -195,14 +180,13 @@ export function buildView(i: ViewInput): SpeechModelsView {
   const floor = floorOf(i.hardware);
   return {
     models: ordered(i.catalog.map((m) => cardOf(m, i, rows))),
-    table: rows.map((r) => tableRow(r, i.catalog, cpuRows)),
+    table: rows.map((r) => ({ language: r.language, recommended: r.recommended })),
     names: Object.fromEntries(i.catalog.map((m) => [m.id, m.name])),
     dictationLanguage: current ? resolveLanguage(current, i.language).language : i.language,
     sample: { recordings: { ...MEASUREMENT_SAMPLE.recordings }, words: { ...MEASUREMENT_SAMPLE.words }, machine: MEASUREMENT_SAMPLE.machine },
     idleMinutes: i.config.idleMinutes,
     device: deviceOf(i),
     disk: { total: i.diskTotal, folder: i.folder },
-    releaseOnClose: i.config.releaseOnClose,
     autoSwitch: { enabled: i.config.autoSwitch.enabled, rules: rules.map((r) => ({ ...r })), skippedRuleIds: rules.filter((r) => !i.installed.has(r.model)).map((r) => r.id) },
     recording: i.recording,
     noModel: i.installed.size === 0,

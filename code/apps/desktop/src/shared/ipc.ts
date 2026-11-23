@@ -1,4 +1,4 @@
-import type { EngineList, Health, VoiceList } from "@speakkit/protocol";
+import type { Health, VoiceList } from "@speakkit/protocol";
 import type { DownloadsReport } from "./app-data";
 import type { DesktopError } from "./errors";
 import type { Config } from "./schemas";
@@ -15,10 +15,8 @@ export type { Config, ConfigPatch } from "./schemas";
 /** The answer to a change of settings made through the one validator. */
 export type SettingsResult = { ok: true } | { ok: false; message: string; shortcut?: Extract<ShortcutResult, { ok: false }> };
 
-/** What importing a settings file did: how many settings were applied, which of them differ from before, and which names were left out. */
-export type ImportOutcome = { status: "imported"; applied: number; changed: string[]; skipped: string[] } | { status: "cancelled" } | { status: "failed"; message: string };
-export const PAGES = ["home", "library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "settings"] as const;
-export const SETTINGS_SUBS = ["general", "voice", "shortcuts", "accessibility", "performance", "storage", "privacy", "experiments", "browser", "diagnostics", "whatsnew", "about"] as const;
+export const PAGES = ["library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "settings"] as const;
+export const SETTINGS_SUBS = ["general", "shortcuts", "accessibility", "storage", "privacy", "browser", "whatsnew", "about"] as const;
 export type Page = (typeof PAGES)[number];
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
@@ -43,8 +41,6 @@ export interface AppState {
   platform: string;
   /** Port the server really listens on (0 while starting or failed). */
   port: number;
-  /** True when `port` is not the preferred port because that one was busy. */
-  portFallback: boolean;
   token: string;
   health: Health | null;
   serverError: DesktopError | null;
@@ -98,13 +94,9 @@ export type UiEvent =
 /** The only surface the renderer gets (window.speakkit). Every call is an ipcMain.handle on `speakkit:<name>`, validated with ARGS in schemas.ts. */
 export interface Api {
   state(): Promise<AppState>;
-  /** A change of settings from a Settings page: checked by the settings registry, the same one the command line uses. Keys are `voice`, `speed`... or `dictation.<key>`. */
+  /** A change of settings from a Settings page: checked by the settings registry. Keys are `voice`, `speed`... or `dictation.<key>`. */
   applySettings(change: Record<string, unknown>): Promise<SettingsResult>;
-  /** Asks for a settings file and applies the settings in it that are valid. */
-  importSettings(): Promise<ImportOutcome>;
   setLaunchAtLogin(on: boolean): Promise<AppState>;
-  setPort(port: number): Promise<AppState>;
-  regenerateToken(): Promise<AppState>;
   retryEngine(): Promise<AppState>;
   /** Starts the model download (and load) when it is not on disk yet. Idempotent. */
   downloadModel(): Promise<AppState>;
@@ -125,9 +117,6 @@ export interface Api {
   /** The mini player reports what its audio output is doing. */
   readerStarted(epoch: number, index: number): Promise<void>;
   readerDone(epoch: number, index: number): Promise<void>;
-  /** Loads the voice engine now (Memory: Load now). */
-  warmEngine(): Promise<void>;
-  engines(): Promise<EngineList>;
   updateAction(action: UpdateAction): Promise<AppState>;
   exportCheck(dir: string, name: string, format: "wav" | "mp3"): Promise<ExportTarget>;
   exportStart(options: ExportOptions): Promise<ExportView>;
@@ -146,15 +135,10 @@ export interface Api {
   voiceChatTestKey(): Promise<VoiceChatTestResult>;
   /** The log lines since the last read; `lines` is null when the file did not grow, so the view stays as it is. */
   diagnosticsLog(sinceSize: number): Promise<{ size: number; lines: string[] | null }>;
-  /** The redacted text Copy diagnostics puts on the clipboard. */
-  diagnosticsReport(): Promise<string>;
-  clearActivity(): Promise<AppState>;
   dismissSettingsNotice(): Promise<AppState>;
   micAccess(): Promise<MicAccess>;
   /** Opens the operating system page where the microphone permission is changed; false when this system has none. */
   openSystemSettings(which: "microphone"): Promise<boolean>;
-  /** Relaunches the app (an experiment that needs a restart). */
-  restartApp(): Promise<void>;
   onState(cb: (s: AppState) => void): () => void;
   onUi(cb: (e: UiEvent) => void): () => void;
 }
@@ -162,10 +146,7 @@ export interface Api {
 export const METHODS = [
   "state",
   "applySettings",
-  "importSettings",
   "setLaunchAtLogin",
-  "setPort",
-  "regenerateToken",
   "retryEngine",
   "downloadModel",
   "voices",
@@ -181,8 +162,6 @@ export const METHODS = [
   "reader",
   "readerStarted",
   "readerDone",
-  "warmEngine",
-  "engines",
   "updateAction",
   "exportCheck",
   "exportStart",
@@ -195,12 +174,9 @@ export const METHODS = [
   "voiceChatRemoveKey",
   "voiceChatTestKey",
   "diagnosticsLog",
-  "diagnosticsReport",
-  "clearActivity",
   "dismissSettingsNotice",
   "micAccess",
   "openSystemSettings",
-  "restartApp",
 ] as const;
 export type Method = (typeof METHODS)[number];
 export const STATE_EVENT = "speakkit:state";

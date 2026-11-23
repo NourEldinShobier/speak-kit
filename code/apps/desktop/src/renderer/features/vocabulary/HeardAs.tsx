@@ -6,7 +6,6 @@ import { MAX_REPLACEMENTS, type Replacement } from "../../../shared/dictation/se
 import { patchDictation } from "../dictation-bridge";
 import { filterTerms, promptSummary, wordCount } from "./model";
 import { ReplacementRules } from "./ReplacementRules";
-import { RulesTester } from "./RulesTester";
 import { useLive } from "./useLive";
 import { WordDialog } from "./WordDialog";
 
@@ -14,17 +13,13 @@ const SHOWN = 6;
 
 interface RowProps {
   term: Term;
-  first: boolean;
-  last: boolean;
-  canMove: boolean;
   onEdit(): void;
   onDelete(): void;
-  onMove(by: -1 | 1): void;
 }
 
 const iconBtn = "lm-btn lm-btn--icon lm-btn--secondary";
 
-function WordRow({ term, first, last, canMove, onEdit, onDelete, onMove }: RowProps) {
+function WordRow({ term, onEdit, onDelete }: RowProps) {
   return (
     <li className="lm-row vocab-row" data-term={term.id}>
       <span className="vocab-row__word">{term.word}</span>
@@ -34,16 +29,6 @@ function WordRow({ term, first, last, canMove, onEdit, onDelete, onMove }: RowPr
         ))}
       </span>
       <span className="vocab-row__acts">
-        {canMove ? (
-          <>
-            <button type="button" className={iconBtn} aria-label={`Move ${term.word} up`} disabled={first} onClick={() => onMove(-1)}>
-              <Icon name="arrow-up" size={14} />
-            </button>
-            <button type="button" className={iconBtn} aria-label={`Move ${term.word} down`} disabled={last} onClick={() => onMove(1)}>
-              <Icon name="arrow-down" size={14} />
-            </button>
-          </>
-        ) : null}
         <button type="button" className={iconBtn} aria-label={`Edit ${term.word}`} onClick={onEdit}>
           <Icon name="pencil" size={14} />
         </button>
@@ -55,39 +40,19 @@ function WordRow({ term, first, last, canMove, onEdit, onDelete, onMove }: RowPr
   );
 }
 
-/** A word moves one place up or down; the first and last stay put. */
-function moved(list: Term[], id: string, by: -1 | 1): Term[] {
-  const i = list.findIndex((t) => t.id === id);
-  const j = i + by;
-  if (i < 0 || j < 0 || j >= list.length) return list;
-  const next = [...list];
-  [next[i], next[j]] = [next[j]!, next[i]!];
-  return next;
-}
-
 interface ListProps {
   shown: Term[];
   scroll: boolean;
-  canMove: boolean;
   update(change: (t: Term[]) => Term[]): void;
   onEdit(t: Term): void;
 }
 
-function WordList({ shown, scroll, canMove, update, onEdit }: ListProps) {
+function WordList({ shown, scroll, update, onEdit }: ListProps) {
   if (shown.length === 0) return <p className="vocab-empty-line">Nothing matches that search.</p>;
   return (
     <ul className={`vocab-list${scroll ? " vocab-list--scroll" : ""}`} aria-label="Your words" tabIndex={scroll ? 0 : undefined}>
-      {shown.map((t, i) => (
-        <WordRow
-          key={t.id}
-          term={t}
-          first={i === 0}
-          last={i === shown.length - 1}
-          canMove={canMove}
-          onEdit={() => onEdit(t)}
-          onDelete={() => update((list) => removeTerm(list, t.id))}
-          onMove={(by) => update((list) => moved(list, t.id, by))}
-        />
+      {shown.map((t) => (
+        <WordRow key={t.id} term={t} onEdit={() => onEdit(t)} onDelete={() => update((list) => removeTerm(list, t.id))} />
       ))}
     </ul>
   );
@@ -133,7 +98,7 @@ function WordsBody({ terms, update, onAdd, onEdit, query, setQuery }: CardProps)
           Add word
         </Button>
       </div>
-      <WordList shown={shown} scroll={expanded} canMove={all && !query.trim()} update={update} onEdit={onEdit} />
+      <WordList shown={shown} scroll={expanded} update={update} onEdit={onEdit} />
       <div className="vocab-foot">
         <span>{`Showing ${shown.length} of ${terms.length} words.`}</span>
         {!query && terms.length > SHOWN ? (
@@ -203,9 +168,7 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
             {sum.note}
           </Banner>
         ) : null}
-        {supported ? (
-          <p className="vocab-note">Words higher in the list go first. When the list is longer than the budget, the words at the bottom are only fixed after the model has heard you.</p>
-        ) : null}
+        {supported ? <p className="vocab-note">Words you added first go first. When the list is longer than the budget, the words added last are only fixed after the model has heard you.</p> : null}
       </div>
     </section>
   );
@@ -243,7 +206,7 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
   );
 }
 
-/** The Heard as tab: words, the model prompt, replacements and the tester. */
+/** The Heard as tab: words, the model prompt and replacements. */
 export function HeardAs({ s, onImport, onShowWords }: { s: DictationStatus; onImport(): void; onShowWords(): void }) {
   const [terms, update] = useLive<Term>(s.settings.terms, (next) => patchDictation({ terms: next }));
   return (
@@ -251,7 +214,6 @@ export function HeardAs({ s, onImport, onShowWords }: { s: DictationStatus; onIm
       <WordsCard terms={terms} update={update} onImport={onImport} />
       <PromptCard s={s} terms={terms} />
       <ReplacementsCard s={s} onShowWords={onShowWords} />
-      <RulesTester s={s} />
     </>
   );
 }

@@ -22,13 +22,6 @@ describe("keyboard map", () => {
   });
 });
 
-describe("privacy copy", () => {
-  it("names the one case where audio leaves the computer", async () => {
-    const { NO_TELEMETRY } = await import("./network");
-    expect(NO_TELEMETRY).toContain("except voice chat");
-  });
-});
-
 describe("closing the window", () => {
   it("hides to the tray, with or without work running", () => {
     expect(closeOutcome(false, false)).toBe("hide");

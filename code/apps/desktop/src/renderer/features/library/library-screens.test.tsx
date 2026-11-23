@@ -10,9 +10,9 @@ import { PasteFooter } from "./PasteDialog";
 const noop = () => {};
 
 describe("Add pasted text footer", () => {
-  it("keeps the actions at the right when there are no voices", () => {
-    const html = renderToStaticMarkup(<PasteFooter voices={[]} voice="af_heart" empty={false} onVoice={noop} onClose={noop} onAdd={noop} />);
+  it("has no voice choice and keeps the actions at the right", () => {
+    const html = renderToStaticMarkup(<PasteFooter empty={false} onClose={noop} onAdd={noop} />);
     expect(html).toContain('class="lib-foot__actions"');
-    expect(html).not.toContain('aria-label="Voice"');
+    expect(html).not.toContain("Voice");
   });
 });

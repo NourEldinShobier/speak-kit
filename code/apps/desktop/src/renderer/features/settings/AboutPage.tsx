@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Button, Modal, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, Modal, Select, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { AppState } from "../../../shared/ipc";
 import type { Config } from "../../../shared/schemas";
-import { api, Page } from "../../ui";
+import { api, Page, useVisible } from "../../ui";
 import { UpdateCard } from "../../UpdateCard";
+import { Advanced } from "./Advanced";
 import { rowAttr } from "./focus";
 import { change } from "../../change";
 import { NetworkTable } from "./PrivacyPage";
@@ -134,12 +135,81 @@ function UpdatesSection({ s }: { s: AppState }) {
         <UpdateCard s={s} />
       </div>
       <Channel s={s} />
-      <SettingRow
-        label={t("s.about.checkAuto")}
-        description={t("s.about.checkAutoHint")}
-        control={<Toggle aria-label={t("s.about.checkAutoAria")} checked={s.config.autoUpdate} onChange={(v) => change({ autoUpdate: v })} />}
-      />
     </SettingsSection>
+  );
+}
+
+/** The log tail. It asks main every 3 s while the window is visible and redraws only when the file grew. */
+function useLog(): string[] | null {
+  const visible = useVisible();
+  const [lines, setLines] = useState<string[] | null>(null);
+  const size = useRef(0);
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    const tick = () =>
+      api.diagnosticsLog(size.current).then(
+        (r) => {
+          if (!live) return;
+          size.current = r.size;
+          if (r.lines) setLines(r.lines);
+        },
+        () => live && setLines((l) => l ?? []),
+      );
+    void tick();
+    const t = setInterval(tick, 3000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [visible]);
+  return lines;
+}
+
+function LogTail() {
+  const { t } = useT();
+  const log = useLog();
+  let text = t("s.about.logLoading");
+  if (log !== null) text = log.length ? log.join("\n") : t("s.about.logEmpty");
+  return (
+    <pre className="sk-report sk-report--log" tabIndex={0} aria-label={t("s.about.logAria")} data-testid="log-view">
+      {text}
+    </pre>
+  );
+}
+
+/** The Advanced fold: the models and log folders, and the log as it grows. */
+function AdvancedFold() {
+  const { t } = useT();
+  return (
+    <Advanced page="about" subtitle={t("s.about.advancedLead")} count={3}>
+      <SettingsSection title={t("s.about.folders")}>
+        <SettingRow
+          {...rowAttr("about/models-folder")}
+          label={t("s.store.folder")}
+          control={
+            <Button iconLeft="folder" onClick={() => api.openPath("models")}>
+              {t("s.about.openModels")}
+            </Button>
+          }
+        />
+        <SettingRow
+          {...rowAttr("about/log-folder")}
+          label={t("s.about.logFolder")}
+          description={t("s.about.logFolderHint")}
+          control={
+            <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
+              {t("s.about.openLogs")}
+            </Button>
+          }
+        />
+      </SettingsSection>
+      <SettingsSection title={t("s.about.log")}>
+        <div {...rowAttr("about/log")} className="sk-pad">
+          <LogTail />
+        </div>
+      </SettingsSection>
+    </Advanced>
   );
 }
 
@@ -167,11 +237,7 @@ export function AboutPage({ s }: { s: AppState }) {
         <SettingRow label={t("s.about.models")} description={t(s.platform === "darwin" ? "s.about.uninstallMac" : "s.about.uninstallWin")} />
       </SettingsSection>
       <Support />
-      <div>
-        <Button iconLeft="folder" onClick={() => api.openPath("logs")}>
-          {t("s.about.openLogs")}
-        </Button>
-      </div>
+      <AdvancedFold />
     </Page>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { applyMemory, IDLE_MS, serverOptions, type Tunable } from "./memory";
+import { applyMemory, IDLE_UNLOAD_MS, serverOptions, type Tunable } from "./memory";
 
 const recorder = () => {
   const calls: [string, unknown][] = [];
@@ -10,29 +10,24 @@ const recorder = () => {
   return { t, calls };
 };
 
-describe("Settings > Memory wiring", () => {
-  it("maps the idle choices to milliseconds, 0 for never", () => {
-    expect(IDLE_MS).toEqual({ "1": 60000, "5": 300000, "15": 900000, never: 0 });
-    expect(serverOptions({ idleUnload: "15" })).toEqual({ idleUnloadMs: 900000 });
+describe("memory rules", () => {
+  it("unloads the model after 5 minutes idle", () => {
+    expect(IDLE_UNLOAD_MS).toBe(300000);
+    expect(serverOptions()).toEqual({ idleUnloadMs: 300000 });
   });
-  it("pushes idle unload and battery saver to the server setters", () => {
+  it("pushes the idle window and the power source to the server setters", () => {
     const { t, calls } = recorder();
-    expect(applyMemory(t, { idleUnload: "1", batterySaver: true }, true)).toEqual([]);
+    expect(applyMemory(t, true)).toEqual([]);
     expect(calls).toEqual([
-      ["idle", 60000],
+      ["idle", 300000],
       ["battery", true],
     ]);
-  });
-  it("battery saver only counts while on battery", () => {
-    const a = recorder();
-    applyMemory(a.t, { idleUnload: "5", batterySaver: false }, true);
-    expect(a.calls.at(-1)).toEqual(["battery", false]);
     const b = recorder();
-    applyMemory(b.t, { idleUnload: "5", batterySaver: true }, false);
+    applyMemory(b.t, false);
     expect(b.calls.at(-1)).toEqual(["battery", false]);
   });
   it("reports setters the server build does not have", () => {
-    expect(applyMemory({ setOnBattery: () => {} }, { idleUnload: "5", batterySaver: true }, false)).toEqual(["setIdleUnloadMs"]);
-    expect(applyMemory(null, { idleUnload: "5", batterySaver: true }, false)).toHaveLength(2);
+    expect(applyMemory({ setOnBattery: () => {} }, false)).toEqual(["setIdleUnloadMs"]);
+    expect(applyMemory(null, false)).toHaveLength(2);
   });
 });

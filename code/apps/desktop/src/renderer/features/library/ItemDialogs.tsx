@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, TextInput } from "@speakkit/ui";
-import type { Voice } from "@speakkit/protocol";
+import { Button, Modal, TextInput } from "@speakkit/ui";
 import type { DocMeta } from "../../../shared/library/contract";
 import { useT } from "../../i18n";
 import { library } from "./api";
-import { voiceOptions } from "./PasteDialog";
 
 export function RenameDialog({ doc, onClose, onDone }: { doc: DocMeta | null; onClose(): void; onDone(): void }) {
   const { t } = useT();
@@ -25,30 +23,6 @@ export function RenameDialog({ doc, onClose, onDone }: { doc: DocMeta | null; on
       }
     >
       <TextInput label={t("lib.titleLabel")} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus onFocus={(e) => e.currentTarget.select()} />
-    </Modal>
-  );
-}
-
-export function VoiceDialog({ doc, voices, defaultVoice, onClose, onDone }: { doc: DocMeta | null; voices: Voice[]; defaultVoice: string; onClose(): void; onDone(): void }) {
-  const { t } = useT();
-  const [voice, setVoice] = useState(doc?.voice ?? defaultVoice);
-  const save = (v: string | null) => doc && void library.setVoice(doc.id, v).then(onDone);
-  return (
-    <Modal
-      open={!!doc}
-      onClose={onClose}
-      title={t("lib.voiceTitle")}
-      width={440}
-      footer={
-        <>
-          <Button onClick={() => save(null)}>{t("lib.useAppVoice")}</Button>
-          <Button variant="primary" onClick={() => save(voice)}>
-            {t("lib.save")}
-          </Button>
-        </>
-      }
-    >
-      <Select label={t("lib.voice")} options={voiceOptions(voices)} value={voice} onChange={setVoice} />
     </Modal>
   );
 }

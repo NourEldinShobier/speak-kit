@@ -6,7 +6,6 @@ export const DisplaySchema = v.object({
   size: v.fallback(v.pipe(v.number(), v.minValue(14), v.maxValue(30)), 19),
   line: v.fallback(v.pipe(v.number(), v.minValue(1.3), v.maxValue(2.2)), 1.7),
   width: v.fallback(v.pipe(v.number(), v.minValue(480), v.maxValue(960)), 680),
-  follow: v.fallback(v.boolean(), true),
 });
 export type Display = v.InferOutput<typeof DisplaySchema>;
 

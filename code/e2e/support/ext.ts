@@ -128,21 +128,16 @@ export class Ext {
     }, url);
   }
 
-  /** Pair through the real options page: type the port and the token, as a user would. */
+  /** Points the extension at the app's port. A user never does this: the extension finds the app on the default port and the ones after it, and the test apps listen elsewhere. */
+  async setPort(port: number) {
+    await this.sw.evaluate((p) => chrome.storage.local.set({ "speakkit.port": p }), port);
+  }
+
+  /** Pair through the real options page: the token is pasted into its field, as a user would. */
   async pair(app: { port: number; token: string }, expectOk = true): Promise<Page> {
+    await this.setPort(app.port);
     const opt = await this.ctx.newPage();
     await opt.goto(this.url("options"));
-    const port = opt.locator("#port");
-    await port.fill(String(app.port));
-    await port.press("Enter");
-    await expect
-      .poll(async () => (await this.settings()).port, { timeout: 5000 })
-      .toBe(app.port)
-      .catch(async () => {
-        await port.fill(String(app.port));
-        await port.press("Tab");
-        await expect.poll(async () => (await this.settings()).port, { timeout: 8000 }).toBe(app.port);
-      });
     const tok = opt.locator("#token");
     await tok.click();
     await tok.fill(app.token);

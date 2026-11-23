@@ -5,7 +5,7 @@ import { fixtureBytes, importBytes, importText, openLibrary, PARAGRAPHS } from "
 const status = (page: Page) => page.getByTestId("reader").getAttribute("data-status");
 const currentSentence = (page: Page) => page.evaluate(() => [...(CSS.highlights.get("sk-sentence") ?? [])].map((r) => (r as unknown as StaticRange & { toString(): string }).toString()).join("|"));
 const openDoc = async (page: Page, title: string) => {
-  await page.getByRole("link", { name: "Home" }).click();
+  await page.getByRole("link", { name: "Dictation", exact: true }).first().click();
   await page.getByRole("link", { name: "Library" }).click();
   await page.getByRole("button", { name: `Open ${title}` }).click();
   await page.getByTestId("reader").waitFor();

@@ -61,7 +61,7 @@ describe("health client", () => {
     });
   });
 
-  it("auth-check sends the bearer token and maps 204 / 401", async () => {
+  it("auth-check sends the saved bearer token and maps 204 / 401", async () => {
     let seen = "";
     const good = client((_u, init) => {
       seen = (init!.headers as Record<string, string>).Authorization!;
@@ -69,9 +69,7 @@ describe("health client", () => {
     });
     expect(await good.c.authCheck()).toEqual({ ok: true, value: true });
     expect(seen).toBe("Bearer tok");
-    expect(await good.c.authCheck(47616, "other")).toEqual({ ok: true, value: true });
-    expect(good.urls.at(-1)).toBe("http://127.0.0.1:47616/v1/auth/check");
-    expect(seen).toBe("Bearer other");
+    expect(good.urls.at(-1)).toBe("http://127.0.0.1:47615/v1/auth/check");
     expect(await client(() => new Response(null, { status: 401 })).c.authCheck()).toMatchObject({
       ok: false,
       code: "token-rejected",
@@ -79,5 +77,56 @@ describe("health client", () => {
     const wrong = new Response(JSON.stringify({ error: { code: "token-rejected", message: "x" } }), { status: 404 });
     expect(await client(() => wrong).c.authCheck()).toMatchObject({ ok: false, code: "token-rejected" });
     expect(await client(() => new Response("<html>", { status: 404 })).c.authCheck()).toMatchObject({ ok: false, code: "app-not-running" });
+  });
+});
+
+describe("health client when the app moved to a free port", () => {
+  const ok = { app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state: "ready" } };
+  function client(listening: number[]) {
+    let now = 100_000;
+    let saved = 47615;
+    const urls: string[] = [];
+    const c = createHealthClient({
+      fetch: (async (u: string) => {
+        urls.push(u);
+        const port = Number(new URL(u).port);
+        if (!listening.includes(port)) throw new TypeError("connection refused");
+        return Response.json(port === 47620 ? { app: "other" } : ok);
+      }) as unknown as typeof fetch,
+      now: () => now,
+      port: async () => saved,
+      token: async () => "tok",
+      remember: async (p) => void (saved = p),
+    });
+    return { c, urls, saved: () => saved, tick: (ms: number) => void (now += ms) };
+  }
+
+  it("finds Speak Kit on the next free port, keeps that port and uses it for later calls", async () => {
+    const t = client([47617]);
+    expect(await t.c.health(true)).toEqual({ ok: true, value: ok });
+    expect(t.saved()).toBe(47617);
+    expect(t.urls.at(-1)).toBe("http://127.0.0.1:47617/v1/health");
+    t.urls.length = 0;
+    await t.c.health(true);
+    expect(t.urls).toEqual(["http://127.0.0.1:47617/v1/health"]);
+  });
+
+  it("answers app-not-running when nothing in the range answers, and looks again only after the cooldown", async () => {
+    const t = client([]);
+    expect(await t.c.health(true)).toMatchObject({ ok: false, code: "app-not-running" });
+    expect(t.urls).toHaveLength(1 + 19);
+    t.urls.length = 0;
+    await t.c.health(true);
+    expect(t.urls).toHaveLength(1);
+    t.tick(10_000);
+    await t.c.health(true);
+    expect(t.urls).toHaveLength(1 + 1 + 19);
+    expect(t.saved()).toBe(47615);
+  });
+
+  it("does not take a port where another program answers", async () => {
+    const t = client([47620]);
+    expect(await t.c.health(true)).toMatchObject({ ok: false, code: "app-not-running" });
+    expect(t.saved()).toBe(47615);
   });
 });

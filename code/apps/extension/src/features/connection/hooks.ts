@@ -37,7 +37,3 @@ export function connState(h: HealthResult | null): ConnState {
   if (h.ok) return "ok";
   return h.error === "token-rejected" ? "token" : "offline";
 }
-
-const PORT_MIN = 1024;
-const PORT_MAX = 65535;
-export const validPort = (n: number) => Number.isInteger(n) && n >= PORT_MIN && n <= PORT_MAX;

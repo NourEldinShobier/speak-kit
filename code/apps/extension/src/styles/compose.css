@@ -615,14 +615,13 @@ body {
 .op-alert {
   padding: 0 16px 16px;
 }
-.op-two {
+.op-pair {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 16px;
   padding: 16px;
   border-top: 1px solid var(--stroke-divider);
 }
-.op-alert + .op-two {
+.op-alert + .op-pair {
   border-top: 0;
 }
 .op-field {
@@ -638,10 +637,40 @@ body {
 .op-field .lm-field {
   width: 100%;
 }
-.op-token-tools {
+/* The collapsed Advanced fold of the General page: a summary row, then the cards it holds. */
+.op-fold > summary {
   display: flex;
-  gap: 4px;
-  margin-left: 4px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--text-secondary);
+  font:
+    600 14px/17px Inter,
+    "Inter Variable",
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  list-style: none;
+}
+.op-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.op-fold > summary:focus-visible {
+  outline: 2px solid var(--stroke-focus-field);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.op-fold > summary .lm-icon {
+  transition: transform 0.15s ease;
+}
+.op-fold[open] > summary .lm-icon {
+  transform: rotate(90deg);
+}
+.op-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  margin-top: 16px;
 }
 .op-grid2 {
   display: grid;
@@ -1187,9 +1216,6 @@ body {
   }
   .op-main {
     padding: 20px 20px 48px;
-  }
-  .op-two {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

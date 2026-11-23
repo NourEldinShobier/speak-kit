@@ -1,5 +1,4 @@
 import type { AudioTrash, HistoryEntry, HistoryHit, HistoryQuery, HistoryStatus, RemoveReport } from "./history";
-import type { HistoryStats } from "./history-search";
 import type { Rewriter } from "./modes/rewrite";
 import type { CopyReason, PastePlan, Target } from "./paste-plan";
 import type { CaretContext } from "./spacing";
@@ -130,7 +129,7 @@ export interface DictationDeps {
   rewriter?: Rewriter;
   /** Starting values; later changes go through `configure`. Missing keys take `defaultSettings`. */
   settings?: Partial<Settings>;
-  /** The feature that holds the microphone right now (voice chat, a screen look, a capture), or undefined when it is free. Dictation does not start while one does. */
+  /** The feature that holds the microphone right now (voice chat, a capture), or undefined when it is free. Dictation does not start while one does. */
   micOwner?: () => string | undefined;
 }
 
@@ -176,7 +175,6 @@ export interface Dictation {
     remove(id: string): Promise<RemoveReport>;
     removeMany(ids: readonly string[]): Promise<RemoveReport>;
     clear(): Promise<RemoveReport>;
-    stats(): Promise<HistoryStats>;
     status(): HistoryStatus;
     preservedAs(): string | undefined;
     addVersion(id: string, v: { model: string; at: number; text: string; ms: number }): Promise<string | undefined>;

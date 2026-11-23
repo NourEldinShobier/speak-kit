@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
 import { IDLE_READER, type ReaderState } from "./reader";
 import { DEFAULT_SHORTCUTS } from "./shortcuts";
-import { recordToggle, speechModelRows, trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
+import { speechModelRows, trayIconState, trayIconVariant, trayMenuModel, trayTooltipFor, type TrayContext } from "./tray";
 
 const health = (state: EngineState): Health => ({ app: "speakkit", version: "1", apiVersion: 1, engine: { id: "kokoro", state } });
 const reader = (status: ReaderState["status"]): ReaderState => ({ ...IDLE_READER, status, title: "Chapter one", index: 2, total: 9, source: "selection" });
@@ -90,37 +90,6 @@ describe("tray menu, dictation", () => {
   it("the hint is not clickable", () => {
     const hint = trayMenuModel(dictation(true)).find((i) => i.type === "item" && i.label.startsWith("Hold "));
     expect(hint).toMatchObject({ enabled: false });
-  });
-});
-
-describe("tray menu, recorder", () => {
-  const row = (phase: NonNullable<TrayContext["recorder"]>["phase"]) =>
-    trayMenuModel(ctx({ recorder: { phase } })).find((i) => i.type === "item" && (i.action === "record-start" || i.action === "record-stop"));
-
-  it("has no recorder row where the recorder is not offered", () => {
-    expect(labels(ctx())).not.toContain("Record a conversation");
-  });
-
-  it("starts a recording when ready, stops it while recording", () => {
-    expect(row("ready")).toEqual({ type: "item", action: "record-start", label: "Record a conversation", enabled: true });
-    expect(row("recording")).toEqual({ type: "item", action: "record-stop", label: "Stop recording", enabled: true });
-  });
-
-  it("says Done for a moment after a transcript finishes and still starts a new recording", () => {
-    expect(row("done")).toEqual({ type: "item", action: "record-start", label: "Done. Record a conversation", enabled: true });
-  });
-
-  it("waits, disabled, while it starts and saves; a transcript being made does not grey it", () => {
-    expect(row("starting")).toMatchObject({ label: "Starting recording...", enabled: false });
-    expect(row("saving")).toMatchObject({ label: "Saving recording...", enabled: false });
-    expect(row("transcribing")).toMatchObject({ label: "Record a conversation", enabled: true });
-    expect(row("ready")).toMatchObject({ enabled: true });
-  });
-
-  it("sits under Open Speak Kit, before the reading rows", () => {
-    const all = labels(ctx({ recorder: { phase: "ready" }, reader: reader("playing") }));
-    expect(all.indexOf("Record a conversation")).toBe(1);
-    expect(all.indexOf("Pause")).toBeGreaterThan(1);
   });
 });
 
@@ -234,15 +203,5 @@ describe("tray icon variant", () => {
     expect(trayIconVariant(ctx({ platform: "win32", darkTaskbar: false }))).toBe("light");
     expect(trayIconVariant(ctx({ platform: "win32" }))).toBe("light");
     expect(trayIconVariant(ctx({ platform: "darwin", darkTaskbar: true }))).toBe("light");
-  });
-});
-
-describe("record shortcut", () => {
-  it("stops while recording, starts when idle, done or only a transcript is running, ignores starting and saving", () => {
-    expect(recordToggle("recording")).toBe("stop");
-    expect(recordToggle("ready")).toBe("start");
-    expect(recordToggle("done")).toBe("start");
-    expect(["starting", "saving"].map((p) => recordToggle(p as never))).toEqual(["none", "none"]);
-    expect(recordToggle("transcribing")).toBe("start");
   });
 });

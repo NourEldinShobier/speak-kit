@@ -17,7 +17,7 @@ const view = (popup: Page) => popup.locator(".pp");
 
 test.describe("popup: every state is accessible and fits", () => {
   test("install, token, unreadable page, PDF, file permission", async ({ ext, app }) => {
-    await ext.setSettings({ port: 58123 }); // nothing listens here, so a machine with a real SpeakKit on the default port still starts unpaired
+    await ext.setPort(58123); // nothing listens here, so a machine with a real SpeakKit on the default port still starts unpaired
     const page = await ext.open("/article");
     let popup = await ext.popup(page);
     await expect(view(popup)).toHaveAttribute("data-view", "install");
@@ -67,7 +67,7 @@ test.describe("popup: every state is accessible and fits", () => {
     });
     await new Promise<void>((r) => old.listen(0, "127.0.0.1", r));
     try {
-      await ext.setSettings({ port: (old.address() as { port: number }).port });
+      await ext.setPort((old.address() as { port: number }).port);
       await expect(view(popup)).toHaveAttribute("data-view", "version", { timeout: 10_000 });
       await expect(popup.getByRole("button", { name: "Download the latest app" })).toBeVisible();
       await expect(popup.getByText("Update needed")).toBeVisible();
@@ -129,7 +129,7 @@ test.describe("popup: every state is accessible and fits", () => {
 test.describe("options and side panel", () => {
   test("every options section", async ({ ext, app }) => {
     const opt = await ext.pair(app);
-    for (const id of ["general", "launcher", "voice", "highlight", "reader", "shortcuts", "sites"]) {
+    for (const id of ["general", "voice", "highlight", "reader", "shortcuts", "sites"]) {
       await opt.goto(ext.url("options") + `#${id}`);
       await expect(opt.locator(`main[data-section="${id}"] h1`)).toBeVisible();
       await expect(opt.locator("main")).not.toHaveAttribute("aria-busy", "true");
@@ -144,7 +144,7 @@ test.describe("options and side panel", () => {
       [320, 640, "320 px reflow"],
     ] as const) {
       await opt.setViewportSize({ width: w, height: h });
-      for (const id of ["general", "launcher", "voice", "highlight", "reader", "shortcuts", "sites"]) {
+      for (const id of ["general", "voice", "highlight", "reader", "shortcuts", "sites"]) {
         await opt.goto(ext.url("options") + `#${id}`);
         await expect(opt.locator(`main[data-section="${id}"] h1`)).toBeVisible();
         expect(await layoutIssues(opt), `options ${id} at ${label}`).toEqual([]);

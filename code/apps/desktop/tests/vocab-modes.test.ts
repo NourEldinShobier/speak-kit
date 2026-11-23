@@ -6,7 +6,7 @@ import { launch, removeDir, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const dirs: string[] = [];
-const DONE = { setupDone: true, setupSkipped: false, preferredPort: 0 };
+const DONE = { setupDone: true, setupSkipped: false };
 const start = async (o: Parameters<typeof launch>[0] = {}) => {
   const l = await launch({ config: DONE, ...o, env: { SPEAKKIT_TEST: "1", ...o.env } });
   running.push(l);
@@ -85,34 +85,11 @@ describe("Vocabulary page", () => {
     expect((await settings(l)).terms.map((t) => t.word)).toEqual(["Beta"]);
   });
 
-  it("shows how many words the speech model reads, and tries the rules step by step with the vocabulary applied", async () => {
+  it("shows how many words the speech model reads", async () => {
     const l = await start();
-    await l.page.evaluate(() =>
-      window.speakkitDictation.patchSettings({ terms: [{ id: "k", word: "Kubernetes", soundsLike: ["cooper netties"] }], replacements: [{ from: "my email", to: "sam@example.com" }] }),
-    );
+    await l.page.evaluate(() => window.speakkitDictation.patchSettings({ terms: [{ id: "k", word: "Kubernetes", soundsLike: ["cooper netties"] }] }));
     await open(l, "Vocabulary");
     await l.page.getByText("1 of 1 word read by the model, 10 of 500 characters.").waitFor();
-    await l.page.getByLabel("Sentence to test").fill("tell the team the cooper netties update is live and send it to my email");
-    const steps = l.page.locator(".vocab-step__text");
-    expect(await steps.allTextContents()).toEqual([
-      "tell the team the cooper netties update is live and send it to my email",
-      "tell the team the Kubernetes update is live and send it to my email",
-      "tell the team the Kubernetes update is live and send it to sam@example.com",
-      "Tell the team the Kubernetes update is live and send it to sam@example.com",
-    ]);
-    expect(await l.page.getByTestId("tester-final").textContent()).toBe("Tell the team the Kubernetes update is live and send it to sam@example.com");
-    // Fix this adds the right spelling with what was heard, only when asked.
-    await l.page.getByLabel("Sentence to test").fill("deploy grafana now");
-    await l.page.getByRole("button", { name: "Fix this" }).click();
-    const form = l.page.getByRole("form", { name: "Fix this" });
-    await form.getByLabel("Right spelling").fill("Grafana");
-    await form.getByLabel("Heard as").fill("graph fan ah");
-    await form.getByRole("button", { name: "Add to Vocabulary" }).click();
-    await l.page.locator("[data-term]").filter({ hasText: "Grafana" }).waitFor();
-    expect((await settings(l)).terms.map((t) => [t.word, t.soundsLike])).toEqual([
-      ["Kubernetes", ["cooper netties"]],
-      ["Grafana", ["graph fan ah"]],
-    ]);
   });
 
   it("imports a word list with a result dialog that lists what was skipped, and exports words as text", async () => {
@@ -184,17 +161,14 @@ async function expectFile(file: string, content: string) {
 }
 
 describe("Dictation clean-up", () => {
-  it("scopes the language rules and disables the ones a language lacks", async () => {
+  it("scopes the language rules and disables the ones the dictation language lacks", async () => {
     const l = await start();
     await open(l, "Dictation");
     await l.page.getByRole("heading", { name: "Clean-up" }).waitFor();
     expect(await l.page.getByText("English only").count()).toBe(1);
-    await l.page.getByRole("combobox", { name: "Rules for" }).click();
-    await l.page.getByRole("option", { name: "German" }).click();
+    await l.page.evaluate(() => window.speakkitDictation.patchSettings({ language: "de" }));
     await l.page.getByText("Not available for German yet.").waitFor();
     expect(await l.page.getByRole("switch", { name: "Remove filler words" }).isDisabled()).toBe(true);
-    await l.page.getByRole("combobox", { name: "Rules for" }).click();
-    await l.page.getByRole("option", { name: "English" }).click();
   });
 });
 
@@ -203,7 +177,7 @@ describe("Modes page", () => {
     const l = await start();
     await l.page.evaluate(() => window.speakkitDictation.patchSettings({ terms: [{ id: "s1", word: "Kubectl", soundsLike: [] }] }));
     await open(l, "Modes");
-    expect(await l.page.getByRole("list", { name: "Modes" }).locator("li").count()).toBe(1);
+    expect(await l.page.getByRole("list", { name: "Modes" }).locator("li").count()).toBe(0);
     await l.page.getByRole("button", { name: "Add mode" }).click();
     const add = l.page.getByRole("dialog", { name: "Add a mode" });
     await add.getByLabel("Name").fill("Code editor");
@@ -215,10 +189,8 @@ describe("Modes page", () => {
     await app.getByRole("button", { name: "Visual Studio Code" }).click();
     await app.getByRole("button", { name: "Add app" }).click();
     await l.page.getByRole("button", { name: "Remove Visual Studio Code" }).waitFor();
-    expect((await settings(l)).modes[0]).toMatchObject({ name: "Code editor", apps: ["code"], capitals: "keep" });
+    expect((await settings(l)).modes[0]).toMatchObject({ name: "Code editor", apps: ["code"] });
 
-    await l.page.getByRole("combobox", { name: "End of dictation" }).click();
-    await l.page.getByRole("option", { name: "No full stop" }).click();
     await l.page.getByRole("button", { name: "Add word" }).click();
     const word = l.page.getByRole("dialog", { name: "Add a word to Code editor" });
     await word.getByLabel("Word or name").fill("kubectl");
@@ -226,7 +198,7 @@ describe("Modes page", () => {
     await word.getByRole("button", { name: "Add word" }).click();
     await l.page.getByText("Replaces the shared spelling").waitFor();
     expect(await l.page.getByRole("combobox", { name: "Rewrite pass" }).isDisabled()).toBe(true);
-    expect((await settings(l)).modes[0]).toMatchObject({ end: "no-full-stop", terms: [{ word: "kubectl" }] });
+    expect((await settings(l)).modes[0]).toMatchObject({ terms: [{ word: "kubectl" }] });
 
     await l.page.getByRole("button", { name: "Modes", exact: true }).click();
     const row = l.page.locator("[data-mode]").filter({ hasText: "Code editor" });
@@ -278,19 +250,12 @@ describe("Modes page", () => {
 });
 
 describe("Default mode", () => {
-  it("opens a detail page where the rewrite pass can be turned on for apps outside every mode, and saves it once", async () => {
-    const l = await start();
-    await l.page.evaluate(() => window.speakkitDictation.patchSettings({ rewrite: { enabled: true, deadlineMs: 4000 } }));
+  it("is not listed or editable, and a saved one from an older version is dropped", async () => {
+    const l = await start({ config: { ...DONE, dictation: { modes: [{ id: "default", name: "Default", apps: [], rewrite: true, terms: [] }] } } });
     await open(l, "Modes");
-    await l.page.locator("[data-mode=default]").click();
-    await l.page.getByRole("heading", { name: "Default", exact: true, level: 1 }).waitFor();
-    expect(await l.page.getByRole("button", { name: "Delete mode" }).count()).toBe(0);
-    await l.page.getByRole("combobox", { name: "Rewrite pass" }).click();
-    await l.page.getByRole("option", { name: "On" }).click();
-    await expect.poll(async () => (await settings(l)).modes.filter((m) => m.id === "default").map((m) => m.rewrite)).toEqual([true]);
-    await l.page.getByRole("button", { name: "Modes", exact: true }).click();
-    expect(await l.page.getByRole("list", { name: "Modes" }).locator("li").count()).toBe(1);
-    expect(await l.page.locator("[data-mode=default] .lm-chip").allTextContents()).toEqual(["Shared words only", "Rewrite on"]);
+    expect(await l.page.getByRole("list", { name: "Modes" }).locator("li").count()).toBe(0);
+    expect(await l.page.locator("[data-mode=default]").count()).toBe(0);
+    expect((await settings(l)).modes).toEqual([]);
   });
 });
 
@@ -332,24 +297,14 @@ describe("History page", () => {
     { id: "e2", at: now - 3_600_000, text: "Deploy Kubernetes today.", raw: "deploy cooper netties today", durationMs: 2000, app: "chrome.exe", rewrite: "deadline" },
   ];
 
-  it("shows totals, the retention on each entry, the raw text beside the final one, and finds a word by its sounds-like spelling", async () => {
+  it("shows the retention on each entry and finds a word by its sounds-like spelling", async () => {
     const userData = tmp();
     seed(userData, entries);
     const l = await start({ userData });
     await l.page.evaluate(() => window.speakkitDictation.patchSettings({ terms: [{ id: "k", word: "Kubernetes", soundsLike: ["cooper netties"] }] }));
     await open(l, "History");
-    await l.page.getByRole("button", { name: "Statistics" }).click();
-    await l.page.getByText("Dictation statistics").waitFor();
-    await l.page.locator(".dict-stats dd").first().waitFor();
-    expect(await l.page.locator(".dict-stats dd").allTextContents()).toEqual(["2", "11", "3 s", "2", "0", "0"]);
-    await l.page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
     expect(await l.page.locator(".dict-hist__meta").first().textContent()).toContain("Removed in 7 days");
     expect(await l.page.getByText("Pasted as said after 4 seconds").count()).toBe(1);
-
-    await l.page.getByRole("radio", { name: "Side by side" }).click();
-    await l.page.getByText("What the model heard").waitFor();
-    expect(await l.page.locator(".dict-hist__text--raw").first().textContent()).toContain("remind the team");
-    await l.page.getByRole("radio", { name: "Final text" }).click();
 
     await l.page.getByLabel("Search what you dictated").fill("cooper netties");
     await l.page.getByText("Matched “cooper netties” from your Vocabulary entry Kubernetes").waitFor();
@@ -433,11 +388,15 @@ describe("History page", () => {
     await l.page.waitForFunction(async () => (await window.speakkitDictation.status()).settings.keepRecordings === true);
   });
 
-  it("copies one of the last five dictations from Copy recent", async () => {
+  it("copies one of the last five dictations from Copy recent, under Advanced", async () => {
     const userData = tmp();
     seed(userData, entries);
     const l = await start({ userData });
     await open(l, "History");
+    await l.page
+      .getByTestId("advanced-fold")
+      .getByRole("button", { name: /^Advanced/ })
+      .click();
     await l.page.getByRole("button", { name: "Copy recent" }).click();
     await l.page.getByRole("list", { name: "Recent dictations" }).waitFor();
     expect(await l.page.getByRole("list", { name: "Recent dictations" }).locator("li").count()).toBe(2);
@@ -490,15 +449,9 @@ describe("Websites in a mode", () => {
   });
 });
 
-describe("Installed-app picker", () => {
-  const APPS = JSON.stringify([
-    { key: "slack", name: "Slack" },
-    { key: "putty", name: "PuTTY" },
-    { key: "code", name: "Visual Studio Code" },
-  ]);
-
-  it("offers installed programs in the mode's Add app dialog, narrows them as you type and skips the ones already added", async () => {
-    const l = await start({ env: { SPEAKKIT_INSTALLED_APPS: APPS } });
+describe("Add app dialog", () => {
+  it("offers the common apps as buttons and no list of installed programs", async () => {
+    const l = await start();
     await open(l, "Modes");
     await l.page.getByRole("button", { name: "Add mode" }).click();
     await l.page.getByRole("dialog", { name: "Add a mode" }).getByLabel("Name").fill("Chat");
@@ -506,21 +459,10 @@ describe("Installed-app picker", () => {
     await l.page.getByRole("heading", { name: "Chat", exact: true, level: 1 }).waitFor();
     await l.page.getByRole("button", { name: "Add app" }).first().click();
     const dialog = l.page.getByRole("dialog", { name: "Add an app to Chat" });
-    const list = dialog.getByRole("group", { name: "Installed apps" });
-    await list.getByRole("button", { name: "Use PuTTY" }).waitFor();
-    expect(await list.getByRole("button").count()).toBe(3);
-    await dialog.getByLabel("Program name").fill("sla");
-    await list.getByRole("button", { name: "Use Slack" }).waitFor();
-    expect(await list.getByRole("button").count()).toBe(1);
-    await dialog.getByLabel("Program name").fill("zzz");
-    await dialog.getByText(/No installed app matches .zzz.\. You can still add the name you typed\./).waitFor();
-    await dialog.getByLabel("Program name").fill("sla");
-    await list.getByRole("button", { name: "Use Slack" }).click();
-    expect(await dialog.getByLabel("Program name").inputValue()).toBe("slack");
+    await dialog.getByRole("group", { name: "Common apps" }).waitFor();
+    expect(await dialog.getByRole("group", { name: "Installed apps" }).count()).toBe(0);
+    await dialog.getByLabel("Program name").fill("slack");
     await dialog.getByRole("button", { name: "Add app" }).click();
     await expect.poll(async () => (await settings(l)).modes[0]?.apps).toEqual(["slack"]);
-
-    await l.page.getByRole("button", { name: "Add app" }).first().click();
-    await l.page.getByRole("dialog", { name: "Add an app to Chat" }).getByRole("group", { name: "Installed apps" }).getByRole("button", { name: "Use Slack" }).waitFor({ state: "detached" });
   });
 });

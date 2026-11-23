@@ -16,10 +16,7 @@ export interface MenuItemDef {
 export const MENU: { group: string; items: MenuItemDef[] }[] = [
   {
     group: "Read",
-    items: [
-      { page: "home", label: "Home", icon: "home", lead: "Speak Kit runs a private voice server on this computer.", keywords: "start overview" },
-      { page: "library", label: "Library", icon: "book", lead: "Everything you saved to read later.", keywords: "readings saved articles" },
-    ],
+    items: [{ page: "library", label: "Library", icon: "book", lead: "Everything you saved to read later.", keywords: "readings saved articles" }],
   },
   {
     group: "Voice",
@@ -54,7 +51,6 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
     group: "General",
     items: [
       { id: "general", label: "General", icon: "settings", lead: "Startup and language.", keywords: "launch login language" },
-      { id: "voice", label: "Voice and playback", icon: "volume", lead: "Used for previews in this app. The extension keeps its own voice and speed.", keywords: "speed default" },
       { id: "shortcuts", label: "Shortcuts", icon: "keyboard", lead: "Global keys and in-app keys.", keywords: "global keys hotkey record ctrl alt" },
       { id: "accessibility", label: "Accessibility", icon: "accessible", lead: "Make Speak Kit easier to see and hear.", keywords: "keyboard contrast screen reader text size" },
     ],
@@ -62,20 +58,14 @@ export const SETTINGS_NAV: { group: string; items: SettingsItemDef[] }[] = [
   {
     group: "Device",
     items: [
-      { id: "performance", label: "Performance", icon: "cpu", lead: "Memory and battery use.", keywords: "memory idle unload ram battery" },
       { id: "storage", label: "Storage", icon: "folder", lead: "Models, audio and data on this computer.", keywords: "models disk" },
-      { id: "privacy", label: "Privacy", icon: "lock", lead: "What stays on this computer.", keywords: "data local telemetry permissions" },
+      { id: "privacy", label: "Privacy", icon: "lock", lead: "What stays on this computer.", keywords: "data local permissions" },
     ],
-  },
-  {
-    group: "Features",
-    items: [{ id: "experiments", label: "Experiments", icon: "flask", lead: "Features that are still being tried out.", keywords: "beta labs" }],
   },
   {
     group: "App",
     items: [
-      { id: "browser", label: "Browser integration", icon: "world", lead: "Pair the browser extension.", keywords: "port token pair extension chrome" },
-      { id: "diagnostics", label: "Diagnostics", icon: "activity", lead: "Logs and checks for when something goes wrong.", keywords: "logs debug problem" },
+      { id: "browser", label: "Browser integration", icon: "world", lead: "Pair the browser extension.", keywords: "token pair extension chrome" },
       { id: "whatsnew", label: "What is new", icon: "sparkles", lead: "What changed in the version that is running.", keywords: "release notes changelog update version" },
       { id: "about", label: "About", icon: "info-circle", lead: "Speak Kit reads text out loud on your own computer.", keywords: "version update" },
     ],

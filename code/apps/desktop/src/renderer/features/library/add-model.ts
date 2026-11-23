@@ -3,13 +3,12 @@ export const countWords = (t: string): number => t.match(/\S+/g)?.length ?? 0;
 interface PasteState {
   text: string;
   title: string;
-  voice: string;
   error: string | null;
 }
 
-type PasteAction = { type: "text"; text: string } | { type: "title"; title: string } | { type: "voice"; voice: string } | { type: "failed"; message: string } | { type: "added" };
+type PasteAction = { type: "text"; text: string } | { type: "title"; title: string } | { type: "failed"; message: string } | { type: "added" };
 
-export const initPaste = (voice: string): PasteState => ({ text: "", title: "", voice, error: null });
+export const initPaste = (): PasteState => ({ text: "", title: "", error: null });
 
 export function pasteReducer(s: PasteState, a: PasteAction): PasteState {
   switch (a.type) {
@@ -17,8 +16,6 @@ export function pasteReducer(s: PasteState, a: PasteAction): PasteState {
       return { ...s, text: a.text };
     case "title":
       return { ...s, title: a.title };
-    case "voice":
-      return { ...s, voice: a.voice };
     case "failed":
       return { ...s, error: a.message };
     case "added":

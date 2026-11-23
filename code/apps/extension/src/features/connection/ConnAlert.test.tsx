@@ -50,7 +50,7 @@ describe("ConnAlert", () => {
 
   test("a rejected token copies the error detail the app gave", async () => {
     const m = await mount(<ConnAlert st="token" port={4242} health={{ ok: false, error: "token-rejected", detail: "401 Unauthorized" }} />);
-    expect(text(m.root.querySelector(".lm-banner__body"))).toBe("Speak Kit rejected the pairing token saved in this browser. Paste a new token below, or re-pair from scratch.");
+    expect(text(m.root.querySelector(".lm-banner__body"))).toBe("Speak Kit rejected the pairing token saved in this browser. Paste a new token below.");
     await click(m.root.querySelector(".lm-banner button"));
     expect(writeText).toHaveBeenCalledWith("token-rejected · 127.0.0.1:4242 · 401 Unauthorized");
     await m.unmount();

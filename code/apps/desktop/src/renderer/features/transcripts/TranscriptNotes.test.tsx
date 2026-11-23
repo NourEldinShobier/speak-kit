@@ -24,16 +24,14 @@ const detail = (notes: Detail["notes"], status: Detail["status"] = "done"): Deta
     title: "T",
     createdAt: 1,
     durationSec: 10,
-    source: "file",
     language: "en",
     status,
     chunksDone: 1,
     chunksTotal: 1,
     audioBytes: 0,
     audioRemoved: true,
-    daysLeft: null,
+    daysLeft: 3,
     segments: [],
-    exports: [],
     ...(notes && { notes }),
   }) as Detail;
 const html = (d: Detail) => renderToStaticMarkup(<SummaryCard detail={d} reload={() => {}} />);
@@ -84,7 +82,6 @@ describe("list row", () => {
           title: "Call",
           createdAt: 1,
           durationSec: 5,
-          source: "file",
           language: "en",
           status: "done",
           chunksDone: 1,
@@ -95,12 +92,10 @@ describe("list row", () => {
           ...(notesState && { notesState }),
         }}
         now={2}
-        audioDays={7}
         onOpen={() => {}}
         onDelete={() => {}}
         onCancel={() => {}}
         onResume={() => {}}
-        onExport={() => {}}
       />,
     );
   it("says Writing notes only while the notes are being written", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createDictation, historyStats, normalize, rank } from "../src";
+import { createDictation, normalize, rank } from "../src";
 import { fakeClock, fakeInserter, fakeKeyboard, fakeRecorder, fakeStorage, fakeTranscriber } from "./fakes";
 
 describe("normalize", () => {
@@ -49,45 +49,6 @@ describe("rank", () => {
   });
 });
 
-describe("historyStats", () => {
-  it("counts dictations, words and listening time and ranks programs", () => {
-    const stats = historyStats([
-      { text: "one two three", durationMs: 2000, app: "code.exe" },
-      { text: "four", durationMs: 500, app: "notepad.exe" },
-      { text: "five six", durationMs: 1500, app: "code.exe" },
-      { text: "", durationMs: 0 },
-    ]);
-    expect(stats).toEqual({
-      dictations: 4,
-      words: 6,
-      listeningMs: 4000,
-      wordsPerMinute: 90,
-      topApps: [
-        { app: "code.exe", count: 2 },
-        { app: "notepad.exe", count: 1 },
-      ],
-      outcomes: { pasted: 4, copied: 0, failed: 0 },
-    });
-  });
-  it("is all zero for nothing", () => {
-    expect(historyStats([])).toEqual({ dictations: 0, words: 0, listeningMs: 0, wordsPerMinute: 0, topApps: [], outcomes: { pasted: 0, copied: 0, failed: 0 } });
-  });
-  it("counts what happened to each text; an entry from before outcomes were kept counts as pasted", () => {
-    const stats = historyStats([
-      { text: "a", durationMs: 1, outcome: "sent" },
-      { text: "b", durationMs: 1, outcome: "copied" },
-      { text: "c", durationMs: 1, outcome: "failed" },
-      { text: "d", durationMs: 1, outcome: "failed" },
-      { text: "e", durationMs: 1 },
-    ]);
-    expect(stats.outcomes).toEqual({ pasted: 2, copied: 1, failed: 2 });
-  });
-  it("lists at most five programs, ties in name order", () => {
-    const entries = "fedcbaz".split("").map((l) => ({ text: "x", durationMs: 1, app: `${l}.exe` }));
-    expect(historyStats(entries).topApps.map((a) => a.app)).toEqual(["a.exe", "b.exe", "c.exe", "d.exe", "e.exe"]);
-  });
-});
-
 describe("history through the dictation", () => {
   async function seeded() {
     const time = fakeClock();
@@ -118,9 +79,5 @@ describe("history through the dictation", () => {
     const d = await seeded();
     await d.history.removeMany(["a", "c", "missing"]);
     expect((await d.history.list()).map((e) => e.id)).toEqual(["b"]);
-  });
-  it("reports stats", async () => {
-    const d = await seeded();
-    expect(await d.history.stats()).toMatchObject({ dictations: 3, words: 9, listeningMs: 6000 });
   });
 });

@@ -1,4 +1,4 @@
-/* History > Transcripts: the list, the transcript view, Trash, the import dialog and the recorder. Colours, radii and spacing come from the Lumen tokens. */
+/* History > Transcripts: the list, the transcript view and the import dialog. Colours, radii and spacing come from the Lumen tokens. */
 .tr-page {
   gap: 16px;
 }
@@ -15,17 +15,6 @@
 .tr-search {
   flex: 1;
   min-inline-size: 0;
-}
-.tr-count {
-  margin-inline-start: 8px;
-  padding-inline: 6px;
-  min-inline-size: 20px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-well);
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 20px;
-  text-align: center;
 }
 .tr-back {
   all: unset;
@@ -49,11 +38,6 @@
   font-size: 12px;
   line-height: 16px;
 }
-.tr-notice__actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 
 /* The list. */
 .tr-list {
@@ -76,8 +60,7 @@
   padding: 12px 16px;
   cursor: pointer;
 }
-.tr-row__main:disabled,
-.tr-row__main--static {
+.tr-row__main:disabled {
   cursor: default;
 }
 .tr-row__main:focus-visible {
@@ -166,7 +149,7 @@
   background: linear-gradient(to left, transparent, var(--surface-card) 24px);
 }
 @media (hover: hover) and (pointer: fine) {
-  .tr-row:not(.tr-row--trash) .tr-row__acts {
+  .tr-row .tr-row__acts {
     opacity: 0;
     pointer-events: none;
   }
@@ -181,15 +164,6 @@
   .tr-row:hover .tr-row__acts {
     background: linear-gradient(to right, transparent, var(--surface-well) 24px);
   }
-}
-.tr-row__acts--always {
-  position: static;
-  padding: 0 16px 12px;
-  justify-content: flex-end;
-  background: none;
-}
-.tr-row--trash .tr-row__main {
-  padding-block-end: 8px;
 }
 .tr-row--skeleton {
   display: flex;
@@ -227,18 +201,6 @@
   display: flex;
   gap: 8px;
   flex: none;
-}
-.tr-toast {
-  position: fixed;
-  inset-block-end: 24px;
-  inset-inline: 0;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 20;
-}
-.tr-toast > * {
-  pointer-events: auto;
 }
 
 /* Narrow windows: length and date go under the title. */
@@ -314,9 +276,6 @@
 .tr-find__field {
   flex: 1;
   min-inline-size: 200px;
-}
-.tr-find__jump {
-  inline-size: 140px;
 }
 .tr-find__count {
   color: var(--text-secondary);
@@ -417,105 +376,6 @@
 }
 .tr-dlg__working {
   margin-block-start: 16px;
-}
-
-/* Recorder. */
-.tr-rec {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-.tr-rec__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.tr-rec__h {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-.tr-rec__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-.tr-rec__dot {
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: 50%;
-  background: var(--tag-red);
-  animation: tr-pulse 1.4s ease-in-out infinite;
-}
-.tr-rec__dot[data-saving] {
-  animation: none;
-  opacity: 0.5;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tr-rec__dot {
-    animation: none;
-  }
-}
-@keyframes tr-pulse {
-  50% {
-    opacity: 0.35;
-  }
-}
-.tr-rec__time {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-.tr-rec__row {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
-}
-.tr-rec__label {
-  font-weight: 500;
-}
-.tr-rec__device {
-  color: var(--text-secondary);
-  overflow-wrap: anywhere;
-}
-.tr-rec__note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-}
-.tr-rec__foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tr-rec__local {
-  margin-inline-start: auto;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.tr-meter {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  block-size: 20px;
-}
-.tr-meter i {
-  inline-size: 3px;
-  border-radius: var(--radius-bar);
-  background: var(--track);
-}
-.tr-meter i[data-lit] {
-  background: var(--text-label-on-white);
-}
-
-/* Settings. */
-.tr-path {
-  overflow-wrap: anywhere;
 }
 
 .tr-notes__foot {

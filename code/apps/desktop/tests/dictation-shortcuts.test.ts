@@ -5,7 +5,7 @@ import { launch, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const start = async (dictation: object = {}) => {
-  const l = await launch({ config: { setupDone: true, setupSkipped: false, preferredPort: 0, dictation }, env: { SPEAKKIT_TEST: "1" } });
+  const l = await launch({ config: { setupDone: true, setupSkipped: false, dictation }, env: { SPEAKKIT_TEST: "1" } });
   running.push(l);
   await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Dictation" }).click();
   await l.page.getByRole("heading", { name: "Dictation shortcut" }).waitFor();
@@ -19,30 +19,25 @@ const saved = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "co
 const group = (l: Launched, name: string) => l.page.getByRole("group", { name });
 
 describe("Dictation shortcuts page", () => {
-  it("shows the default rows with nothing set, and Restore default disabled", async () => {
+  it("shows the default rows, and Restore default disabled", async () => {
     const l = await start();
-    for (const t of ["Dictation shortcut", "Shortcut mode", "Hold time", "Dictate without processing", "Paste last dictation"])
-      expect(await l.page.getByText(t, { exact: true }).first().isVisible()).toBe(true);
+    for (const t of ["Dictation shortcut", "Shortcut mode", "Paste last dictation"]) expect(await l.page.getByText(t, { exact: true }).first().isVisible()).toBe(true);
     expect(await l.page.getByRole("button", { name: "Restore the default Dictation shortcut" }).isDisabled()).toBe(true);
-    expect(await group(l, "Dictate without processing").getByText("Not set").isVisible()).toBe(true);
   });
 
-  it("records the raw shortcut, shows Saved only after it is written, and Remove clears it", async () => {
+  it("records the Paste last shortcut and shows Saved only after it is written", async () => {
     const l = await start();
-    await l.page.getByRole("button", { name: "Add shortcut: Dictate without processing" }).click();
+    await l.page.getByRole("button", { name: "Change Paste last dictation" }).click();
     await l.page.getByText("Press the new keys").waitFor();
     await l.page.keyboard.down("F8");
     await l.page.keyboard.up("F8");
     await l.page.getByText(/Saved\./).waitFor();
-    expect(saved(l).rawHotkey).toBe("F8");
-    await l.page.getByRole("button", { name: "Remove Dictate without processing" }).click();
-    await group(l, "Dictate without processing").getByText("Not set").waitFor();
-    expect(saved(l).rawHotkey).toBe("");
+    expect(saved(l).pasteLastHotkey).toBe("F8");
   });
 
   it("says Unsupported key, refuses a lone letter, and Escape cancels the recorder", async () => {
     const l = await start();
-    await l.page.getByRole("button", { name: "Add shortcut: Dictate without processing" }).click();
+    await l.page.getByRole("button", { name: "Change Paste last dictation" }).click();
     await l.page.keyboard.down("Numpad1");
     await l.page.keyboard.up("Numpad1");
     await l.page.getByText("Unsupported key").waitFor();
@@ -50,8 +45,8 @@ describe("Dictation shortcuts page", () => {
     await l.page.keyboard.up("A");
     await l.page.getByText("Use a modifier such as Ctrl").waitFor();
     await l.page.keyboard.press("Escape");
-    await l.page.getByRole("button", { name: "Add shortcut: Dictate without processing" }).waitFor();
-    expect(saved(l)?.rawHotkey ?? "").toBe("");
+    await l.page.getByRole("button", { name: "Change Paste last dictation" }).waitFor();
+    expect(saved(l)?.pasteLastHotkey ?? "ControlLeft+AltLeft+KeyV").toBe("ControlLeft+AltLeft+KeyV");
   });
 
   it("refuses a shortcut that another one already uses and names it, saving nothing", async () => {
@@ -79,37 +74,37 @@ describe("Dictation shortcuts page", () => {
     expect(saved(l).pasteLastHotkey).toBe("ControlLeft+AltLeft+KeyV");
   });
 
-  it("changes the mode and the explainer, and shows the Cancel key in the hands-free modes", async () => {
+  it("changes the mode and its description, and shows the Cancel key in the hands-free modes", async () => {
     const l = await start();
     expect(await l.page.getByRole("button", { name: "Advanced shortcut options" }).count()).toBe(0);
     await l.page.getByRole("combobox", { name: "Shortcut mode" }).click();
     await l.page.getByRole("option", { name: "Hold", exact: true }).click();
-    await l.page.getByRole("heading", { name: "How Hold works" }).waitFor();
+    await l.page.getByText("Hold the key to talk. Let go to insert the text.").first().waitFor();
     expect(saved(l).mode).toBe("hold-only");
     await l.page.getByRole("combobox", { name: "Shortcut mode" }).click();
     await l.page.getByRole("option", { name: "Tap or hold" }).click();
-    await l.page.getByRole("heading", { name: "How Tap or hold works" }).waitFor();
+    await l.page.getByText("Hold the key to talk, or tap it to start and tap again to finish.").waitFor();
     await l.page.getByText("Cancel key", { exact: true }).waitFor();
   });
 
   it("asks before saving Home as a shortcut and saves it after the person agrees", async () => {
     const l = await start();
-    await l.page.getByRole("button", { name: "Add shortcut: Dictate without processing" }).click();
+    await l.page.getByRole("button", { name: "Change Paste last dictation" }).click();
     await l.page.keyboard.down("Home");
     await l.page.keyboard.up("Home");
     await l.page.getByRole("heading", { name: "This key works in every app" }).waitFor();
     await l.page.getByRole("button", { name: "Use Home" }).click();
     await l.page.getByText(/Saved\./).waitFor();
-    expect(saved(l).rawHotkey).toBe("Home");
+    expect(saved(l).pasteLastHotkey).toBe("Home");
   });
 
   it("tells the person when a clashing shortcut was cleared, and clears the notice on dismiss", async () => {
-    const l = await start({ hotkey: "ControlRight", rawHotkey: "ControlRight" });
+    const l = await start({ hotkey: "ControlRight", pasteLastHotkey: "ControlRight" });
     await l.page.getByText("Two shortcuts shared a key, so the extra one was cleared.").waitFor();
     await l.page.getByRole("button", { name: "Dismiss" }).click();
     await l.page.getByText("A shortcut was reset").waitFor({ state: "detached" });
     expect(saved(l).hotkey).toBe("ControlRight");
-    expect(saved(l).rawHotkey).toBe("");
+    expect(saved(l).pasteLastHotkey).toBe("ControlLeft+AltLeft+KeyV");
   });
 
   it("loads a file with a mouse-button shortcut and a second shortcut on the default shortcut, with no notice", async () => {
@@ -119,7 +114,7 @@ describe("Dictation shortcuts page", () => {
   });
 
   it("holds its layout at 960 px: no horizontal scroll, and every button stays inside its row", async () => {
-    const l = await start({ rawHotkey: "AltRight" });
+    const l = await start({ pasteLastHotkey: "AltRight" });
     await l.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setContentSize(960, 680));
     await l.page.waitForFunction(() => innerWidth === 960);
     expect(await l.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

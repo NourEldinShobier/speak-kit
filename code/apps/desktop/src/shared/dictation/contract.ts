@@ -1,6 +1,6 @@
 import type { Note } from "./sounds";
 import * as v from "valibot";
-import type { HistoryStats, InstalledApp, MicStatus } from "@speakkit/dictation";
+import type { MicStatus } from "@speakkit/dictation";
 import type { DictationConfig, DictationModelId } from "./settings";
 import { DICTATION_MODELS } from "./models";
 import { DICTATION_LANGUAGES, DictationPatchSchema, modelId } from "./settings";
@@ -124,8 +124,6 @@ export interface HistoryItem {
   language?: string;
 }
 
-export type { HistoryStats };
-
 /** What the HUD page draws. */
 type HudBody =
   | { kind: "ready"; hotkey: string }
@@ -151,7 +149,6 @@ export interface DictationBridge {
   historyRemove(id: string): Promise<void>;
   historyClear(): Promise<void>;
   historyRemoveMany(ids: string[]): Promise<void>;
-  historyStats(): Promise<HistoryStats>;
   /** Asks the microphone window to list the inputs; the answer arrives in the status. */
   micDevices(): Promise<DictationStatus>;
   /** Starts or stops the level meter of the Audio card; the microphone is open only while it is on. */
@@ -175,7 +172,6 @@ export interface DictationBridge {
   /** Saves `text` as a file the person names; the path, or null when cancelled. */
   vocabExport(format: "json" | "txt" | "csv", text: string): Promise<string | null>;
   /** The programs installed on this computer, found the first time it is asked; `refresh` scans again. */
-  installedApps(refresh?: boolean): Promise<{ apps: InstalledApp[]; available: boolean }>;
   /** Runs the last recording that failed to transcribe once more. */
   retry(): Promise<void>;
   /** Pause all shortcuts (true) or resume them. The returned status shows the state once keys are released. */
@@ -260,7 +256,6 @@ export const DICTATION_ARGS = {
   historyRemove: v.tuple([id]),
   historyClear: v.tuple([]),
   historyRemoveMany: v.tuple([v.pipe(v.array(v.pipe(v.string(), v.minLength(1), v.maxLength(64))), v.maxLength(500))]),
-  historyStats: v.tuple([]),
   micDevices: v.tuple([]),
   micMeter: v.tuple([v.boolean()]),
   retry: v.tuple([]),
@@ -279,7 +274,6 @@ export const DICTATION_ARGS = {
   vocabImport: v.tuple([]),
   vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
   openMicrophoneSettings: v.tuple([]),
-  installedApps: v.tuple([v.optional(v.boolean())]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

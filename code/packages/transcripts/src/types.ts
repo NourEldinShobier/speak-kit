@@ -5,8 +5,7 @@ export interface Segment {
   text: string;
 }
 
-export type Source = "file" | "microphone";
-export type Status = "recording" | "queued" | "transcribing" | "done" | "failed" | "interrupted" | "cancelled";
+export type Status = "queued" | "transcribing" | "done" | "failed" | "interrupted" | "cancelled";
 export type FailureCode = "unsupported" | "too-large" | "too-long" | "decode-failed" | "engine-missing" | "engine-loading" | "disk-full" | "notes" | "failed";
 
 export interface Failure {
@@ -14,19 +13,12 @@ export interface Failure {
   message: string;
 }
 
-/** A file written by an export, with the hash of what was written: a later rewrite or delete leaves a file the person changed alone. */
-export interface ExportedFile {
-  path: string;
-  sha256: string;
-}
-
 /** One row of the manifest: everything but the words. */
 export interface Entry {
   id: string;
   title: string;
   createdAt: number;
-  source: Source;
-  /** The audio file's name for an import. */
+  /** The audio file's name. */
   sourceName?: string;
   durationSec: number;
   /** "auto" or a language code. */
@@ -37,15 +29,13 @@ export interface Entry {
   chunksDone: number;
   chunksTotal: number;
   failure?: Failure;
-  /** True for a microphone recording found unfinished at start-up. */
-  recovered?: boolean;
   /** The 16 kHz audio kept next to the words, until its retention ends. */
   audioBytes: number;
   audioRemovedAt?: number;
+  /** Set by a version that had a Trash: such a transcript is deleted for good at the next start. */
   trashedAt?: number;
   /** The last notes pass: written, or failed. */
   notes?: "ready" | "failed";
-  exports: ExportedFile[];
 }
 
 export interface Transcript extends Entry {

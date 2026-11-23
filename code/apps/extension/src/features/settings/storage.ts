@@ -1,4 +1,4 @@
-import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
+import { DEFAULT_PORT, PORT_KEY, SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
 import { localGet, localRemove, localSet, onStorageKey, storageAvailable, syncGet, syncSet } from "./browser";
 import { parseSettings } from "./schema";
 import type { Settings } from "./types";
@@ -16,6 +16,11 @@ export async function readToken(): Promise<string> {
   if (!storageAvailable()) return "";
   const r = await localGet(TOKEN_KEY);
   return typeof r[TOKEN_KEY] === "string" ? (r[TOKEN_KEY] as string) : "";
+}
+export async function readPort(): Promise<number> {
+  if (!storageAvailable()) return DEFAULT_PORT;
+  const p = (await localGet(PORT_KEY))[PORT_KEY];
+  return typeof p === "number" && Number.isInteger(p) && p >= 1 && p <= 65535 ? p : DEFAULT_PORT;
 }
 export async function writeToken(t: string): Promise<void> {
   if (!storageAvailable()) return;

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
-import { Banner, Button, EmptyState, Modal, Segmented, Select, Skeleton } from "@speakkit/ui";
-import type { FoundView, ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
+import { useState } from "react";
+import { Banner, Button, EmptyState, Modal, Skeleton } from "@speakkit/ui";
+import type { ModelCard, SpeechModelsView } from "../../../shared/speech-models/contract";
 import { models } from "./api";
 import { CompareDialog } from "./CompareDialog";
 import { ImportDialog } from "./ImportDialog";
 import { ModelCardView } from "./ModelCards";
 import { Performance } from "./Performance";
-import { DiskSpace, LanguageTable } from "./Tables";
-import { deleteConfirm, DEFAULT_FILTER, hiddenLine, languageName, recommendationText, sampleText, SORT_OPTIONS, visibleModels, type Filter } from "../../speech-text";
+import { DiskSpace } from "./Tables";
+import { deleteConfirm, recommendationText, sampleText, sortedModels } from "../../speech-text";
 import type { Run } from "./run";
 import { useSpeechModels } from "./useSpeechModels";
 import "./speech-models.css";
@@ -33,7 +33,7 @@ function useRunner(set: (v: SpeechModelsView) => void) {
   return { busy, message, run, clear: () => setMessage(null) };
 }
 
-function Notices({ v, run, found }: { v: SpeechModelsView; run: (f: () => Promise<unknown>) => void; found: FoundView[] }) {
+function Notices({ v, run }: { v: SpeechModelsView; run: (f: () => Promise<unknown>) => void }) {
   const rec = recommendationText(v);
   return (
     <>
@@ -47,16 +47,6 @@ function Notices({ v, run, found }: { v: SpeechModelsView; run: (f: () => Promis
           {v.floor.message}
         </Banner>
       )}
-      {found.length > 0 && (
-        <Banner
-          tone="info"
-          icon="search"
-          title={`${found.map((f) => f.name).join(" and ")} found on this computer`}
-          action={<Button onClick={() => run(() => models.adoptFound(found.map((f) => f.id)))}>Use {found.length === 1 ? "it" : "them"}</Button>}
-        >
-          No download needed. Speak Kit copies the file into its own folder and leaves yours where it is.
-        </Banner>
-      )}
       {v.newer && (
         <Banner tone="info" icon="sparkles" title={`${v.newer.name} is out`} action={<Button onClick={() => run(() => models.dismissNewer(v.newer!.id))}>Dismiss</Button>}>
           It replaces a model you have. Speak Kit never switches or downloads by itself.
@@ -68,31 +58,6 @@ function Notices({ v, run, found }: { v: SpeechModelsView; run: (f: () => Promis
         </Banner>
       )}
     </>
-  );
-}
-
-function Filters({ v, filter, set }: { v: SpeechModelsView; filter: Filter; set(f: Filter): void }) {
-  const codes = [...new Set(v.models.flatMap((m) => m.languages))].filter((c) => c !== "auto");
-  return (
-    <div className="sk-model-filters">
-      <Segmented
-        label="Show models"
-        className="lm-seg--lg"
-        value={filter.downloadedOnly ? "downloaded" : "all"}
-        onChange={(id) => set({ ...filter, downloadedOnly: id === "downloaded" })}
-        items={[
-          { id: "all", label: "All models" },
-          { id: "downloaded", label: "Downloaded" },
-        ]}
-      />
-      <Select
-        label="Language"
-        value={filter.language}
-        onChange={(language) => set({ ...filter, language })}
-        options={[{ value: "all", label: "All languages" }, ...codes.map((c) => ({ value: c, label: languageName(c) }))]}
-      />
-      <Select label="Sort" value={filter.sort} onChange={(sort) => set({ ...filter, sort: sort as Filter["sort"] })} options={SORT_OPTIONS} />
-    </div>
   );
 }
 
@@ -185,16 +150,6 @@ function DeleteDialog({ card, v, onClose, run }: { card: ModelCard | null; v: Sp
   );
 }
 
-/** The scan for models that are already on this computer, run when the page opens and some model is missing. */
-function useFound(v: SpeechModelsView | null): FoundView[] {
-  const [found, setFound] = useState<FoundView[]>([]);
-  const missing = !!v && v.models.some((m) => !m.installed && m.origin === "builtin");
-  useEffect(() => {
-    if (missing) void models.scanDisk().then(setFound, () => setFound([]));
-  }, [missing]);
-  return found;
-}
-
 function ModelGrid({ v, shown, run, busy, onDelete }: { v: SpeechModelsView; shown: ModelCard[]; run: Run; busy: boolean; onDelete(c: ModelCard): void }) {
   const advice = (a: string) => run(() => (a === "open-proxy-settings" ? models.openProxySettings() : models.openModelsFolder()));
   return (
@@ -215,30 +170,18 @@ function ModelGrid({ v, shown, run, busy, onDelete }: { v: SpeechModelsView; sho
   );
 }
 
-function ModelsSection({
-  v,
-  run,
-  state,
-}: {
-  v: SpeechModelsView;
-  run: Run;
-  state: { busy: boolean; message: string | null; clear(): void; found: FoundView[]; setDeleting(c: ModelCard): void; setImporting(): void };
-}) {
-  const [filter, setFilter] = useState<Filter>(DEFAULT_FILTER);
+function ModelsSection({ v, run, state }: { v: SpeechModelsView; run: Run; state: { busy: boolean; message: string | null; clear(): void; setDeleting(c: ModelCard): void; setImporting(): void } }) {
   const [comparing, setComparing] = useState(false);
-  const { shown, hidden } = visibleModels(v.models, filter);
+  const shown = sortedModels(v.models);
   return (
     <section className="sk-engines-section" aria-labelledby="models-h">
       <div className="sk-engines-section__head">
         <h2 id="models-h">Speech models</h2>
-        <Filters v={v} filter={filter} set={setFilter} />
       </div>
-      <Notices v={v} run={run} found={state.found} />
+      <Notices v={v} run={run} />
       <Status v={v} message={state.message} clear={state.clear} run={run} />
       <ModelGrid v={v} shown={shown} run={run} busy={state.busy} onDelete={state.setDeleting} />
-      {shown.length === 0 && <p className="sk-engines-section__foot">No model matches this filter.</p>}
       <p className="sk-engines-section__foot">{sampleText(v.sample)}</p>
-      {filter.downloadedOnly && hidden > 0 && <p className="sk-engines-section__foot">{hiddenLine(hidden)}</p>}
       <div className="sk-engines-section__actions">
         {shown.length > 1 && (
           <Button iconLeft="arrows-horizontal" onClick={() => setComparing(true)}>
@@ -254,18 +197,16 @@ function ModelsSection({
   );
 }
 
-/** Speech models: the model cards, the language table, performance and disk space. */
+/** Speech models: the model cards, performance and disk space. */
 export function SpeechModelsSection() {
   const { view: v, failed, set } = useSpeechModels();
   const { busy, message, run, clear } = useRunner(set);
   const [deleting, setDeleting] = useState<ModelCard | null>(null);
   const [importing, setImporting] = useState(false);
-  const found = useFound(v);
   if (!v) return <Loading failed={failed} retry={() => run(() => models.view().then(set))} />;
   return (
     <>
-      <ModelsSection v={v} run={run} state={{ busy, message, clear, found, setDeleting, setImporting: () => setImporting(true) }} />
-      <LanguageTable v={v} />
+      <ModelsSection v={v} run={run} state={{ busy, message, clear, setDeleting, setImporting: () => setImporting(true) }} />
       <Performance v={v} run={run} />
       <DiskSpace v={v} run={run} onDelete={setDeleting} />
       <ImportDialog open={importing} onClose={() => setImporting(false)} run={run} />

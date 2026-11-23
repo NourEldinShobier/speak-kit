@@ -1,13 +1,13 @@
 import type { Health } from "@speakkit/protocol";
 import { createEngineClient, createHealthClient, launchApp } from "../../features/connection";
-import { getToken, loadSettings } from "../../features/settings";
+import { getPort, getToken, savePort } from "../../features/settings";
 import { sleep } from "../../shared/ignore";
 import { LINKS } from "../../shared/links";
 
-/** What the app clients need to reach the app: the fetch, the saved port and the saved token. */
-export const net = { fetch: (i: RequestInfo | URL, init?: RequestInit) => fetch(i, init), port: async () => (await loadSettings()).port, token: getToken };
+/** What the app clients need to reach the app: the fetch, the port it was last found on and the saved token. */
+export const net = { fetch: (i: RequestInfo | URL, init?: RequestInit) => fetch(i, init), port: getPort, token: getToken };
 
-export const health = createHealthClient({ ...net, now: Date.now });
+export const health = createHealthClient({ ...net, now: Date.now, remember: savePort });
 
 export const engine = createEngineClient(net);
 
@@ -22,7 +22,7 @@ export const clearHealth = () => {
 };
 
 export async function getHealthResult(force = false): Promise<HealthResult> {
-  const port = (await loadSettings()).port;
+  const port = await getPort();
   const token = await getToken();
   if (!force && cached && cached.port === port && cached.token === token && Date.now() - cached.at < 3000) return cached.value;
   const t0 = Date.now();

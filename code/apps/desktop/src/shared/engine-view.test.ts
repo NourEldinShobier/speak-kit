@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { EngineState, Health } from "@speakkit/protocol";
-import { engineDetail, engineView, trayState, trayTooltip } from "./engine-view";
+import { engineView, trayState, trayTooltip } from "./engine-view";
 import type { DesktopError } from "./errors";
 
 const BUSY: DesktopError = { code: "unexpected", args: { detail: "EADDRINUSE" } };
@@ -33,15 +33,5 @@ describe("engine state to words and tray icon", () => {
   it("tooltip names the state and the wake hint", () => {
     expect(trayTooltip(h("unloaded"), null)).toBe("Speak Kit - Unloaded (wakes on play)");
     expect(trayTooltip(h("ready"), null)).toBe("Speak Kit - Ready");
-  });
-});
-
-describe("Home engine line", () => {
-  it("words the downloading, unloaded and reported states", () => {
-    expect(engineDetail(h("downloading", { progress: 0.424 }).engine)).toBe("Downloading the model, 42%");
-    expect(engineDetail(h("unloaded").engine)).toBe("Kokoro-82M is on disk. It loads when you press play and unloads when idle.");
-    expect(engineDetail(h("ready", { detail: "cpu, q8" }).engine)).toBe("cpu, q8");
-    expect(engineDetail(h("ready").engine)).toBe("Kokoro-82M, runs on the CPU");
-    expect(engineDetail(undefined)).toBe("Kokoro-82M, runs on the CPU");
   });
 });

@@ -29,15 +29,15 @@ afterEach(() => delete (globalThis as Record<string, unknown>).chrome);
 describe("useSettings", () => {
   test("a change made before the stored settings arrive is applied on top of them, not over the defaults", async () => {
     const m = await mount(<Probe />);
-    await act(async () => api.update((s: Settings) => ({ ...s, launcher: { ...s.launcher, side: "left" } })));
+    await act(async () => api.update((s: Settings) => ({ ...s, launcher: { ...s.launcher, enabled: false } })));
     await act(async () => release());
     expect(api.ready).toBe(true);
-    expect([api.settings.launcher.side, api.settings.speed, api.settings.voice]).toEqual(["left", 2, "bm_george"]);
+    expect([api.settings.launcher.enabled, api.settings.speed, api.settings.voice]).toEqual([false, 2, "bm_george"]);
     await act(async () => {
       await new Promise((r) => setTimeout(r, 300));
     });
     const saved = stored["speakkit.settings"] as Settings;
-    expect([saved.launcher.side, saved.speed, saved.voice]).toEqual(["left", 2, "bm_george"]);
+    expect([saved.launcher.enabled, saved.speed, saved.voice]).toEqual([false, 2, "bm_george"]);
     await m.unmount();
   });
 

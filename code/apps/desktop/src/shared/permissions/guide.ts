@@ -1,9 +1,8 @@
 import type { PermissionId, PermissionState } from "./channels";
 
-/** What each feature needs before it works. Dictation needs the key tap and the paste keys; reading the screen needs Screen Recording. */
+/** What each feature needs before it works. Dictation needs the key tap and the paste keys. */
 export const FEATURE_PERMISSIONS = {
   dictation: ["microphone", "input-monitoring", "accessibility"],
-  "screen-reading": ["screen-recording"],
 } as const satisfies Record<string, readonly PermissionId[]>;
 export type PermissionFeature = keyof typeof FEATURE_PERMISSIONS;
 
@@ -25,10 +24,9 @@ export interface Guide {
 export const FEATURES = Object.keys(FEATURE_PERMISSIONS) as PermissionFeature[];
 const ready = (s: PermissionState) => s === "granted" || s === "not-needed";
 
-/** Screen Recording has no system prompt of its own to call: it is granted in settings. */
-const actionFor = (id: PermissionId, state: PermissionState): GuideAction => {
+const actionFor = (state: PermissionState): GuideAction => {
   if (ready(state)) return "none";
-  if (state === "not-determined" && id !== "screen-recording") return "request";
+  if (state === "not-determined") return "request";
   return "open-settings";
 };
 
@@ -37,6 +35,6 @@ export const hotkeyPermissionsReady = (states: Record<PermissionId, PermissionSt
 
 /** The first-use steps for a feature, in the order the system should be asked. A state the system could not read ("unknown") counts as open, never as granted. */
 export function guideFor(states: Record<PermissionId, PermissionState>, feature: PermissionFeature): Guide {
-  const steps = FEATURE_PERMISSIONS[feature].map((id): GuideStep => ({ id, state: states[id], action: actionFor(id, states[id]) }));
+  const steps = FEATURE_PERMISSIONS[feature].map((id): GuideStep => ({ id, state: states[id], action: actionFor(states[id]) }));
   return { steps, next: steps.find((s) => !ready(s.state)) ?? null };
 }

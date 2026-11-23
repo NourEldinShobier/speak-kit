@@ -10,7 +10,6 @@ import { Reader } from "./features/reader";
 import { VoiceChatPage } from "./features/voice-chat";
 import { VoicesPage } from "./features/voices";
 import { requestVocabularyTab } from "./vocabulary-tab";
-import { Home } from "./HomePage";
 import type { MenuPage } from "./routes";
 import type { OpenDoc, ShellAction } from "./shell-model";
 
@@ -21,7 +20,7 @@ export interface PageProps {
   doc: OpenDoc | null;
 }
 
-// Dictation is rarely opened: its pages, styles and code load on first use.
+// Dictation is the landing page, but its pages, styles and code still load as a chunk on first use, so the shell paints without them.
 const DictationPage = lazy(() => import("./features/dictation").then((m) => ({ default: m.DictationPage })));
 // History holds the dictation history and the transcripts; it is rarely opened too.
 const HistoryPage = lazy(() => import("./features/transcripts").then((m) => ({ default: m.HistoryRoute })));
@@ -46,7 +45,6 @@ function LibraryRoute({ s, dispatch, doc }: PageProps) {
 }
 
 export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
-  home: ({ s, dispatch }) => <Home s={s} go={(p) => dispatch(p === "engines" ? { type: "go", page: "engines" } : { type: "go", page: "settings", sub: "browser" })} />,
   library: LibraryRoute,
   voices: ({ s, dispatch }) => (
     <VoicesPage
@@ -58,7 +56,7 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
     />
   ),
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
-  engines: ({ s }) => <EnginesPage s={s} />,
+  engines: () => <EnginesPage />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => later(<ModesPage />),
   vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),

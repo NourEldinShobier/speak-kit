@@ -2,7 +2,7 @@ import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { logSince, readLogTail } from "./log-tail";
+import { logSince, readLogTail, tailLines } from "./log-tail";
 
 let dir: string;
 let file: string;
@@ -11,6 +11,15 @@ beforeEach(() => {
   file = path.join(dir, "main.log");
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+describe("tailLines", () => {
+  it("keeps the last lines and drops a cut first line", () => {
+    expect(tailLines("a\nb\r\nc\n\nd", 2)).toEqual(["c", "d"]);
+    expect(tailLines("cut\nb\nc", 5, true)).toEqual(["b", "c"]);
+    expect(tailLines("", 5)).toEqual([]);
+    expect(tailLines("a\nb", 5)).toEqual(["a", "b"]);
+  });
+});
 
 describe("log tail", () => {
   it("a missing file is an empty log", async () => {

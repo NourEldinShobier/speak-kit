@@ -13,20 +13,19 @@ describe("countWords", () => {
 });
 
 describe("pasteReducer", () => {
-  it("keeps what is typed and the chosen voice", () => {
+  it("keeps what is typed", () => {
     const s = [
       { type: "text", text: "Hello there" },
       { type: "title", title: "Greeting" },
-      { type: "voice", voice: "bf_emma" },
     ] as const;
-    expect(s.reduce(pasteReducer, initPaste("af_heart"))).toEqual({ text: "Hello there", title: "Greeting", voice: "bf_emma", error: null });
+    expect(s.reduce(pasteReducer, initPaste())).toEqual({ text: "Hello there", title: "Greeting", error: null });
   });
 
-  it("shows an error, and clears text, title and error after the text is added (the voice stays)", () => {
-    let s = pasteReducer(pasteReducer(initPaste("af_heart"), { type: "text", text: "x" }), { type: "failed", message: "Too long" });
+  it("shows an error, and clears text, title and error after the text is added", () => {
+    let s = pasteReducer(pasteReducer(initPaste(), { type: "text", text: "x" }), { type: "failed", message: "Too long" });
     expect(s.error).toBe("Too long");
     s = pasteReducer(s, { type: "added" });
-    expect(s).toEqual({ text: "", title: "", voice: "af_heart", error: null });
+    expect(s).toEqual({ text: "", title: "", error: null });
   });
 });
 

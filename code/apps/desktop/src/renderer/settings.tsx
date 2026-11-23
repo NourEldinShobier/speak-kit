@@ -4,34 +4,16 @@
  */
 import { Suspense, type ComponentType } from "react";
 import type { AppState, SettingsSub } from "../shared/ipc";
-import {
-  AboutPage,
-  AccessibilityPage,
-  BrowserPage,
-  DiagnosticsPage,
-  ExperimentsPage,
-  GeneralPage,
-  MemoryPage,
-  PrivacyPage,
-  SettingsFrame,
-  ShortcutsPage,
-  StoragePage,
-  VoicePage,
-  WhatsNewPage,
-} from "./features/settings";
+import { AboutPage, AccessibilityPage, BrowserPage, GeneralPage, PrivacyPage, SettingsFrame, ShortcutsPage, StoragePage, WhatsNewPage } from "./features/settings";
 import "./settings.css";
 
 const SETTINGS_PAGES: Record<SettingsSub, ComponentType<{ s: AppState }>> = {
   general: GeneralPage,
-  voice: VoicePage,
   shortcuts: ShortcutsPage,
   accessibility: AccessibilityPage,
-  performance: MemoryPage,
   storage: StoragePage,
   privacy: PrivacyPage,
-  experiments: ExperimentsPage,
   browser: BrowserPage,
-  diagnostics: DiagnosticsPage,
   whatsnew: WhatsNewPage,
   about: AboutPage,
 };

@@ -122,7 +122,7 @@ describe("several chords", () => {
   it("takes a new set of chords while running, and drops the old ones", async () => {
     const r = rig();
     r.hook.start({ keys: [VK.rightCtrl] }, r.handlers);
-    r.hook.setExtraChords({ raw: { keys: [F9] } });
+    r.hook.setExtraChords({ extra: { keys: [F9] } });
     expect(r.key(F9, true)).toBe(true);
     r.key(F9, false);
     r.hook.setExtraChords({});

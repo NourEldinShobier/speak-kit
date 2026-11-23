@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Icon, SettingRow, Toggle } from "@speakkit/ui";
 
 /** Small compositions of kit components shared by the options sections. */
@@ -49,3 +49,17 @@ export const Card = ({ title, children, desc, id }: { title?: string; desc?: str
     {children}
   </section>
 );
+
+/** A fold that starts collapsed. Its content is built only once it has been opened, so a lazily loaded body is not fetched for a page that never opens it. */
+export function Advanced({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="op-fold" onToggle={(e) => setOpen(e.currentTarget.hasAttribute("open"))}>
+      <summary>
+        <Icon name="chevron-right" size={14} />
+        Advanced
+      </summary>
+      {open && <div className="op-fold-body">{children}</div>}
+    </details>
+  );
+}

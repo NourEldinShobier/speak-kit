@@ -6,7 +6,7 @@ import { errorView, hudViewFor } from "./hud-view";
 import { coreSettings, hotkeyLayout } from "./service-support";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", raw: "", pasteLast: "", cancelKey: "Escape" };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", pasteLast: "", cancelKey: "Escape" };
 
 function rig(down = new Set<number>()) {
   let handlers: HotkeyHandlers | undefined;
@@ -57,24 +57,21 @@ describe("several shortcuts through the source", () => {
     expect(r.extras()).toEqual({});
   });
 
-  it("registers the raw and paste last chords once they are set", () => {
+  it("registers the paste last chord once it is set", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, raw: "AltRight", pasteLast: "ControlLeft+AltLeft+KeyV" });
+    r.hk.layout({ ...LAYOUT, pasteLast: "ControlLeft+AltLeft+KeyV" });
     r.hk.enable(true);
-    expect(r.extras()).toEqual({
-      raw: { keys: [VK.rightAlt] },
-      pasteLast: { keys: [VK.leftCtrl, VK.leftAlt, 0x56] },
-    });
+    expect(r.extras()).toEqual({ pasteLast: { keys: [VK.leftCtrl, VK.leftAlt, 0x56] } });
   });
 
-  it("names each chord after its own shortcut, so the core can tell which one started a recording", () => {
+  it("names the dictation chord after its shortcut and ignores events of chords it did not register", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, raw: "F7" });
+    r.hk.layout(LAYOUT);
     r.hk.enable(true);
-    r.push({ kind: "down", chord: "raw" });
-    r.push({ kind: "up", chord: "raw" });
+    r.push({ kind: "down", chord: "other" });
     r.push({ kind: "down" });
-    expect(r.events.map((e) => `${e.key}:${e.down}`)).toEqual(["F7:true", "F7:false", "ControlRight:true"]);
+    r.push({ kind: "up" });
+    expect(r.events.map((e) => `${e.key}:${e.down}`)).toEqual(["ControlRight:true", "ControlRight:false"]);
   });
 
   it("calls the paste-last handler on press only, and never reports it as a dictation key", () => {
@@ -99,10 +96,10 @@ describe("several shortcuts through the source", () => {
 
   it("never lets the keys through to other programs, whatever the hook is given", () => {
     const r = rig();
-    r.hk.layout({ ...LAYOUT, raw: "F8" });
+    r.hk.layout({ ...LAYOUT, pasteLast: "F8" });
     r.hk.enable(true);
     expect(r.chord()).toEqual({ keys: [VK.rightCtrl] });
-    expect(r.extras().raw).toEqual({ keys: [0x77] });
+    expect(r.extras().pasteLast).toEqual({ keys: [0x77] });
   });
 
   it("does not take a shortcut that has no dictation key", () => {
@@ -188,12 +185,11 @@ const A_KEY = 0x41;
 describe("settings to the hook and the core", () => {
   const cfg = (d: object) => parseConfig({ dictation: d }).dictation;
 
-  it("passes every shortcut and the hold time to the core", () => {
-    expect(coreSettings(cfg({ hotkey: "F9", mode: "tap-or-hold", holdMs: 500, rawHotkey: "F7", cancelKey: "F10" }))).toMatchObject({
+  it("passes every shortcut to the core", () => {
+    expect(coreSettings(cfg({ hotkey: "F9", mode: "tap-or-hold", pasteLastHotkey: "F7", cancelKey: "F10" }))).toMatchObject({
       hotkey: "F9",
       mode: "tap-or-hold",
-      holdMs: 500,
-      rawKey: "F7",
+      pasteLastKey: "F7",
       cancelKey: "F10",
     });
   });
@@ -208,7 +204,7 @@ describe("settings to the hook and the core", () => {
       pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true },
       transformHotkey: "F6",
     };
-    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", raw: "", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
+    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
     expect(cfg(old)).not.toHaveProperty("shareHotkey");
     expect(cfg(old)).not.toHaveProperty("secondHotkey");
     expect(cfg(old)).not.toHaveProperty("mouseButton");
@@ -222,9 +218,9 @@ describe("pills for activation", () => {
     expect(errorView("mic-in-use", false, "Voice chat")).toMatchObject({ kind: "error", text: "Voice chat is using the microphone" });
     expect(errorView("mic-in-use", false)).toMatchObject({ text: "Another feature is using the microphone" });
     expect(
-      hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Screen look" }, hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false }),
+      hudViewFor({ state: { status: "error", code: "mic-in-use", owner: "Voice chat" }, hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false }),
     ).toMatchObject({
-      text: "Screen look is using the microphone",
+      text: "Voice chat is using the microphone",
     });
   });
 

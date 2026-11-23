@@ -1,17 +1,13 @@
 import { describe, expect, test, vi } from "vitest";
-import { createTranscripts, DEFAULT_POLICY, type ChunkResult, type Policy, type Transcripts } from "../src";
+import { createTranscripts, type ChunkResult, type Transcripts } from "../src";
 import { clock, DIR, ids, MemFs, tone } from "./fakes";
-
-const OUT = "/export";
 
 function setup(
   over: {
     transcribe?: (n: number, pcm: Int16Array, lang: string, signal: AbortSignal) => Promise<ChunkResult> | ChunkResult;
-    policy?: Policy;
     busy?: () => boolean;
     fs?: MemFs;
     recycle?: (file: string) => Promise<void>;
-    warn?: (message: string) => void;
   } = {},
 ) {
   const fs = over.fs ?? new MemFs();
@@ -32,11 +28,8 @@ function setup(
       busy: over.busy ?? (() => false),
       sleep: c.sleep,
       model: () => "model-a",
-      policy: () => over.policy ?? DEFAULT_POLICY,
-      exportDir: () => OUT,
       changed,
       ...(over.recycle && { recycle: over.recycle }),
-      ...(over.warn && { warn: over.warn }),
     });
   return { fs, c, changed, make, langs, calls: () => calls };
 }
@@ -44,10 +37,10 @@ function setup(
 const settled = async (t: Transcripts, id: string, status: string) => vi.waitFor(async () => expect((await t.get(id))!.status).toBe(status));
 const idOf = (r: { ok: boolean }): string => (r as unknown as { id: string }).id;
 
-const record = async (t: Transcripts, sec: number) => {
-  const id = idOf(await t.beginRecording("auto"));
-  await t.appendRecording(id, tone(sec));
-  await t.finishRecording(id);
+/** An import whose job fails at once, so its audio stays for a retry. */
+const failedImport = async (t: Transcripts, name: string, sec = 5) => {
+  const id = idOf(await t.importAudio({ name, pcm: tone(sec), language: "auto" }));
+  await settled(t, id, "failed");
   return id;
 };
 
@@ -61,7 +54,7 @@ describe("import", () => {
     const id = idOf(r);
     await settled(t, id, "done");
     const d = (await t.get(id))!;
-    expect(d).toMatchObject({ title: "weekly sync", source: "file", sourceName: "weekly_sync.m4a", language: "en", durationSec: 70, chunksDone: 3, chunksTotal: 3, daysLeft: 90 });
+    expect(d).toMatchObject({ title: "weekly sync", sourceName: "weekly_sync.m4a", language: "en", durationSec: 70, chunksDone: 3, chunksTotal: 3, daysLeft: 30 });
     expect(d.segments.map((x) => x.text)).toEqual(["words 1", "words 2", "words 3"]);
     expect(d.audioBytes).toBe(0); // an import keeps no audio once it is done
     expect(t.list({ search: "words" }).map((x) => x.id)).toEqual([id]);
@@ -249,88 +242,7 @@ describe("import", () => {
   });
 });
 
-describe("recording", () => {
-  const pcm = (sec: number) => tone(sec);
-
-  test("spools to disk, then becomes audio and is transcribed", async () => {
-    const s = setup();
-    const t = await s.make();
-    const begun = await t.beginRecording("auto");
-    const id = idOf(begun);
-    expect(await t.get(id)).toMatchObject({ status: "recording", source: "microphone", title: expect.stringMatching(/^Conversation /) as string });
-    expect(await t.appendRecording(id, pcm(2))).toEqual({ ok: true, seconds: 2 });
-    expect(await t.appendRecording(id, pcm(3))).toEqual({ ok: true, seconds: 5 });
-    expect(t.list()[0]!.durationSec).toBe(5);
-    expect(s.fs.files.get(`${DIR}/audio/${id}.raw`)!.length).toBe(5 * 32000);
-    expect(await t.finishRecording(id)).toEqual({ ok: true, id });
-    await settled(t, id, "done");
-    expect((await t.get(id))!.durationSec).toBe(5);
-    expect(s.fs.files.has(`${DIR}/audio/${id}.raw`)).toBe(false);
-    expect(s.fs.files.has(`${DIR}/audio/${id}.wav`)).toBe(true);
-  });
-
-  test("an empty recording fails and can be thrown away", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.beginRecording("auto"));
-    const r = await t.finishRecording(id);
-    expect(r).toMatchObject({ ok: false, failure: { code: "decode-failed" } });
-    expect((await t.get(id))!.status).toBe("failed");
-    await t.remove(id);
-    expect(t.list()).toEqual([]);
-    expect(await t.finishRecording("nope")).toMatchObject({ ok: false });
-    expect(await t.finishRecording(id)).toMatchObject({ ok: false });
-  });
-
-  test("discarding removes the entry and its spool", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.beginRecording("auto"));
-    await t.appendRecording(id, pcm(1));
-    await t.discardRecording(id);
-    expect(t.list()).toEqual([]);
-    expect([...s.fs.files.keys()].filter((k) => k.includes("audio"))).toEqual([]);
-    expect(await t.appendRecording(id, pcm(1))).toMatchObject({ ok: false });
-  });
-
-  test("a full disk while recording is reported and what was saved so far is kept", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.beginRecording("auto"));
-    await t.appendRecording(id, pcm(1));
-    s.fs.fullAfter = s.fs.writes;
-    expect(await t.appendRecording(id, pcm(1))).toMatchObject({ ok: false, failure: { code: "disk-full" } });
-    s.fs.fullAfter = Infinity;
-    expect(await t.appendRecording(id, pcm(1))).toEqual({ ok: true, seconds: 2 });
-    expect(s.fs.files.get(`${DIR}/audio/${id}.raw`)!.length).toBe(2 * 32000);
-  });
-
-  test("a crash leaves a recovered recording that can be transcribed", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.beginRecording("de"));
-    await t.appendRecording(id, pcm(4));
-    // The app dies here: nothing else is written. A stray odd byte at the end of the spool is ignored.
-    s.fs.files.set(`${DIR}/audio/${id}.raw`, Uint8Array.from([...s.fs.files.get(`${DIR}/audio/${id}.raw`)!, 7]));
-    const next = await s.make();
-    expect(next.list()[0]).toMatchObject({ id, status: "interrupted", recovered: true });
-    expect(await next.resume(id)).toEqual({ ok: true });
-    await settled(next, id, "done");
-    expect(await next.get(id)).toMatchObject({ durationSec: 4, recovered: true, language: "de" });
-  });
-
-  test("a crash before any sound leaves a recording that fails with a clear message", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.beginRecording("auto"));
-    const next = await s.make();
-    expect(await next.resume(id)).toEqual({ ok: true });
-    await settled(next, id, "failed");
-    expect((await next.get(id))!.failure!.message).toBe("Nothing was recorded, so there is nothing to transcribe.");
-  });
-});
-
-describe("trash, restore, delete, rename", () => {
+describe("delete and rename", () => {
   async function one(over = {}) {
     const s = setup(over);
     const t = await s.make();
@@ -339,25 +251,13 @@ describe("trash, restore, delete, rename", () => {
     return { s, t, id };
   }
 
-  test("trash hides and unsearches; restore brings back and searches again", async () => {
+  test("deleting removes the files and the search entry", async () => {
     const { s, t, id } = await one();
-    await t.trash(id);
-    expect(t.list()).toEqual([]);
-    expect(t.list({ trashed: true })[0]).toMatchObject({ id, daysLeft: 30 });
-    expect(t.list({ search: "words" })).toEqual([]);
-    s.c.advance(5 * 86_400_000);
-    expect(t.list({ trashed: true })[0]!.daysLeft).toBe(25);
-    await t.restore(id);
     expect(t.list({ search: "words" }).map((r) => r.id)).toEqual([id]);
-  });
-
-  test("deleting forever removes the files; empty trash counts", async () => {
-    const { s, t, id } = await one();
-    await t.trash(id);
-    expect(await t.emptyTrash()).toBe(1);
+    await t.remove(id);
+    expect(t.list({ search: "words" })).toEqual([]);
     expect(await t.get(id)).toBeUndefined();
     expect([...s.fs.files.keys()].filter((k) => k.includes("items") || k.includes("audio"))).toEqual([]);
-    expect(await t.emptyTrash()).toBe(0);
   });
 
   test("remove works on a live transcript and a running job is stopped first", async () => {
@@ -374,19 +274,6 @@ describe("trash, restore, delete, rename", () => {
     await vi.waitFor(() => expect([...s.fs.files.keys()].filter((k) => k.includes("items"))).toEqual([]));
   });
 
-  test("trashing a running job stops it", async () => {
-    let release!: () => void;
-    const hold = new Promise<void>((r) => (release = r));
-    const s = setup({ transcribe: async () => (await hold, { ok: true, text: "x", speech: true }) });
-    const t = await s.make();
-    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
-    await vi.waitFor(() => expect(s.calls()).toBe(1));
-    const p = t.trash(id);
-    release();
-    await p;
-    expect(t.list({ trashed: true })[0]!.id).toBe(id);
-  });
-
   test("rename trims, ignores empty, cuts long titles, and search sees the new title", async () => {
     const { t, id } = await one();
     await t.rename(id, "  Budget review  ");
@@ -399,84 +286,62 @@ describe("trash, restore, delete, rename", () => {
   });
 });
 
-describe("export", () => {
-  async function one() {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.importAudio({ name: "talk.wav", pcm: tone(5), language: "auto" }));
-    await settled(t, id, "done");
-    return { s, t, id };
-  }
-  const fwd = (p: string) => p.replaceAll("\\", "/");
-
-  test("text for each format and a saved file that is never overwritten", async () => {
-    const { s, t, id } = await one();
-    expect((await t.text(id, "srt"))!.text).toBe("1\n00:00:00,000 --> 00:00:05,000\nwords 1\n");
-    expect(await t.text("nope", "txt")).toBeUndefined();
-    const a = await t.save(id, "md");
-    expect(a.ok && fwd(a.path)).toBe(`${OUT}/talk.md`);
-    expect(s.fs.text(`${OUT}/talk.md`)).toContain("# talk");
-    // Unchanged since: saved again in place. Changed: a copy beside it.
-    const b = await t.save(id, "md");
-    expect(b).toMatchObject({ ok: true, kind: "replaced" });
-    s.fs.files.set(`${OUT}/talk.md`, new TextEncoder().encode("mine"));
-    const c = await t.save(id, "md");
-    expect(c.ok && c.kind).toBe("copy");
-    expect(c.ok && fwd(c.path)).toBe(`${OUT}/talk (2).md`);
-    expect(s.fs.text(`${OUT}/talk.md`)).toBe("mine");
-    const d = await t.save(id, "vtt");
-    expect(d.ok && fwd(d.path)).toBe(`${OUT}/talk.vtt`);
-    expect(await t.save("nope", "md")).toMatchObject({ ok: false });
-  });
-
-  test("a full disk while saving is reported", async () => {
-    const { s, t, id } = await one();
-    s.fs.fullAfter = s.fs.writes;
-    expect(await t.save(id, "txt")).toMatchObject({ ok: false, failure: { code: "disk-full" } });
-  });
-});
-
 describe("retention", () => {
-  test("a sweep at start moves old text to the trash and drops old audio, a later sweep deletes old trash", async () => {
-    const policy = { textDays: 30, audioDays: 7, audioCapBytes: null, trashDays: 10, keepAudio: true };
-    const s = setup({ policy });
+  test("a transcript is deleted after 30 days and the audio of an unfinished one after 7", async () => {
+    const s = setup({ transcribe: () => ({ ok: false, code: "engine-missing" }) });
     const t = await s.make();
-    const id = await record(t, 5);
-    await settled(t, id, "done");
+    const id = await failedImport(t, "a.wav");
     s.c.advance(8 * 86_400_000);
-    expect(await t.sweep()).toEqual({ trashed: 0, removed: 0, audioDropped: 1 });
+    expect(await t.sweep()).toEqual({ removed: 0, audioDropped: 1 });
     expect(await t.get(id)).toMatchObject({ audioBytes: 0, audioRemoved: true });
     s.c.advance(23 * 86_400_000);
-    expect(await t.sweep()).toEqual({ trashed: 1, removed: 0, audioDropped: 0 });
+    expect(await t.sweep()).toEqual({ removed: 1, audioDropped: 0 });
     expect(t.list()).toEqual([]);
-    s.c.advance(11 * 86_400_000);
-    expect(await t.sweep()).toEqual({ trashed: 0, removed: 1, audioDropped: 0 });
-    expect(await t.get(id)).toBeUndefined();
-    expect(t.storage()).toEqual({ audioBytes: 0, count: 0, trashed: 0 });
+    expect(t.storage()).toEqual({ audioBytes: 0, count: 0 });
   });
 
   test("the sweep also runs when the store opens", async () => {
-    const policy = { textDays: 1, audioDays: 1, audioCapBytes: null, trashDays: 1, keepAudio: true };
-    const s = setup({ policy });
+    const s = setup();
     const t = await s.make();
-    const id = await record(t, 5);
+    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
     await settled(t, id, "done");
-    s.c.advance(2 * 86_400_000);
+    s.c.advance(31 * 86_400_000);
     const again = await s.make();
     await again.ready;
     expect(again.list()).toEqual([]);
-    expect(again.storage()).toMatchObject({ trashed: 1 });
+    expect(again.storage()).toEqual({ audioBytes: 0, count: 0 });
   });
 
-  test("storage counts audio of kept and trashed transcripts", async () => {
-    const s = setup();
+  test("a transcript left in the Trash by an earlier version is deleted at start", async () => {
+    const fs = new MemFs();
+    const entry = {
+      id: "old",
+      title: "old",
+      createdAt: 1_700_000_000_000,
+      status: "done",
+      trashedAt: 1_700_000_000_000,
+      chunksDone: 1,
+      chunksTotal: 1,
+      audioBytes: 0,
+      language: "auto",
+      model: "m",
+      durationSec: 1,
+    };
+    fs.files.set(`${DIR}/manifest.json`, new TextEncoder().encode(JSON.stringify({ version: 1, entries: [entry] })));
+    fs.files.set(`${DIR}/items/old.json`, new TextEncoder().encode(JSON.stringify({ segments: [{ start: 0, end: 1, text: "hi" }] })));
+    const t = await setup({ fs }).make();
+    await t.ready;
+    expect(t.list()).toEqual([]);
+    expect(await t.get("old")).toBeUndefined();
+    expect(fs.files.has(`${DIR}/items/old.json`)).toBe(false);
+  });
+
+  test("storage counts the audio kept for unfinished imports", async () => {
+    const s = setup({ transcribe: () => ({ ok: false, code: "engine-missing" }) });
     const t = await s.make();
-    const a = await record(t, 5);
-    const b = await record(t, 5);
-    await settled(t, a, "done");
-    await settled(t, b, "done");
-    await t.trash(b);
-    expect(t.storage()).toEqual({ audioBytes: 2 * (44 + 160000), count: 1, trashed: 1 });
+    await failedImport(t, "a.wav");
+    await failedImport(t, "b.wav");
+    expect(t.storage()).toEqual({ audioBytes: 2 * (44 + 160000), count: 2 });
   });
 });
 
@@ -527,35 +392,22 @@ describe("store notices", () => {
 });
 
 describe("audio", () => {
-  test("an imported file's audio is gone once its transcript is done; a recording keeps it", async () => {
+  test("an imported file's audio is gone once its transcript is done", async () => {
     const s = setup();
     const t = await s.make();
-    const imp = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
-    const rec = await record(t, 5);
-    await settled(t, imp, "done");
-    await settled(t, rec, "done");
-    expect(await t.get(imp)).toMatchObject({ audioBytes: 0, audioRemoved: true });
-    expect(await t.get(rec)).toMatchObject({ audioBytes: 44 + 160000, audioRemoved: false });
+    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
+    await settled(t, id, "done");
+    expect(await t.get(id)).toMatchObject({ audioBytes: 0, audioRemoved: true });
+    expect(s.fs.files.has(`${DIR}/audio/${id}.wav`)).toBe(false);
   });
 
-  test("with keep audio off a recording's audio goes when it is done", async () => {
-    const s = setup({ policy: { ...DEFAULT_POLICY, keepAudio: false } });
+  test("delete audio removes one transcript's audio and keeps its words; delete all counts", async () => {
+    const s = setup({ transcribe: () => ({ ok: false, code: "engine-missing" }) });
     const t = await s.make();
-    const rec = await record(t, 5);
-    await settled(t, rec, "done");
-    expect(await t.get(rec)).toMatchObject({ audioBytes: 0, audioRemoved: true });
-    expect(s.fs.files.has(`${DIR}/audio/${rec}.wav`)).toBe(false);
-  });
-
-  test("delete audio removes one recording's audio and keeps its words; delete all counts", async () => {
-    const s = setup();
-    const t = await s.make();
-    const a = await record(t, 5);
-    const b = await record(t, 5);
-    await settled(t, a, "done");
-    await settled(t, b, "done");
+    const a = await failedImport(t, "a.wav");
+    await failedImport(t, "b.wav");
     await t.dropAudio(a);
-    expect(await t.get(a)).toMatchObject({ audioBytes: 0, segments: [{ text: "words 1" }] });
+    expect(await t.get(a)).toMatchObject({ audioBytes: 0, status: "failed" });
     expect(await t.dropAllAudio()).toBe(1);
     expect(t.storage().audioBytes).toBe(0);
     expect(await t.dropAllAudio()).toBe(0);
@@ -567,59 +419,16 @@ describe("audio", () => {
     const hold = new Promise<void>((r) => (release = r));
     const s = setup({ transcribe: async () => (await hold, { ok: true, text: "x", speech: true }) });
     const t = await s.make();
-    const rec = await record(t, 5);
+    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
     await vi.waitFor(() => expect(s.calls()).toBe(1));
-    await t.dropAudio(rec);
+    await t.dropAudio(id);
     expect(await t.dropAllAudio()).toBe(0);
-    expect((await t.get(rec))!.audioBytes).toBeGreaterThan(0);
+    expect((await t.get(id))!.audioBytes).toBeGreaterThan(0);
     release();
-    await settled(t, rec, "done");
+    await settled(t, id, "done");
   });
 
   describe("recycle bin", () => {
-    const exported = async (over: Parameters<typeof setup>[0]) => {
-      const s = setup(over);
-      const t = await s.make();
-      const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
-      await settled(t, id, "done");
-      await t.save(id, "txt");
-      return { s, t, id };
-    };
-
-    test("deleting for good sends an untouched export to the recycle bin", async () => {
-      const recycled: string[] = [];
-      const { t, id } = await exported({ recycle: async (f) => void recycled.push(f.replaceAll("\\", "/")) });
-      await t.trash(id);
-      await t.remove(id);
-      expect(recycled).toEqual([`${OUT}/a.txt`]);
-      expect(await t.get(id)).toBeUndefined();
-    });
-
-    test("a file the person changed is not recycled", async () => {
-      const recycled: string[] = [];
-      const { s, t, id } = await exported({ recycle: async (f) => void recycled.push(f.replaceAll("\\", "/")) });
-      await s.fs.write(`${OUT}/a.txt`, "my own edits");
-      await t.trash(id);
-      await t.emptyTrash();
-      expect(recycled.some((f) => f.endsWith("a.txt"))).toBe(false);
-      expect(new TextDecoder().decode(await s.fs.read(`${OUT}/a.txt`))).toBe("my own edits");
-    });
-
-    test("an export that cannot be recycled stays in place and the person is told", async () => {
-      const warn = vi.fn();
-      const { s, t, id } = await exported({
-        recycle: async (f) => {
-          if (f.endsWith("a.txt")) throw new Error("locked");
-        },
-        warn,
-      });
-      await t.trash(id);
-      await t.remove(id);
-      expect(await s.fs.exists(`${OUT}/a.txt`)).toBe(true);
-      expect(warn).toHaveBeenCalledWith("An exported file could not be moved to the Recycle Bin and was left where it is.");
-      expect(await t.get(id)).toBeUndefined();
-    });
-
     test("audio goes to the recycle bin too, and is deleted anyway when that fails", async () => {
       const recycled: string[] = [];
       let bin = true;
@@ -633,24 +442,13 @@ describe("audio", () => {
       const t = await s.make();
       const first = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
       await settled(t, first, "failed");
-      await t.trash(first);
       await t.remove(first);
       expect(recycled).toEqual([expect.stringContaining(`${first}.wav`)]);
       bin = false;
       const id = idOf(await t.importAudio({ name: "b.wav", pcm: tone(5), language: "auto" }));
       await settled(t, id, "failed");
-      await t.trash(id);
       await t.remove(id);
       expect([...s.fs.files.keys()].some((k) => k.endsWith(`${id}.wav`))).toBe(false);
     });
-  });
-
-  test("a transcript's exports are listed on its detail", async () => {
-    const s = setup();
-    const t = await s.make();
-    const id = idOf(await t.importAudio({ name: "a.wav", pcm: tone(5), language: "auto" }));
-    await settled(t, id, "done");
-    await t.save(id, "txt");
-    expect((await t.get(id))!.exports.map((e) => e.path.replaceAll("\\", "/"))).toEqual([`${OUT}/a.txt`]);
   });
 });

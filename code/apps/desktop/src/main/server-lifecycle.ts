@@ -22,6 +22,8 @@ type EngineState = Health["engine"]["state"];
 interface RuntimeDeps {
   state: AppState;
   config: Config;
+  /** The first port the server tries; it moves up to the next free one while that is busy. */
+  startPort: number;
   dataDir: string;
   modelsDir: string;
   /** The model host: dist/worker/worker.js when built, the engine package's source file in development (see engineWorkerUrl). */
@@ -108,11 +110,11 @@ export class ServerRuntime {
   }
 
   async start(token?: string): Promise<void> {
-    const { state, config, dataDir, log } = this.#d;
+    const { state, startPort, dataDir, log } = this.#d;
     state.serverError = null;
     try {
       const engine = this.#engine ?? this.createEngine();
-      const { server, port } = await listenWithFallback(config.preferredPort, (port) =>
+      const { server, port } = await listenWithFallback(startPort, (port) =>
         createServer({
           engine,
           dataDir,
@@ -125,14 +127,13 @@ export class ServerRuntime {
           ...(token ? { token } : {}),
           onError: (e) => this.#onServerError(e),
           // Lazy-load options of the server build; extra keys are ignored by a build that predates them.
-          ...serverOptions(config),
+          ...serverOptions(),
         }),
       );
       this.#server = server;
       state.port = port;
-      state.portFallback = port !== config.preferredPort;
       state.token = server.token;
-      const missing = applyMemory(server, config, state.onBattery);
+      const missing = applyMemory(server, state.onBattery);
       if (missing.length) log.info("server has no runtime setter for:", missing.join(", "));
       log.info(`server listening on 127.0.0.1:${port}`);
     } catch (e) {
@@ -140,12 +141,6 @@ export class ServerRuntime {
       log.error("server failed to start", e instanceof Error ? e.message : e);
     }
     await this.refreshHealth();
-  }
-
-  async restart(token?: string): Promise<AppState> {
-    await this.stop();
-    await this.start(token);
-    return this.#d.publish();
   }
 
   /** Drops the engine and starts over (Retry after an error). */

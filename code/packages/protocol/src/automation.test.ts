@@ -17,7 +17,6 @@ import {
   automationStopRequestSchema,
   capabilities,
   capabilitiesSchema,
-  exitCodeFor,
 } from "./automation";
 
 describe("error codes", () => {
@@ -42,24 +41,12 @@ describe("error codes", () => {
       expect(AUTOMATION_ERROR_STATUS[c]).toBeGreaterThanOrEqual(400);
     }
   });
-  it.each([
-    ["too_large", 1],
-    ["model_missing", 1],
-    ["busy", 1],
-    ["queue_full", 1],
-    ["failed", 1],
-    ["invalid_input", 2],
-    ["not_running", 3],
-    ["token_rejected", 3],
-  ] as const)("exit code of %s is %i", (code, exit) => {
-    expect(exitCodeFor(code)).toBe(exit);
-  });
 });
 
 describe("capabilities", () => {
   it("names what this version can and cannot do", () => {
     const c = capabilities("1.2.3");
-    expect(c).toMatchObject({ app: "speakkit", version: "1.2.3", apiVersion: 1, exitCodes: { ok: 0, failed: 1, usage: 2, unreachable: 3 } });
+    expect(c).toMatchObject({ app: "speakkit", version: "1.2.3", apiVersion: 1 });
     expect(c.commands.speak).toBe("available");
     expect(c.commands["live-stream"]).toBe("available");
     expect(c.errors[3]).toEqual({ code: "too_large", message: "The file is over the 64 MiB limit." });
@@ -117,13 +104,12 @@ describe("every schema keeps what it is given and refuses what is missing", () =
     needs(automationLimitsSchema, LIMITS);
     expect(v.safeParse(automationLimitsSchema, { ...LIMITS, maxStreams: -1 }).success).toBe(false);
   });
-  it("capabilities, with each command state and the exit codes it promises", () => {
+  it("capabilities, with each command state", () => {
     const c = capabilities("1.0.0");
     keepsAll(capabilitiesSchema, c);
     needs(capabilitiesSchema, c as unknown as Record<string, unknown>);
     expect(v.safeParse(capabilitiesSchema, { ...c, commands: { speak: "broken" } }).success).toBe(false);
     expect(v.safeParse(capabilitiesSchema, { ...c, commands: { dance: "available" } }).success).toBe(false);
-    expect(v.safeParse(capabilitiesSchema, { ...c, exitCodes: { ...c.exitCodes, usage: 9 } }).success).toBe(false);
     expect(v.safeParse(capabilitiesSchema, { ...c, errors: [{ code: "nope", message: "x" }] }).success).toBe(false);
     expect(v.safeParse(capabilitiesSchema, { ...c, app: "other" }).success).toBe(false);
   });
@@ -205,10 +191,6 @@ describe("the constants other code relies on", () => {
       export: "available",
       events: "available",
       capabilities: "available",
-      mcp: "available",
-      skill: "available",
-      dictate: "parked",
-      history: "parked",
       "live-stream": "available",
     });
   });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Segmented, Slider, Toggle } from "@speakkit/ui";
+import { Segmented, Slider } from "@speakkit/ui";
 import type { Display } from "./display";
 
 interface Props {
@@ -64,10 +64,6 @@ export function DisplayCard({ d, onChange, onClose }: Props) {
       <Group label="Text width" value={`${d.width}px`}>
         <Slider min={480} max={960} step={20} value={d.width} aria-label="Text width" onChange={(v) => onChange({ width: v })} />
       </Group>
-      <label className="rd-display__row rd-display__row--between rd-display__row--switch">
-        <span className="rd-display__text">Scroll along with the voice</span>
-        <Toggle checked={d.follow} onChange={(follow) => onChange({ follow })} aria-label="Scroll along with the voice" />
-      </label>
     </div>
   );
 }

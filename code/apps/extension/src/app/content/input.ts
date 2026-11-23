@@ -110,7 +110,7 @@ export class PageInput {
   private warmNearLauncher(e: PointerEvent) {
     const l = this.c.settings.launcher;
     if (!l.enabled || this.c.dismissed) return;
-    const edge = l.side === "right" ? innerWidth - e.clientX : e.clientX;
+    const edge = innerWidth - e.clientX;
     if (edge > LAUNCHER_EDGE_PX || Math.abs(e.clientY / innerHeight - l.y) > 0.2) return;
     const rule = this.c.rule();
     if (rule !== "hide-controls" && rule !== "never-read") this.c.warm("hover");

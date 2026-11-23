@@ -81,7 +81,7 @@ function events(x: Parameters<Route["handle"]>[0], s: Services, h: AutomationHos
   });
 }
 
-/** Everything a script or an AI app does through the command line tool and the MCP server. */
+/** Everything a script or another local app does through the automation routes. */
 export const automationRoutes: Route[] = [
   { method: "GET", path: "/v1/limits", handle: ({ res }, s) => json(res, 200, limitsOf(s)) },
   { method: "GET", path: "/v1/capabilities", handle: ({ res }, s) => json(res, 200, capabilities(s.version)) },

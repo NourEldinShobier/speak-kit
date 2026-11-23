@@ -5,7 +5,6 @@ import { noticeFor } from "../../main/notify-rules";
 import { ERROR_TEXT, errorText, updateErrorText } from "../../renderer/error-text";
 import { engineView } from "../engine-view";
 import { IDLE_READER } from "../reader";
-import { activityRow } from "../settings/diagnostics";
 import { DEFAULT_SHORTCUTS } from "../shortcuts";
 import { trayMenuModel, trayTooltipFor, type TrayContext } from "../tray";
 import { at, loadLocale, LOCALES, setActiveLocale, applyLanguage } from "./index";
@@ -72,10 +71,5 @@ describe("text the main process builds", () => {
     await applyLanguage("fr", []);
     expect(errorText({ code: "no-selection" })).toBe("Aucun texte n’est sélectionné. Sélectionnez du texte, puis réessayez.");
     expect(updateErrorText({ code: "update-offline" }, "check").title).toBe("Impossible de rechercher des mises à jour");
-  });
-
-  it("translates the Settings helper that builds text", async () => {
-    await applyLanguage("de", []);
-    expect(activityRow({ id: 1, atMs: 0, kind: "error", title: "t", body: "b" })).toEqual({ title: "t", detail: "Problem: b" });
   });
 });

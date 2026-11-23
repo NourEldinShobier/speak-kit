@@ -1,8 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { createTranscripts, DEFAULT_POLICY, footerOf, notesBlock, viewOf, type NoteDoc, type Summarise, type Transcripts } from "../src";
+import { createTranscripts, viewOf, type NoteDoc, type Summarise, type Transcripts } from "../src";
 import { clock, DIR, ids, MemFs, tone } from "./fakes";
 
-const OUT = "/export";
 const GOOD: Summarise = async () => ({
   ok: true,
   writer: "OpenAI test-model",
@@ -22,8 +21,6 @@ function setup(notes: () => Summarise | undefined, text = (n: number) => `words 
     busy,
     sleep: c.sleep,
     model: () => "model-a",
-    policy: () => DEFAULT_POLICY,
-    exportDir: () => OUT,
     changed,
     notes,
   });
@@ -195,36 +192,8 @@ describe("notes after a transcript finishes", () => {
   });
 });
 
-describe("exports with a summary", () => {
-  test("text and Markdown carry the summary and name the writer", async () => {
-    const t = await setup(() => GOOD).t;
-    const id = await imported(t);
-    await notesState(t, id, "ready");
-    const txt = (await t.text(id, "txt"))!.text;
-    expect(txt).toContain("Summary\nThey agreed the date. Nothing else was decided.");
-    expect(txt).toContain("Summary written by OpenAI test-model.");
-    expect(txt).toContain("[0:00] words 1");
-    const md = (await t.text(id, "md"))!.text;
-    expect(md).toContain("## Summary");
-    expect(md).toContain("_Summary written by OpenAI test-model._");
-    expect(JSON.parse((await t.text(id, "json"))!.text)).toMatchObject({ summaryWriter: "OpenAI test-model", chapters: [{ start: 0, title: "Date" }] });
-    expect((await t.text(id, "srt"))!.text).not.toContain("Summary");
-  });
-
-  test("with no notes the export is the plain transcript", async () => {
-    const t = await setup(() => undefined).t;
-    const id = await imported(t);
-    expect((await t.text(id, "txt"))!.text).not.toContain("Summary");
-  });
-});
-
 describe("pure notes helpers", () => {
   const doc: NoteDoc = { title: "T", summary: "S.", chapters: [{ start: 65, title: "Later", text: "x" }], writer: "W", at: 1 };
-  test("footer and block", () => {
-    expect(footerOf("W")).toBe("Summary written by W.");
-    expect(notesBlock(doc, false)).toEqual(["Summary", "S.", "", "Chapters", "[1:05] Later", "", "Summary written by W.", ""]);
-    expect(notesBlock({ ...doc, chapters: [] }, true)).toEqual(["## Summary", "S.", "", "_Summary written by W._", ""]);
-  });
   test("view of a record", () => {
     expect(viewOf(undefined, false)).toBeUndefined();
     expect(viewOf(undefined, true)).toEqual({ state: "writing" });

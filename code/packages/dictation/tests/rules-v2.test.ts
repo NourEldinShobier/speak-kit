@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { applyRules, soundsLikeRules, traceRules, type RulesOptions } from "../src";
+import { applyRules, soundsLikeRules, type RulesOptions } from "../src";
+import { traceRules } from "../src/rules";
 
 const off: RulesOptions = { fillers: false, spokenSymbols: false, spokenFormatting: false, autoCapitalize: false, trailingSpace: false, replacements: [], language: "en" };
 const run = (text: string, opts: Partial<RulesOptions> = {}): string => applyRules(text, { ...off, ...opts });
@@ -106,7 +107,7 @@ describe("rules by language", () => {
   });
 });
 
-describe("rules tester", () => {
+describe("rules trace", () => {
   const opts: RulesOptions = { ...off, fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, replacements: [rule("cooper netties", "Kubernetes")] };
 
   it("shows each stage, ending with the final text", () => {

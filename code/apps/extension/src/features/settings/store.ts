@@ -1,5 +1,5 @@
-import { SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
-import { localGet, syncGet, syncSet } from "./browser";
+import { PORT_KEY, SETTINGS_KEY, TOKEN_KEY } from "@speakkit/protocol";
+import { localGet, localSet, syncGet, syncSet } from "./browser";
 import { parseSettings } from "./schema";
 import type { Settings } from "./types";
 
@@ -62,4 +62,11 @@ export async function migrateStoredSettings(): Promise<void> {
 export async function getToken(): Promise<string> {
   const got = await localGet(TOKEN_KEY);
   return typeof got[TOKEN_KEY] === "string" ? (got[TOKEN_KEY] as string) : "";
+}
+
+/** The port the app answered on last; the default port until something else answered. Never typed by the user. */
+export { readPort as getPort } from "./storage";
+
+export async function savePort(port: number): Promise<void> {
+  await localSet({ [PORT_KEY]: port });
 }

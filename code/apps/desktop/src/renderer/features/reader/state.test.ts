@@ -19,17 +19,16 @@ const doc = buildDoc([{ kind: "paragraph", text: "One. Two." }]);
 const run = (...actions: ReaderAction[]) => actions.reduce(readerReducer, initReader(1, "af_heart"));
 
 describe("loading", () => {
-  it("starts loading, becomes ready with the reading's own voice, or missing", () => {
+  it("starts loading, becomes ready with the app's voice, or missing", () => {
     expect(run().load).toEqual({ kind: "loading" });
-    const s = run({ type: "loaded", meta: meta({ voice: "bf_emma" }), doc });
+    const s = run({ type: "loaded", meta: meta(), doc });
     expect(s.load.kind).toBe("ready");
-    expect(s.voiceId).toBe("bf_emma");
-    expect(run({ type: "loaded", meta: meta(), doc }).voiceId).toBe("af_heart");
+    expect(s.voiceId).toBe("af_heart");
     expect(run({ type: "missing" }).load).toEqual({ kind: "missing" });
   });
 
   it("a refresh after text recognition keeps the chosen voice", () => {
-    const s = run({ type: "voice", voiceId: "am_adam" }, { type: "refreshed", meta: meta({ voice: "bf_emma" }), doc });
+    const s = run({ type: "voice", voiceId: "am_adam" }, { type: "refreshed", meta: meta(), doc });
     expect(s.voiceId).toBe("am_adam");
   });
 });
@@ -72,11 +71,9 @@ describe("playback helpers", () => {
     expect(readerReducer(s, { type: "word", word: undefined }).word).toBeUndefined();
   });
 
-  it("stores the sleep countdown, the speed and the bookmarks of the open reading", () => {
-    const s = run({ type: "loaded", meta: meta(), doc }, { type: "sleep", leftMs: 60_000 }, { type: "speed", speed: 1.5 }, { type: "bookmarks", bookmarks: [{ sentence: 1, text: "Two." } as never] });
+  it("stores the sleep countdown and the speed", () => {
+    const s = run({ type: "loaded", meta: meta(), doc }, { type: "sleep", leftMs: 60_000 }, { type: "speed", speed: 1.5 });
     expect(s.sleepLeft).toBe(60_000);
     expect(s.speed).toBe(1.5);
-    expect(s.load.kind === "ready" && s.load.meta.bookmarks).toEqual([{ sentence: 1, text: "Two." }]);
-    expect(readerReducer(initReader(1, "x"), { type: "bookmarks", bookmarks: [] }).load.kind).toBe("loading");
   });
 });

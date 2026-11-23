@@ -80,20 +80,16 @@ describe("snippetAround", () => {
 describe("provisional title", () => {
   test("all twelve months and two-digit times", () => {
     const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    names.forEach((m, i) => expect(provisionalTitle({ source: "microphone", at: new Date(2026, i, 7, 3, 4).getTime() })).toBe(`Conversation 7 ${m}, 03:04`));
-    expect(provisionalTitle({ source: "microphone", at: new Date(2026, 0, 31, 23, 59).getTime() })).toBe("Conversation 31 Jan, 23:59");
+    names.forEach((m, i) => expect(provisionalTitle({ at: new Date(2026, i, 7, 3, 4).getTime() })).toBe(`Transcript 7 ${m}, 03:04`));
+    expect(provisionalTitle({ at: new Date(2026, 0, 31, 23, 59).getTime() })).toBe("Transcript 31 Jan, 23:59");
   });
 
   test("file names lose their extension and underscores, and keep dots that are not an extension", () => {
-    expect(provisionalTitle({ source: "file", name: "Weekly__sync_call.m4a", at: 0 })).toBe("Weekly sync call");
-    expect(provisionalTitle({ source: "file", name: "archive.tar.gz", at: 0 })).toBe("archive.tar");
-    expect(provisionalTitle({ source: "file", name: "noext", at: 0 })).toBe("noext");
-    expect(provisionalTitle({ source: "file", name: "  spaced  .wav", at: 0 })).toBe("spaced");
-    expect(provisionalTitle({ source: "file", name: "a.verylongext", at: 0 })).toBe("a.verylongext");
-  });
-
-  test("a microphone recording ignores a name", () => {
-    expect(provisionalTitle({ source: "microphone", name: "x.wav", at: new Date(2026, 5, 1, 12, 0).getTime() })).toBe("Conversation 1 Jun, 12:00");
+    expect(provisionalTitle({ name: "Weekly__sync_call.m4a", at: 0 })).toBe("Weekly sync call");
+    expect(provisionalTitle({ name: "archive.tar.gz", at: 0 })).toBe("archive.tar");
+    expect(provisionalTitle({ name: "noext", at: 0 })).toBe("noext");
+    expect(provisionalTitle({ name: "  spaced  .wav", at: 0 })).toBe("spaced");
+    expect(provisionalTitle({ name: "a.verylongext", at: 0 })).toBe("a.verylongext");
   });
 });
 
@@ -107,7 +103,6 @@ describe("file checks", () => {
     expect(failures.engineLoading()).toEqual({ code: "engine-loading", message: "The speech model is still loading. Try again in a moment." });
     expect(failures.diskFull()).toEqual({ code: "disk-full", message: "The disk is full, so the transcript could not be saved. Free some space and try again." });
     expect(failures.failed()).toEqual({ code: "failed", message: "Transcription stopped because the speech engine failed. Try again." });
-    expect(failures.nothingRecorded()).toEqual({ code: "decode-failed", message: "Nothing was recorded, so there is nothing to transcribe." });
   });
 
   test("known extensions", () => {

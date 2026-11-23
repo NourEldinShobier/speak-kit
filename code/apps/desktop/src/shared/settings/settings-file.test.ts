@@ -10,37 +10,36 @@ describe("loading settings", () => {
     expect(l.config).toMatchObject({
       appearance: "system",
       updateChannel: "stable",
-      experiments: {},
       configVersion: CONFIG_VERSION,
     });
   });
 
   it("an invalid field loads as its default, is named, and asks for a backup", () => {
-    const l = loadSettings({ idleUnload: "42", updateChannel: "explode", autoUpdate: false });
-    expect(l.config.idleUnload).toBe("5");
+    const l = loadSettings({ appearance: "neon", updateChannel: "explode", language: "de" });
+    expect(l.config.appearance).toBe("system");
     expect(l.config.updateChannel).toBe("stable");
-    expect(l.config.autoUpdate).toBe(false);
-    expect(l.invalidFields).toEqual(["updateChannel", "idleUnload"]);
+    expect(l.config.language).toBe("de");
+    expect(l.invalidFields).toEqual(["appearance", "updateChannel"]);
     expect(l.needsBackup).toBe(true);
-    expect(noticeOf(l)).toEqual({ kind: "repaired", fields: ["updateChannel", "idleUnload"] });
+    expect(noticeOf(l)).toEqual({ kind: "repaired", fields: ["appearance", "updateChannel"] });
   });
 
   it("a number outside its range counts as invalid", () => {
-    expect(invalidFieldsOf({ speed: 9, preferredPort: 70000 })).toEqual(["preferredPort", "speed"]);
+    expect(invalidFieldsOf({ speed: 9, voiceChatVoice: "nobody" })).toEqual(["speed", "voiceChatVoice"]);
     expect(loadSettings({ speed: 9 }).config.speed).toBe(1);
   });
 
   it("a file from a newer app loads read-only with a notice and no backup", () => {
-    const l = loadSettings({ configVersion: CONFIG_VERSION + 4, autoUpdate: false });
+    const l = loadSettings({ configVersion: CONFIG_VERSION + 4, appearance: "light" });
     expect(l.newerVersion).toBe(CONFIG_VERSION + 4);
     expect(l.needsBackup).toBe(false);
-    expect(l.config.autoUpdate).toBe(false);
+    expect(l.config.appearance).toBe("light");
     expect(noticeOf(l)).toEqual({ kind: "newer", version: CONFIG_VERSION + 4 });
     expect(noticeText(noticeOf(l)!)).toContain("newer version");
   });
 
   it("garbage on disk loads defaults", () => {
-    for (const x of [null, "text", 7, [1, 2]]) expect(loadSettings(x).config.autoUpdate).toBe(true);
+    for (const x of [null, "text", 7, [1, 2]]) expect(loadSettings(x).config.appearance).toBe("system");
   });
 
   it("the notice lists at most four fields", () => {
@@ -97,7 +96,7 @@ describe("stored values of the wrong type", () => {
 
 describe("the What is new notes", () => {
   it("a file from before them loads an empty one, a stored one is kept, a broken one is repaired", () => {
-    expect(loadSettings({ autoUpdate: false }).config.whatsNew).toEqual({ version: "", notes: [] });
+    expect(loadSettings({ appearance: "light" }).config.whatsNew).toEqual({ version: "", notes: [] });
     const kept = loadSettings({ whatsNew: { version: "0.4.0", notes: ["a"] } });
     expect(kept.config.whatsNew).toEqual({ version: "0.4.0", notes: ["a"] });
     expect(kept.needsBackup).toBe(false);

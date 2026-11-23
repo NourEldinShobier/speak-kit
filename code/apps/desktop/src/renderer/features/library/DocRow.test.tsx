@@ -17,9 +17,7 @@ const doc = (over: Partial<DocMeta> = {}): DocMeta => ({
   ...over,
 });
 const row = (d: DocMeta, query = "", hit?: { id: string; snippet?: string } | undefined) =>
-  renderToStaticMarkup(
-    <DocRow doc={d} speed={1} now={NOW} query={query} hit={hit} actions={{ onOpen() {}, onPlay() {}, onRename() {}, onVoice() {}, onFinished() {}, onReveal() {}, onDelete() {} }} />,
-  );
+  renderToStaticMarkup(<DocRow doc={d} speed={1} now={NOW} query={query} hit={hit} actions={{ onOpen() {}, onPlay() {}, onRename() {}, onFinished() {}, onReveal() {}, onDelete() {} }} />);
 
 describe("DocRow", () => {
   it("a new reading shows the New badge, its estimated length and an open button named after it", () => {

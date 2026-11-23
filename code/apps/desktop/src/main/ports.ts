@@ -1,4 +1,8 @@
+import { DEFAULT_PORT } from "@speakkit/protocol";
 import { DesktopFault } from "../shared/errors";
+
+/** The port the server tries first: SPEAKKIT_PORT (tests and the development app) or the default. */
+export const startPort = (env: NodeJS.ProcessEnv): number => Number(env.SPEAKKIT_PORT) || DEFAULT_PORT;
 
 interface Listenable {
   listen(): Promise<unknown> | unknown;

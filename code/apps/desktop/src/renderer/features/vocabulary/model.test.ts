@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { importVocabulary, type Term } from "@speakkit/dictation";
-import { changedWords, checkDraft, cleanupRows, filterTerms, importView, promptSummary, testStages, wordCount } from "./model";
+import { checkDraft, cleanupRows, filterTerms, importView, promptSummary, wordCount } from "./model";
 
 const t = (id: string, word: string, soundsLike: string[] = []): Term => ({ id, word, soundsLike });
-const cleanup = { fillers: true, spokenSymbols: true, spokenFormatting: true, autoCapitalize: true, trailingSpace: false, stripFinalStop: false };
 
 describe("add word dialog", () => {
   const terms = [t("a", "Kubernetes")];
@@ -91,40 +90,6 @@ describe("clean-up rows by language", () => {
     const rows = byKey("en");
     expect(Object.keys(rows)).toEqual(["fillers", "spokenSymbols", "spokenFormatting", "autoCapitalize", "stripFinalStop", "trailingSpace"]);
     expect(rows.autoCapitalize?.scope).toBeUndefined();
-  });
-});
-
-describe("rules tester", () => {
-  const terms = [t("k", "Kubernetes", ["cooper netties"])];
-  const replacements = [{ from: "my email", to: "sam@example.com" }];
-
-  it("shows the four steps ending in the final text", () => {
-    const r = testStages("tell the team the cooper netties update is live and send it to my email", { terms, replacements, cleanup: { ...cleanup, fillers: false }, language: "en" });
-    expect(r.stages.map((s) => [s.key, s.text])).toEqual([
-      ["heard", "tell the team the cooper netties update is live and send it to my email"],
-      ["words", "tell the team the Kubernetes update is live and send it to my email"],
-      ["replacements", "tell the team the Kubernetes update is live and send it to sam@example.com"],
-      ["cleanup", "Tell the team the Kubernetes update is live and send it to sam@example.com"],
-    ]);
-    expect(r.final).toBe("Tell the team the Kubernetes update is live and send it to sam@example.com");
-    expect(r.stages[1]?.note).toBe("Changed");
-  });
-
-  it("says when a step has no rules or changed nothing", () => {
-    const r = testStages("hello", { terms: [], replacements: [], cleanup, language: "en" });
-    expect(r.stages.map((s) => s.note)).toEqual(["The raw text", "No sounds-like rules", "No replacement rules", "fillers, symbols, formatting, capital letter"]);
-    expect(testStages("hello", { terms, replacements, cleanup, language: "en" }).stages[2]?.note).toBe("Nothing changed");
-  });
-
-  it("leaves numbers-only text untouched through every step", () => {
-    const r = testStages("12 34", { terms, replacements, cleanup, language: "en" });
-    expect(r.stages.map((s) => s.text)).toEqual(["12 34", "12 34", "12 34", "12 34"]);
-  });
-
-  it("finds the words to fix: what the model heard and what it should be", () => {
-    expect(changedWords("tell cooper netties now", "Tell Kubernetes now")).toEqual({ heard: "cooper netties", word: "Kubernetes" });
-    expect(changedWords("same text", "Same text.")).toBeUndefined();
-    expect(changedWords("", "")).toBeUndefined();
   });
 });
 

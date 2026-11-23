@@ -6,28 +6,28 @@ const label = (p: string) => p[0]!.toUpperCase() + p.slice(1);
 
 describe("settings search", () => {
   it("finds a row behind the Advanced fold", () => {
-    const g = searchSettings("import settings", label);
-    expect(g[0]).toMatchObject({ page: "general" });
-    expect(g[0]!.rows[0]).toMatchObject({ id: "general/import", advanced: true });
+    const g = searchSettings("live log", label);
+    expect(g[0]).toMatchObject({ page: "about" });
+    expect(g[0]!.rows[0]).toMatchObject({ id: "about/log", advanced: true });
   });
 
   it("every typed word must match and an empty query finds nothing", () => {
     expect(searchSettings("", label)).toEqual([]);
     expect(searchSettings("   ", label)).toEqual([]);
     expect(searchSettings("zzzz", label)).toEqual([]);
-    expect(searchSettings("battery laptop", label)[0]!.rows.map((x) => x.id)).toEqual(["performance/battery"]);
-    expect(searchSettings("battery zzzz", label)).toEqual([]);
+    expect(searchSettings("launch boot", label)[0]!.rows.map((x) => x.id)).toEqual(["general/launch"]);
+    expect(searchSettings("launch zzzz", label)).toEqual([]);
   });
 
   it("matches keywords and the page name, label hits first", () => {
-    const g = searchSettings("memory", label);
-    expect(g.map((x) => x.page)[0]).toBe("performance");
+    const g = searchSettings("sign in", label);
+    expect(g.map((x) => x.page)[0]).toBe("general");
     expect(searchSettings("hotkey", label)[0]).toMatchObject({ page: "shortcuts" });
     expect(searchSettings("Accessibility", label)[0]!.page).toBe("accessibility");
   });
 
-  it("finds the record shortcut", () => {
-    expect(searchSettings("record", label)[0]!.rows.map((x) => x.id)).toContain("shortcuts/record-toggle");
+  it("finds the play and pause shortcut", () => {
+    expect(searchSettings("pause", label)[0]!.rows.map((x) => x.id)).toContain("shortcuts/play-pause");
   });
 
   it("groups by page", () => {
@@ -36,13 +36,18 @@ describe("settings search", () => {
   });
 
   it("is case-insensitive", () => {
-    expect(searchSettings("BATTERY", label)[0]!.rows[0]!.id).toBe("performance/battery");
+    expect(searchSettings("LAUNCH", label)[0]!.rows[0]!.id).toBe("general/launch");
   });
 
   it("splits the label around the longest typed word", () => {
     expect(splitMatch("Launch at login", "log")).toEqual({ before: "Launch at ", match: "log", after: "in" });
     expect(splitMatch("Language", "zz")).toEqual({ before: "Language", match: "", after: "" });
     expect(splitMatch("Language", "")).toEqual({ before: "Language", match: "", after: "" });
+  });
+
+  it("the removed pages have no rows", () => {
+    expect(SETTING_ROWS.filter((x) => ["voice", "performance", "experiments", "diagnostics"].includes(x.page))).toEqual([]);
+    expect(SETTING_ROWS.map((x) => x.id)).not.toContain("privacy/telemetry");
   });
 
   it("row ids are unique and belong to real pages", () => {
@@ -54,13 +59,13 @@ describe("settings search", () => {
 describe("search ordering and splitting", () => {
   const rows = [
     { id: "a/one", page: "general" as const, label: "Zebra", keywords: "tray" },
-    { id: "a/two", page: "voice" as const, label: "Tray icon", keywords: "" },
+    { id: "a/two", page: "storage" as const, label: "Tray icon", keywords: "" },
     { id: "a/three", page: "general" as const, label: "Other", keywords: "tray" },
   ];
   it("puts label hits before keyword hits, then keeps the list order, grouped by page in that order", () => {
     const g = searchSettings("tray", label, rows);
     expect(g.map((x) => [x.page, x.rows.map((r) => r.id)])).toEqual([
-      ["voice", ["a/two"]],
+      ["storage", ["a/two"]],
       ["general", ["a/one", "a/three"]],
     ]);
   });
@@ -83,6 +88,6 @@ describe("search ordering and splitting", () => {
   });
 
   it("offers these quick topics", () => {
-    expect(QUICK_TOPICS).toEqual(["Shortcuts", "Microphone", "Memory", "Updates", "Logs"]);
+    expect(QUICK_TOPICS).toEqual(["Shortcuts", "Microphone", "Language", "Updates", "Logs"]);
   });
 });

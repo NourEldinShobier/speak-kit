@@ -54,15 +54,9 @@ const readerSchema = group(
 
 const settingsSchema = v.fallback(
   v.object({
-    port: clamped([1, 65535], d.port, true),
     launcher: group(
       {
         enabled: flag(d.launcher.enabled),
-        side: pick(["left", "right"], d.launcher.side),
-        idle: pick(["peek", "hidden", "open"], d.launcher.idle),
-        openOn: pick(["hover", "click"], d.launcher.openOn),
-        closeDelayMs: clamped([0, 10000], d.launcher.closeDelayMs),
-        widerWhileReading: flag(d.launcher.widerWhileReading),
         y: clamped([0, 1], d.launcher.y),
       },
       d.launcher,

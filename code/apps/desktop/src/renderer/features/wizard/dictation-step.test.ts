@@ -28,9 +28,9 @@ const whisper = card({});
 const view = {
   models: [whisper, parakeet],
   table: [
-    { language: "auto", recommended: whisper.id, alsoWorks: [] },
-    { language: "en", recommended: parakeet.id, alsoWorks: [whisper.id] },
-    { language: "de", recommended: whisper.id, alsoWorks: [parakeet.id] },
+    { language: "auto", recommended: whisper.id },
+    { language: "en", recommended: parakeet.id },
+    { language: "de", recommended: whisper.id },
   ],
 } as unknown as SpeechModelsView;
 
@@ -60,8 +60,8 @@ describe("languageChoice", () => {
   it("detecting the language says it is slower and can mistranscribe close languages", () => {
     expect(languageChoice(view, "auto")!.detail).toBe("Uses Whisper Large v3 Turbo, 574 MB. Slower, handles mixed languages. It can mistranscribe close languages.");
   });
-  it("marks a model that is installed or found on disk as needing no download", () => {
-    expect(languageChoice(view, "de", ["large-v3-turbo-q5_0"])!.noDownload).toBe(true);
+  it("marks a model that is installed as needing no download", () => {
+    expect(languageChoice(view, "de")!.noDownload).toBe(false);
     expect(languageChoice({ ...view, models: [{ ...whisper, installed: true }, parakeet] } as SpeechModelsView, "de")!.noDownload).toBe(true);
   });
   it("is undefined for a language with no row", () => {
@@ -73,10 +73,9 @@ describe("languageChoice", () => {
 
 describe("afterLanguage", () => {
   const choice = (installed: boolean) => languageChoice({ ...view, models: [{ ...parakeet, installed }, whisper] } as SpeechModelsView, "en")!;
-  it("uses an installed model, adopts a found one, and downloads only otherwise", () => {
-    expect(afterLanguage(choice(true), false)).toBe("use");
-    expect(afterLanguage(choice(false), true)).toBe("adopt");
-    expect(afterLanguage(choice(false), false)).toBe("download");
+  it("uses an installed model and downloads only otherwise", () => {
+    expect(afterLanguage(choice(true))).toBe("use");
+    expect(afterLanguage(choice(false))).toBe("download");
   });
 });
 

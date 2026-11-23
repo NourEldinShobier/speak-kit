@@ -1,16 +1,15 @@
 import { powerMonitor } from "electron";
 import type { Activity, AppState } from "../shared/ipc";
 import { applyMemory } from "../shared/memory";
-import type { Config } from "../shared/schemas";
 import { watchPairing } from "./pairing";
 import type { ServerRuntime } from "./server-lifecycle";
 
-/** On battery the model unloads sooner (the Battery saver setting): the server is told whenever the power source changes. */
-export function watchPower(d: { state: AppState; config: Config; runtime: ServerRuntime; publish(): void }): void {
+/** On battery the model unloads sooner: the server is told whenever the power source changes. */
+export function watchPower(d: { state: AppState; runtime: ServerRuntime; publish(): void }): void {
   d.state.onBattery = powerMonitor.isOnBatteryPower();
   const onPower = (battery: boolean) => {
     d.state.onBattery = battery;
-    applyMemory(d.runtime.server, d.config, battery);
+    applyMemory(d.runtime.server, battery);
     d.publish();
   };
   powerMonitor.on("on-battery", () => onPower(true));

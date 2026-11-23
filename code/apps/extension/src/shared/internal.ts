@@ -34,7 +34,6 @@ export type WorkerFailure = { ok: false; error: "invalid-message" | "route-faile
 /** Extra requests answered by the service worker. */
 export type ExtraToBg =
   | { t: "get-health"; force?: boolean | undefined } // reply ConnResult<Health>, cached 3 s
-  | { t: "auth-check"; port?: number | undefined; token?: string | undefined } // reply ConnResult<true>; defaults to the stored port/token
   | { t: "get-voices" } // reply ConnResult<VoiceList>
   | { t: "get-queue" } // reply QueueItem[]
   | { t: "read"; mode: "page" | "selection" | "from-here"; tabId?: number | undefined; queue?: boolean | undefined } // reply { ok: boolean }

@@ -1,5 +1,5 @@
 import type { Voice } from "@speakkit/protocol";
-import type { Bookmark, DocMeta } from "../../../shared/library/contract";
+import type { DocMeta } from "../../../shared/library/contract";
 import type { ReaderDoc, WordSpan } from "./model";
 import type { TextClick } from "./ReaderText";
 
@@ -54,8 +54,7 @@ export type ReaderAction =
   | { type: "away"; away: boolean }
   | { type: "restart" }
   | { type: "sleep"; leftMs: number }
-  | { type: "word"; word: WordSpan | undefined }
-  | { type: "bookmarks"; bookmarks: Bookmark[] };
+  | { type: "word"; word: WordSpan | undefined };
 
 export const initReader = (speed: number, voiceId: string): ReaderUi => ({
   load: { kind: "loading" },
@@ -79,7 +78,7 @@ type Handlers = { [K in ReaderAction["type"]]: (s: ReaderUi, a: Extract<ReaderAc
 const ready = (meta: DocMeta, doc: ReaderDoc): Load => ({ kind: "ready", meta, doc });
 
 const HANDLERS: Handlers = {
-  loaded: (s, a) => ({ ...s, load: ready(a.meta, a.doc), voiceId: a.meta.voice ?? s.voiceId }),
+  loaded: (s, a) => ({ ...s, load: ready(a.meta, a.doc) }),
   refreshed: (s, a) => ({ ...s, load: ready(a.meta, a.doc) }),
   missing: (s) => ({ ...s, load: { kind: "missing" } }),
   voices: (s, a) => ({ ...s, voices: a.voices }),
@@ -98,7 +97,6 @@ const HANDLERS: Handlers = {
   restart: (s) => ({ ...s, dismissedFinish: false, away: false }),
   sleep: (s, a) => ({ ...s, sleepLeft: a.leftMs }),
   word: (s, a) => (sameWord(s.word, a.word) ? s : { ...s, word: a.word }),
-  bookmarks: (s, a) => (s.load.kind === "ready" ? { ...s, load: ready({ ...s.load.meta, bookmarks: a.bookmarks }, s.load.doc) } : s),
 };
 
 /** Every action has exactly one handler: the table type fails to compile when one is missing. */

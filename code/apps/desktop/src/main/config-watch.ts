@@ -9,8 +9,6 @@ interface WatchOptions {
   file: string;
   /** What the app holds right now. */
   current(): Config;
-  /** Fields this run owns (a port set by the environment): an edit to them is ignored. */
-  keep?: readonly string[];
   /** Called for a change that matters; "same" and half-written files are not reported. */
   onEdit(edit: Exclude<ExternalEdit, { kind: "same" } | { kind: "unreadable" }>): void;
   /** Called once a file stays unreadable after it settled. */
@@ -33,7 +31,7 @@ export function watchConfigFile(o: WatchOptions): { dispose(): void } {
     } catch {
       return; // being replaced: the next event reads it
     }
-    const edit = readExternalEdit(o.current(), text, o.keep);
+    const edit = readExternalEdit(o.current(), text);
     if (edit.kind === "same") {
       badSince = 0;
       reported = false;

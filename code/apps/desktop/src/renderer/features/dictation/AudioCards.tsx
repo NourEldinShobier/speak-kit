@@ -3,7 +3,7 @@ import { Banner, Button, Segmented, Select, SettingRow, SettingsSection, Slider,
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { dictation, patchDictation } from "./api";
 import { watchMeter } from "./meter-watch";
-import { KEEP_READY_MINUTES, micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
+import { micLine, OUTPUT_HELP, OUTPUT_OPTIONS } from "./mic-model";
 
 const BARS = 24;
 /** Auto means "no saved device". The select cannot hold an empty value, so it is stored as this word and mapped back. */
@@ -82,14 +82,6 @@ export function MicrophoneCard({ s }: { s: DictationStatus }) {
         description="Keeps the microphone open between recordings, so the first word is never cut off. Windows shows its microphone indicator the whole time; macOS shows the orange dot. Off by default: the microphone is released when idle."
         control={<Toggle aria-label="Keep the microphone ready" checked={c.keepReady} onChange={(keepReady) => void patchDictation({ keepReady })} />}
       />
-      {c.keepReady && (
-        <SettingRow
-          className="lm-row--control"
-          label="Stay open for"
-          description="After this time without dictation the microphone is released."
-          control={<Select label="Stay open for" value={String(c.keepReadyMinutes)} onChange={(v) => void patchDictation({ keepReadyMinutes: Number(v) })} options={KEEP_READY_MINUTES} />}
-        />
-      )}
       <CaptureRows c={c} />
     </SettingsSection>
   );
@@ -111,11 +103,6 @@ export function OutputCard({ s }: { s: DictationStatus }) {
             items={OUTPUT_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
           />
         }
-      />
-      <SettingRow
-        label="Return to the app"
-        description="Brings the app you were in back to the front before inserting. If it cannot, nothing is pasted and the text stays in History."
-        control={<Toggle aria-label="Return to the app" checked={c.returnToApp} onChange={(returnToApp) => void patchDictation({ returnToApp })} />}
       />
       <SettingRow
         label="Space before the text"

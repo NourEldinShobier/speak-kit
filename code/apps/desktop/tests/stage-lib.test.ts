@@ -31,7 +31,7 @@ describe("importedPackages", () => {
   });
 
   it("ignores comment lines that say from followed by a quoted word", () => {
-    const src = `// src/cli/reads/time.ts\n/** Seconds from "90", "90.5" or "1:30"; undefined */\nimport x from "valibot";\n * from "zod"`;
+    const src = `// src/shared/time.ts\n/** Seconds from "90", "90.5" or "1:30"; undefined */\nimport x from "valibot";\n * from "zod"`;
     expect(importedPackages(src)).toEqual(["valibot"]);
   });
 
@@ -94,7 +94,7 @@ describe("the lockfile and the macOS packaging config", () => {
     expect(yml).toContain("hardenedRuntime: true");
     expect(yml).toContain("entitlements: build/entitlements.mac.plist");
     expect(yml).toContain("entitlementsInherit: build/entitlements.mac.inherit.plist");
-    for (const key of ["NSMicrophoneUsageDescription", "NSAppleEventsUsageDescription", "NSScreenCaptureUsageDescription"]) expect(yml).toContain(key);
+    for (const key of ["NSMicrophoneUsageDescription", "NSAppleEventsUsageDescription"]) expect(yml).toContain(key);
     expect(yml).toContain("identity: null"); // unsigned builds keep working
     for (const file of ["../build/entitlements.mac.plist", "../build/entitlements.mac.inherit.plist"]) {
       const plist = read(file);
@@ -130,14 +130,7 @@ describe("macSigningPlan", () => {
 });
 
 describe("fusePlan", () => {
-  it("turns RunAsNode off on macOS only and hardens the other fuses everywhere", () => {
-    expect(fusePlan(true)).toEqual({ RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableCookieEncryption: true });
-    expect(fusePlan(false)).toEqual({ ...fusePlan(true), RunAsNode: true });
-  });
-
-  it("runs the macOS command line inside the app binary instead of as plain Node", () => {
-    const shim = readFileSync(new URL("../cli-shim/speakkit", import.meta.url), "utf8");
-    expect(shim).toContain("--speakkit-cli");
-    expect(shim).not.toContain("ELECTRON_RUN_AS_NODE");
+  it("turns RunAsNode off and hardens the other fuses", () => {
+    expect(fusePlan()).toEqual({ RunAsNode: false, EnableNodeOptionsEnvironmentVariable: false, EnableNodeCliInspectArguments: false, EnableCookieEncryption: true });
   });
 });

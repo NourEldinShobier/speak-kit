@@ -1,2 +1,2 @@
-/** The Voice chat page: OpenAI key, conversation voice and screen access. */
+/** The Voice chat page: OpenAI key and conversation voice. */
 export { VoiceChatPage } from "./VoiceChatPage";

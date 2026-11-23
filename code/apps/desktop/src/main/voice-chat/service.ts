@@ -17,8 +17,6 @@ interface Deps {
   /** Tests point this at a fake OpenAI; the app uses OpenAI itself. */
   baseUrl?: string | undefined;
   fetch?: typeof fetch;
-  /** One look at the screen for the model (screen vision); the local server offers it as POST /v1/voice-chat/look. */
-  look?: VoiceChatService["look"];
   /** The conversation in the browser holds the microphone or lets it go. */
   mic?: VoiceChatService["mic"];
 }
@@ -39,7 +37,6 @@ function serverOf(d: Deps, net: () => { baseUrl: string; fetch: typeof fetch }):
       }
       return { ok: true, session: { ...r.value, model: VOICE_CHAT_MODEL, voice } };
     },
-    look: d.look ?? (async () => ({ ok: false, code: "unavailable" })),
     ...(d.mic && { mic: d.mic }),
   };
 }

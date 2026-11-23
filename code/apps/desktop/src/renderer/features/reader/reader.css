@@ -24,7 +24,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-inline-end: 22px;
 }
 .rd-crumb {
   all: unset;
@@ -197,17 +196,10 @@
 .rd-display__row--between {
   justify-content: space-between;
 }
-/* values and the switch end at the right edge of the selected tab, 2 px inside the grey track */
-.rd-display__row--switch {
-  padding-inline-end: 2px;
-}
 .rd-display__label {
   flex: none;
   width: 80px;
   color: var(--text-secondary);
-}
-.rd-display__text {
-  color: var(--text-primary);
 }
 .rd-display__value {
   flex: none;
@@ -375,17 +367,4 @@
 .rd-ocr__status {
   color: var(--text-tertiary);
   font-size: 12px;
-}
-.rd-bookmarks {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.rd-bookmarks li {
-  display: flex;
-  align-items: center;
-}
-.rd-bookmarks .rd-outline__item {
-  flex: 1;
-  min-width: 0;
 }

@@ -127,7 +127,8 @@ test.describe("queue and side panel", () => {
 test.describe("site rules (edited in the options page)", () => {
   async function addRule(ext: import("../support/ext").Ext, host: string, rule: string) {
     const opt = await ext.ctx.newPage();
-    await opt.goto(ext.url("options") + "#sites");
+    await opt.goto(ext.url("options"));
+    await opt.getByText("Advanced", { exact: true }).click();
     await opt.getByLabel("Site", { exact: true }).fill(host);
     const label = { "always-dock": "Always show dock", "hide-controls": "Hide controls", "never-read": "Never read" }[rule]!;
     await opt.getByRole("combobox", { name: "Rule for new site" }).click(); // Radix Select

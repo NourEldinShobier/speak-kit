@@ -1,45 +1,33 @@
 import type { Row } from "@speakkit/transcripts/pure";
 import { Button, Chip, Icon, IconButton, ProgressBar } from "@speakkit/ui";
-import { ExportMenu, type ExportResult } from "./ExportMenu";
 import { Marked } from "./Marked";
-import { audioText, dateText, lengthText, progressOf, removedText } from "./model";
-
-/** Days of audio left, from the transcript's own days left and the audio setting: the audio never outlives the text. */
-export const audioDaysLeft = (r: Row, audioDays: number | null, now = Date.now()): number | null => {
-  if (audioDays === null) return r.daysLeft;
-  const created = Math.max(0, audioDays - Math.floor((now - r.createdAt) / 86_400_000));
-  return r.daysLeft === null ? created : Math.min(created, r.daysLeft);
-};
+import { dateText, lengthText, progressOf, removedText } from "./model";
 
 interface RowProps {
   row: Row;
   now: number;
-  audioDays: number;
   /** The words typed in the search, to mark in the snippet. */
   query?: string;
   onOpen(): void;
   onDelete(): void;
   onCancel(): void;
   onResume(): void;
-  onExport(r: ExportResult): void;
 }
 
 type Kind = "done" | "live" | "stopped";
 
 const kindOf = (r: Row): Kind => {
   if (r.status === "done") return "done";
-  if (r.status === "queued" || r.status === "transcribing" || r.status === "recording") return "live";
+  if (r.status === "queued" || r.status === "transcribing") return "live";
   return "stopped";
 };
 
-function Meta({ row, audioDays, now }: { row: Row; audioDays: number; now: number }) {
-  const sub = row.source === "file" ? (row.sourceName ?? "") : audioText(row, audioDaysLeft(row, audioDays, now));
+function Meta({ row }: { row: Row }) {
   return (
     <span className="tr-row__sub">
-      <Chip>{row.source === "file" ? "Imported" : "Recorded"}</Chip>
-      {row.recovered ? <Chip>Recovered</Chip> : null}
+      <Chip>Imported</Chip>
       {row.notesState === "writing" ? <Chip>Writing notes</Chip> : null}
-      {sub ? <span>{sub}</span> : null}
+      {row.sourceName ? <span>{row.sourceName}</span> : null}
     </span>
   );
 }
@@ -97,38 +85,29 @@ function Details({ row, now }: { row: Row; now: number }) {
   );
 }
 
-function Actions({ row, onOpen, onDelete, onExport }: Pick<RowProps, "row" | "onOpen" | "onDelete" | "onExport">) {
+function Actions({ row, onOpen, onDelete }: Pick<RowProps, "row" | "onOpen" | "onDelete">) {
   return (
     <span className="tr-row__acts">
       <Button size="sm" onClick={onOpen} aria-label={`Open transcript: ${row.title}`}>
         Open
       </Button>
-      <ExportMenu
-        id={row.id}
-        onResult={onExport}
-        trigger={
-          <Button size="sm" iconLeft="download" aria-label={`Export: ${row.title}`}>
-            Export
-          </Button>
-        }
-      />
       <IconButton name="trash" label={`Delete: ${row.title}`} size={28} variant="secondary" onClick={onDelete} />
     </span>
   );
 }
 
-/** One transcript in the list: title, kind, length, date and how long it stays; Open, Export and Delete appear on hover or focus. A job that is not finished shows its progress, or why it stopped. */
-export function TranscriptRow({ row, now, audioDays, query = "", onOpen, onDelete, onCancel, onResume, onExport }: RowProps) {
+/** One transcript in the list: title, kind, length, date and how long it stays; Open and Delete appear on hover or focus. A job that is not finished shows its progress, or why it stopped. */
+export function TranscriptRow({ row, now, query = "", onOpen, onDelete, onCancel, onResume }: RowProps) {
   const kind = kindOf(row);
   return (
     <div className="tr-row" data-testid="transcript-row" data-row={row.id} data-status={row.status}>
       <button type="button" className="tr-row__main" onClick={onOpen} disabled={kind === "live"} aria-label={`Open: ${row.title}`}>
         <span className="tr-row__icon">
-          <Icon name={row.source === "microphone" ? "microphone" : "file-text"} size={16} />
+          <Icon name="file-text" size={16} />
         </span>
         <span className="tr-row__text">
           <span className="tr-row__title">{row.title}</span>
-          <Meta row={row} audioDays={audioDays} now={now} />
+          <Meta row={row} />
           {row.snippet ? (
             <span className="tr-row__snippet">
               <Marked text={row.snippet} query={query} />
@@ -137,7 +116,7 @@ export function TranscriptRow({ row, now, audioDays, query = "", onOpen, onDelet
         </span>
         <Details row={row} now={now} />
       </button>
-      {kind === "done" ? <Actions row={row} onOpen={onOpen} onDelete={onDelete} onExport={onExport} /> : null}
+      {kind === "done" ? <Actions row={row} onOpen={onOpen} onDelete={onDelete} /> : null}
       {kind === "live" ? <Running row={row} onCancel={onCancel} /> : null}
       {kind === "stopped" ? <Stopped row={row} onResume={onResume} onDelete={onDelete} /> : null}
     </div>

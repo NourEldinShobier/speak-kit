@@ -7,14 +7,12 @@ import type { createReading } from "./reader/service";
 import { createTray } from "./tray";
 import type { createUpdates } from "./updates-service";
 import type { DictationService } from "./dictation/service";
-import type { TranscriptsFeature } from "./transcripts";
 
 interface TrayParts {
   reading: ReturnType<typeof createReading>;
   exports: ReturnType<typeof createExports>;
   updates: ReturnType<typeof createUpdates>;
   dictation: DictationService;
-  transcripts: TranscriptsFeature;
   /** The notice to show in the menu, if any. */
   notice(): string | undefined;
   requestQuit(): void;
@@ -29,10 +27,10 @@ function speechModelsContext(dictation: DictationService): Pick<TrayContext, "sp
   return { speechModels: { models, recording: v.recording, ...(v.switching && { switching: { name: v.names[v.switching] ?? v.switching } }) } };
 }
 
-type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "transcripts" | "notice">;
+type TrayStateParts = Pick<TrayParts, "exports" | "dictation" | "notice">;
 
 /** What the menu is built from: the shared state plus the live counts of the features. */
-function trayContext(ctx: Ctx, { exports, dictation, transcripts, notice }: TrayStateParts): TrayContext {
+function trayContext(ctx: Ctx, { exports, dictation, notice }: TrayStateParts): TrayContext {
   const note = notice();
   return {
     ...(note && { notice: note }),
@@ -44,7 +42,6 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, notice }: Tray
     shortcuts: ctx.config.shortcuts,
     platform: process.platform,
     darkTaskbar: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
-    recorder: { phase: transcripts.phase() },
     ...(dictation.status().supported && {
       dictation: { enabled: ctx.config.dictation.enabled, hotkey: ctx.config.dictation.hotkey, paused: dictation.controls.paused, recent: dictation.history.recent() },
     }),
@@ -53,15 +50,13 @@ function trayContext(ctx: Ctx, { exports, dictation, transcripts, notice }: Tray
 }
 
 /** The tray icon and its menu: what the menu shows comes from the shared state, what its items do from the features. */
-export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, transcripts, notice, requestQuit, retryEngine }: TrayParts) {
-  const context = () => trayContext(ctx, { exports, dictation, transcripts, notice });
+export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, notice, requestQuit, retryEngine }: TrayParts) {
+  const context = () => trayContext(ctx, { exports, dictation, notice });
   const openDictation = (page: "dictation" | "history") => () => (ctx.showWindow(), ctx.sendUi({ type: "nav", page }));
   const actions: Record<TrayAction, () => void> = {
     dictation: dictation.toggle,
     "paste-last": () => void dictation.controls.pasteLast(),
     "pause-shortcuts": () => dictation.controls.setPaused(!dictation.controls.paused),
-    "record-start": () => void transcripts.startRecording().then(() => ctx.showWindow()),
-    "record-stop": () => void transcripts.stopRecording(),
     "dictation-history": openDictation("history"),
     "dictation-settings": openDictation("dictation"),
     "dictation-copy-0": () => dictation.history.copyRecent(0),

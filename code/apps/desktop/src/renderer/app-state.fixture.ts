@@ -8,7 +8,6 @@ export const appState = (over: Partial<AppState> = {}): AppState => ({
   version: "0.2.0",
   platform: "win32",
   port: 47615,
-  portFallback: false,
   token: "test-token",
   health: null,
   serverError: null,

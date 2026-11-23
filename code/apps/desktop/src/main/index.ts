@@ -9,7 +9,8 @@ import { IDLE_READER } from "../shared/reader";
 import { UPDATE_UNSUPPORTED } from "../shared/updates";
 import { DEFAULT_SHORTCUTS } from "../shared/shortcuts";
 import { appMenuTemplate } from "./app-menu";
-import { chooseProcessMode } from "./cli-mode";
+import { setProcessSpawner } from "@speakkit/engine";
+import { utilityChannel } from "./utility-host";
 import { droppedNotices, openConfig } from "./config";
 import { setupDesktop } from "./desktop";
 import { frameBatch } from "./frame-batch";
@@ -24,19 +25,19 @@ import { initLog } from "./log";
 import { MainWindow } from "./main-window";
 import { emptyPairing } from "./pairing";
 import { watchPairingActivity, watchPower } from "./watchers";
+import { startPort } from "./ports";
 import { ServerApi } from "./server-api";
 import { settingsChangeDeps } from "./settings-deps";
 import { sttWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv, fakeMicSwitches } from "./test-env";
-import { createScreenVision } from "./screen-vision";
 import { createMicOwners } from "./mic-owners";
 import { KeyStore } from "./voice-chat/key-store";
 import { createVoiceChat } from "./voice-chat/service";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const test = testEnv();
-await chooseProcessMode(here);
+setProcessSpawner(utilityChannel);
 
 // Tests (and portable installs) isolate all state under one directory; this also scopes the single-instance lock.
 // Otherwise a fixed directory: a dev run and the installed app must share one userData, or each gets its own lock and two instances can run.
@@ -61,7 +62,6 @@ const state: AppState = {
   version: app.getVersion(),
   platform: process.platform,
   port: 0,
-  portFallback: false,
   token: "",
   health: null,
   serverError: null,
@@ -112,10 +112,8 @@ const mainWindow: MainWindow = new MainWindow(config, {
   onHidden: () => (runtime.stopPolling(), desktop?.onWindowHidden()),
   busy: () => desktop?.busy() ?? false,
   trayMissing: () => desktop?.trayMissing() ?? false,
-  onReleased: () => desktop?.dictation.speech.windowReleased(),
 });
 windowVisible = () => mainWindow.isVisible();
-const screenVision = createScreenVision();
 const micOwners = createMicOwners();
 const keyStore = new KeyStore(path.join(dataDir, "voice-chat-key.bin"), safeStorage);
 const voiceChat = createVoiceChat({
@@ -124,12 +122,13 @@ const voiceChat = createVoiceChat({
   saveConfig: store.save,
   log,
   baseUrl: test.openaiBaseUrl,
-  // Dictation waits while a screen look or a conversation in the browser holds the microphone.
-  ...micOwners.voiceChat(screenVision.look),
+  // Dictation waits while a conversation in the browser holds the microphone.
+  ...micOwners.voiceChat(),
 });
 const runtime: ServerRuntime = new ServerRuntime({
   state,
   config,
+  startPort: startPort(process.env),
   dataDir,
   modelsDir,
   engineWorker: await engineWorkerUrl(here),
@@ -179,7 +178,7 @@ function handlerDeps(): HandlerDeps {
     logsDir,
     addActivity,
     onConfigPatch: (patch) => desktop?.onConfigPatch(patch),
-    ...settingsChangeDeps(() => desktop, mainWindow),
+    ...settingsChangeDeps(() => desktop),
   };
 }
 
@@ -208,7 +207,6 @@ function startDesktop() {
       retryEngine: () => runtime.retry(),
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
-      version: app.getVersion(),
       trayNotice: () => trayNotices.current(),
       dictation: {
         dataDir,
@@ -257,15 +255,11 @@ if (!instance.mayRun) {
     /* stay alive in the tray */
   });
   let cleaned = false;
-  app.on("will-quit", (event) => {
+  app.on("will-quit", () => {
     if (cleaned) return;
     cleaned = true;
-    // Quit again once the control server has removed its discovery file, so a quit never leaves a token behind (capped, so it cannot hold the quit).
-    event.preventDefault();
-    const controlDown = Promise.race([Promise.resolve(desktop?.dispose()), new Promise((r) => setTimeout(r, 2000))]);
-    screenVision.dispose();
+    desktop?.dispose();
     void runtime.shutdown();
-    void controlDown.finally(() => app.quit());
   });
 
   app.whenReady().then(async () => {
@@ -281,7 +275,7 @@ if (!instance.mayRun) {
       distDir: here,
       onRecovered: (f) => unreadable("The library", f),
     });
-    watchPower({ state, config, runtime, publish });
+    watchPower({ state, runtime, publish });
     watchPairingActivity({ state, addActivity, publish });
     const appHandlers = createAppHandlers(handlerDeps());
     const settingsWatch = watchSettings(handlerDeps(), store.path, log);

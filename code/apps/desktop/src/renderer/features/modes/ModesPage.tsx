@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addMode, removeMode, setApps, setSites, withDefault, withoutPristineDefault, type WritingMode as Mode, type ModeError } from "@speakkit/dictation";
+import { addMode, removeMode, setApps, setSites, type WritingMode as Mode, type ModeError } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
@@ -10,7 +10,7 @@ import { modeRow } from "./model";
 import { RewriteCard } from "./RewriteCard";
 import "./modes.css";
 
-const LEAD = "A mode sets how dictation behaves in the apps you put in it: how text is inserted, capital letters, the end of the sentence, its own words and an optional rewrite.";
+const LEAD = "A mode sets how dictation behaves in the apps you put in it: its own words, its own replacements and an optional rewrite. Apps in no mode use your Dictation and Vocabulary settings.";
 
 const NAME_ERRORS: Record<ModeError, string> = {
   empty: "",
@@ -113,35 +113,32 @@ function ModeList({ s, all, onOpen, onAdd }: { s: DictationStatus; all: Mode[]; 
 function List({ s, modes, update }: { s: DictationStatus; modes: Mode[]; update(change: (m: Mode[]) => Mode[]): void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const all = withDefault(modes);
-  // Changes start from the list with the default mode in it, so its choices are saved with the rest.
-  const change = (f: (m: Mode[]) => Mode[]) => update((list) => withoutPristineDefault(f(withDefault(list))));
-  const current = open ? all.find((m) => m.id === open) : undefined;
+  const current = open ? modes.find((m) => m.id === open) : undefined;
   if (current)
     return (
       <ModeDetail
         s={s}
         mode={current}
-        others={all}
+        others={modes}
         onBack={() => setOpen(null)}
-        onChange={(next) => change((list) => list.map((m) => (m.id === next.id ? next : m)))}
-        onApps={(apps) => change((list) => setApps(list, current.id, apps))}
-        onSites={(sites) => change((list) => setSites(list, current.id, sites))}
+        onChange={(next) => update((list) => list.map((m) => (m.id === next.id ? next : m)))}
+        onApps={(apps) => update((list) => setApps(list, current.id, apps))}
+        onSites={(sites) => update((list) => setSites(list, current.id, sites))}
         onDelete={() => {
-          change((list) => removeMode(list, current.id));
+          update((list) => removeMode(list, current.id));
           setOpen(null);
         }}
       />
     );
   return (
     <>
-      <ModeList s={s} all={all} onOpen={setOpen} onAdd={() => setAdding(true)} />
+      <ModeList s={s} all={modes} onOpen={setOpen} onAdd={() => setAdding(true)} />
       <AddModeDialog
         open={adding}
-        modes={all}
+        modes={modes}
         onClose={() => setAdding(false)}
         onAdd={(next, created) => {
-          update(() => withoutPristineDefault(next));
+          update(() => next);
           setOpen(created.id);
         }}
       />

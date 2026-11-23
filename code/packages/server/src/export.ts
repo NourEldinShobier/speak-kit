@@ -62,7 +62,6 @@ export class ExportManager {
       done: 0,
       total: input.sentences.length,
       durationMs: 0,
-      sentenceMs: [] as [number, number][],
       ac: new AbortController(),
       file: join(this.#dir, `${id}.wav`),
     } as Job;
@@ -75,8 +74,8 @@ export class ExportManager {
     return this.#jobs.get(id);
   }
 
-  view({ id, state, done, total, durationMs, sentenceMs, error }: Job): ExportJob {
-    return { id, state, done, total, durationMs, ...(sentenceMs && { sentenceMs: [...sentenceMs] }), ...(error && { error }) };
+  view({ id, state, done, total, durationMs, error }: Job): ExportJob {
+    return { id, state, done, total, durationMs, ...(error && { error }) };
   }
 
   /** Streams a finished WAV. */
@@ -145,13 +144,11 @@ export class ExportManager {
       const r = await this.#deps.render(engine, sentence, { voice: input.voice, speed: input.speed, signal });
       if (rate && r.sampleRate !== rate) throw new Error("engine changed sample rate during an export");
       rate = r.sampleRate;
-      const startMs = Math.round((bytes / 2 / rate) * 1000);
       const gap = new Int16Array(i < input.sentences.length - 1 ? Math.round((rate * input.gapMs) / 1000) : 0);
       for (const part of [r.pcm, gap]) {
         await fh.write(new Uint8Array(part.buffer, part.byteOffset, part.byteLength));
         bytes += part.byteLength;
       }
-      job.sentenceMs!.push([startMs, startMs + Math.round((r.pcm.length / rate) * 1000)]);
       job.done = i + 1;
       job.durationMs = Math.round((bytes / 2 / rate) * 1000);
     }

@@ -102,7 +102,7 @@ test.describe("desktop library @slow", () => {
       await importText(d, "Local voices are fast and private.", "Notes A");
       await importText(d, "Nothing about the topic.", "Voices journal");
       await importText(d, "Weather is mild today.", "Weather");
-      await d.page.getByRole("link", { name: "Home" }).click();
+      await d.page.getByRole("link", { name: "Dictation", exact: true }).first().click();
       await d.page.getByRole("link", { name: "Library" }).click();
       await expect(d.page.getByTestId("doc-row")).toHaveCount(3);
       await d.page.getByRole("textbox", { name: "Search title, source or text" }).fill("voices");
@@ -124,7 +124,7 @@ test.describe("desktop library @slow", () => {
     try {
       await importText(d, "Alpha text here.", "Alpha");
       await importText(d, "Beta text here.", "Beta");
-      await d.page.getByRole("link", { name: "Home" }).click();
+      await d.page.getByRole("link", { name: "Dictation", exact: true }).first().click();
       await d.page.getByRole("link", { name: "Library" }).click();
       const row = (name: string) => d.page.getByTestId("doc-row").filter({ hasText: name });
 

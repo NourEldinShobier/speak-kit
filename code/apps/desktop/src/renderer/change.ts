@@ -7,7 +7,7 @@ async function apply(change: Record<string, unknown>): Promise<void> {
   if (!r.ok) throw new Error(r.message);
 }
 
-/** Changes app settings through the settings registry, the same validator the command line uses; a refusal throws its message. */
+/** Changes app settings through the settings registry; a refusal throws its message. */
 export const change = (patch: ConfigPatch): Promise<void> => apply(patch);
 
 /** Puts every shortcut back to its default. */

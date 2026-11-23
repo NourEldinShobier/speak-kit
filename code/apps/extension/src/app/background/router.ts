@@ -92,7 +92,6 @@ const handlers: { [T in Inbound["t"]]: Handler<T> } = {
     return OK;
   },
   "get-health": (msg) => getHealthResult(msg.force),
-  "auth-check": (msg) => health.authCheck(msg.port, msg.token),
   "get-voices": async () => {
     // The content script reads { voices }, extension pages read ConnResult.
     const r = await health.voices();

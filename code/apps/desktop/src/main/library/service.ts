@@ -28,7 +28,7 @@ const failure = (e: unknown, name?: string): ImportResult => {
   return { ok: false, reason, error: toDesktopError(e), ...(name ? { name } : {}) };
 };
 
-type AddInfo = { source: Source; format: Format; origin: string; title?: string; path?: string; voice?: string };
+type AddInfo = { source: Source; format: Format; origin: string; title?: string; path?: string };
 
 /** Turns bytes, text and fetched pages into documents in the store. */
 function importers(store: LibraryStore, now: () => number, parse: NonNullable<LibraryDeps["parse"]>) {
@@ -43,7 +43,6 @@ function importers(store: LibraryStore, now: () => number, parse: NonNullable<Li
       addedAt: now(),
       wordCount: wordCount(parsed.blocks),
       ...(parsed.pages ? { pages: parsed.pages } : {}),
-      ...(info.voice ? { voice: info.voice } : {}),
       progress: { sentence: 0, fraction: 0 },
       finished: false,
       ...(parsed.needsOcr ? { needsOcr: true } : {}),
@@ -63,10 +62,10 @@ function importers(store: LibraryStore, now: () => number, parse: NonNullable<Li
     }
   }
 
-  async function importText(text: string, title?: string, voice?: string): Promise<ImportResult> {
+  async function importText(text: string, title?: string): Promise<ImportResult> {
     const blocks = textToBlocks(text);
     if (!blocks.length) return failure(new ImportError("empty", { code: "nothing-to-add" }));
-    return add({ title: "", blocks }, { source: "paste", format: "text", origin: "Pasted text", ...(title ? { title } : {}), ...(voice ? { voice } : {}) });
+    return add({ title: "", blocks }, { source: "paste", format: "text", origin: "Pasted text", ...(title ? { title } : {}) });
   }
   return { add, importBytes, importText };
 }
@@ -110,15 +109,7 @@ export async function createLibrary(deps: LibraryDeps): Promise<LibraryApi> {
       }
     },
     rename: (id, title) => patch(id, { title }),
-    setVoice: async (id, voice) => {
-      const doc = store.get(id);
-      if (!doc) return null;
-      if (voice) return patch(id, { voice });
-      delete doc.voice;
-      return patch(id, {});
-    },
     setFinished: (id, finished) => patch(id, { finished, ...(finished ? { progress: { sentence: 0, fraction: 1 } } : { progress: { sentence: 0, fraction: 0 } }) }),
-    setBookmarks: (id, bookmarks) => patch(id, { bookmarks }),
     setProgress: (id, progress: Progress) => patch(id, { progress, finished: progress.fraction >= 1 }),
     markOpened: (id) => patch(id, { openedAt: now() }),
     remove: (id) => store.remove(id),

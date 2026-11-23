@@ -5,7 +5,6 @@ import { type Chord, type HotkeyEvent, type HotkeySource as OsHotkeys } from "./
 /** Every shortcut that reaches the key hook. An empty string is unset and registers nothing. */
 export interface HotkeyLayout {
   hotkey: string;
-  raw: string;
   pasteLast: string;
   cancelKey: string;
 }
@@ -41,7 +40,7 @@ interface Deps {
   changed?(): void;
 }
 
-const EMPTY: HotkeyLayout = { hotkey: "", raw: "", pasteLast: "", cancelKey: CANCEL_KEY };
+const EMPTY: HotkeyLayout = { hotkey: "", pasteLast: "", cancelKey: CANCEL_KEY };
 const chordOf = (hotkey: string): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) });
 const defaultAfter = (ms: number, fn: () => void): (() => void) => {
   const t = setTimeout(fn, ms);
@@ -128,19 +127,14 @@ class Hotkeys implements SwitchableHotkeys {
     this.#handler?.({ key, down, at: this.#d.now() });
   }
 
-  /** The name the session knows a chord by: its shortcut string. */
-  #nameOf(chord: string | undefined): string | undefined {
-    const l = this.#layout;
-    return chord === undefined ? l.hotkey : { raw: l.raw }[chord];
-  }
-
   readonly #onEvent = (e: HotkeyEvent): void => {
     if (e.chord === "pasteLast") {
       if (e.kind === "down") this.#pasteLast?.();
       return;
     }
     if (e.kind === "down" || e.kind === "up") {
-      const name = this.#nameOf(e.chord);
+      // The session knows the hotkey by its shortcut string.
+      const name = e.chord === undefined ? this.#layout.hotkey : undefined;
       if (name) {
         if (e.kind === "down") this.#held.add(name);
         else this.#held.delete(name);
@@ -159,7 +153,6 @@ class Hotkeys implements SwitchableHotkeys {
   #extras(): Record<string, Chord> {
     const l = this.#layout;
     const out: Record<string, Chord> = {};
-    if (l.raw) out.raw = chordOf(l.raw);
     if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast);
     return out;
   }

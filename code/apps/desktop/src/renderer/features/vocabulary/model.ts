@@ -1,22 +1,19 @@
 import {
-  applyReplacements,
   buildPrompt,
   FILLER_LANGUAGES,
   FORMATTING_LANGUAGES,
   MAX_TERMS,
   MAX_WORD,
   SYMBOL_LANGUAGES,
-  soundsLikeRules,
   supportsPrompt,
-  traceRules,
   validateWord,
   type ImportResult,
   type PromptPlan,
   type Term,
 } from "@speakkit/dictation";
-import type { Cleanup, Replacement } from "../../../shared/dictation/settings";
+import type { Cleanup } from "../../../shared/dictation/settings";
 
-export const LANGUAGE_NAMES: Record<string, string> = { en: "English", de: "German", es: "Spanish", ar: "Arabic" };
+const LANGUAGE_NAMES: Record<string, string> = { en: "English", de: "German", es: "Spanish", ar: "Arabic" };
 const names = (codes: readonly string[]) => codes.map((c) => LANGUAGE_NAMES[c] ?? c).join(", ");
 
 export const wordCount = (n: number) => `${n} of ${MAX_TERMS} words`;
@@ -91,11 +88,11 @@ export interface CleanupRow {
   description: string;
   /** Which languages the rule has a table for. */
   scope?: string;
-  /** The rule has nothing for the chosen language: the switch is off and says why. */
+  /** The rule has nothing for the dictation language: the switch is off and says why. */
   unavailable?: string;
 }
 
-/** The clean-up switches for the chosen language. Filler removal, spoken symbols and spoken formatting are language rules; the rest apply to every language. */
+/** The clean-up switches for the dictation language. Filler removal, spoken symbols and spoken formatting are language rules; the rest apply to every language. */
 export function cleanupRows(language: string): CleanupRow[] {
   const lang = language === "auto" ? "en" : language;
   const name = LANGUAGE_NAMES[lang] ?? lang;
@@ -111,67 +108,6 @@ export function cleanupRows(language: string): CleanupRow[] {
     { key: "stripFinalStop", label: "No full stop at the end", description: "Removes only the last character of the whole dictation, never one inside it." },
     { key: "trailingSpace", label: "Space after the text", description: "So the next dictation does not run into this one." },
   ];
-}
-
-export interface Stage {
-  key: "heard" | "words" | "replacements" | "cleanup";
-  title: string;
-  note: string;
-  text: string;
-}
-
-/** Each step of the pipeline for a typed sentence, ending in the text that would be inserted. */
-export function testStages(heard: string, o: { terms: readonly Term[]; replacements: readonly Replacement[]; cleanup: Cleanup; language: string }): { stages: Stage[]; final: string } {
-  const own = soundsLikeRules(o.terms);
-  const all = [...o.replacements, ...own];
-  const base = { ...o.cleanup, replacements: all, language: o.language };
-  const trace = traceRules(heard, base);
-  const raw = trace.raw;
-  // The words step shows what the vocabulary alone changes; the replacements step what the replacement list adds on top, using the one pass the dictation uses.
-  const words = trace.notes.includes("noise") || trace.notes.includes("numbers-only") ? raw : applyReplacements(raw, [...own]);
-  const stages: Stage[] = [
-    { key: "heard", title: "Model heard", note: "The raw text", text: raw },
-    { key: "words", title: "Words and names", note: ruleNote({ count: own.length, what: "sounds-like", before: raw, after: words }), text: words },
-    { key: "replacements", title: "Replacements", note: ruleNote({ count: o.replacements.length, what: "replacement", before: words, after: trace.replacements }), text: trace.replacements },
-    { key: "cleanup", title: "Clean-up", note: cleanupNote(o.cleanup), text: trace.final.trimEnd() },
-  ];
-  return { stages, final: trace.final.trimEnd() };
-}
-
-function ruleNote({ count, what, before, after }: { count: number; what: string; before: string; after: string }): string {
-  if (!count) return `No ${what} rules`;
-  return before === after ? "Nothing changed" : "Changed";
-}
-
-function cleanupNote(c: Cleanup): string {
-  const on = [c.fillers && "fillers", c.spokenSymbols && "symbols", c.spokenFormatting && "formatting", c.autoCapitalize && "capital letter", c.stripFinalStop && "no full stop"].filter(Boolean);
-  return on.length ? on.join(", ") : "All switches off";
-}
-
-/** The words that differ between what was heard and the final text, as one run, for "Fix this". */
-export function changedWords(heard: string, final: string): { heard: string; word: string } | undefined {
-  const a = heard.trim().split(/\s+/);
-  const b = final.trim().split(/\s+/);
-  const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-  let i = 0;
-  while (i < a.length && i < b.length && norm(a[i]!) === norm(b[i]!)) i++;
-  let ja = a.length;
-  let jb = b.length;
-  while (ja > i && jb > i && norm(a[ja - 1]!) === norm(b[jb - 1]!)) {
-    ja--;
-    jb--;
-  }
-  const h = a.slice(i, ja).join(" ");
-  const w = b.slice(i, jb).join(" ");
-  return h && w
-    ? {
-        heard: h
-          .toLowerCase()
-          .replace(/[^\p{L}\p{N}\s'-]/gu, "")
-          .trim(),
-        word: w.replace(/[.,!?;:]+$/, ""),
-      }
-    : undefined;
 }
 
 export interface ImportView {

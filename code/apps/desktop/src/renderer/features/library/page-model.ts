@@ -2,7 +2,7 @@ import type { SearchHit, DocMeta } from "../../../shared/library/contract";
 import { continueDoc, estimateMs, filterDocs, sortDocs, type FilterId, type SortId } from "./model";
 
 /** The dialog that is open on the library page, with the reading it is about. */
-export type Dialog = { kind: "paste" | "url" } | { kind: "rename" | "voice" | "delete"; doc: DocMeta } | null;
+export type Dialog = { kind: "paste" | "url" } | { kind: "rename" | "delete"; doc: DocMeta } | null;
 
 export interface ToastState {
   text: string;

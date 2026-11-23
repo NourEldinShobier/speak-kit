@@ -1,21 +1,15 @@
 import { exeKey } from "../paste-plan";
-import type { InsertMode, Replacement, Settings } from "../settings";
+import type { Replacement, Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
 
-export type Capitals = "keep" | "sentence";
-export type EndOfDictation = "keep" | "no-full-stop";
-
-/** How dictation behaves in some apps: how text is inserted, capitals, the end of the sentence, its own words and an optional rewrite. */
+/** How dictation behaves in some apps: its own words and replacements and an optional rewrite. */
 export interface Mode {
   id: string;
   name: string;
-  /** Program names without ".exe", lower case. The default mode has none: it takes every program no other mode lists. */
+  /** Program names without ".exe", lower case. The built-in default mode has none: it takes every program no other mode lists. */
   apps: string[];
   /** Website host names such as "mail.google.com": in a supported browser these pick the mode by the page in front, ahead of `apps`. */
   sites: string[];
-  insertMode: InsertMode;
-  capitals: Capitals;
-  end: EndOfDictation;
   rewrite: boolean;
   terms: Term[];
   /** Phrases swapped after speaking, only in this mode; they win over a shared replacement of the same phrase. */
@@ -31,19 +25,10 @@ export const defaultMode = (): Mode => ({
   name: "Default",
   apps: [],
   sites: [],
-  insertMode: "paste",
-  capitals: "sentence",
-  end: "keep",
   rewrite: false,
   terms: [],
   replacements: [],
 });
-
-/** The list with the default mode in it, first: the one that was saved, or the built-in one when nothing about it was ever changed. */
-export const withDefault = (modes: readonly Mode[]): Mode[] => [modes.find((m) => m.id === DEFAULT_MODE_ID) ?? defaultMode(), ...modes.filter((m) => m.id !== DEFAULT_MODE_ID)];
-
-/** The list as saved: the default mode only when the person changed something about it, so a config that never touched it stays as it was. */
-export const withoutPristineDefault = (modes: readonly Mode[]): Mode[] => modes.filter((m) => m.id !== DEFAULT_MODE_ID || JSON.stringify(m) !== JSON.stringify(defaultMode()));
 
 export type ModeError = "empty" | "too-long" | "duplicate" | "full";
 
@@ -53,21 +38,16 @@ export function addMode(modes: readonly Mode[], name: string): { ok: true; modes
   if ([...n].length > MAX_MODE_NAME) return { ok: false, error: "too-long" };
   if (n.toLowerCase() === defaultMode().name.toLowerCase() || modes.some((m) => m.name.toLowerCase() === n.toLowerCase())) return { ok: false, error: "duplicate" };
   if (modes.length >= MAX_MODES) return { ok: false, error: "full" };
-  const mode: Mode = { ...defaultMode(), id: `m${Date.now().toString(36)}${modes.length}`, name: n, capitals: "keep" };
+  const mode: Mode = { ...defaultMode(), id: `m${Date.now().toString(36)}${modes.length}`, name: n };
   return { ok: true, modes: [...modes, mode], mode };
 }
 
-/** The default mode is always there and cannot be deleted. */
-export const removeMode = (modes: readonly Mode[], id: string): Mode[] => (id === DEFAULT_MODE_ID ? [...modes] : modes.filter((m) => m.id !== id));
+export const removeMode = (modes: readonly Mode[], id: string): Mode[] => modes.filter((m) => m.id !== id);
 
 /** An app belongs to one mode: adding it to a mode takes it from any other. */
 export function setApps(modes: readonly Mode[], id: string, apps: readonly string[]): Mode[] {
   const mine = [...new Set(apps.map(exeKey).filter(Boolean))];
-  return modes.map((m) => {
-    if (m.id === id) return { ...m, apps: mine };
-    // The default mode lists no apps; any other mode gives up the ones that moved.
-    return id === DEFAULT_MODE_ID ? m : { ...m, apps: m.apps.filter((a) => !mine.includes(a)) };
-  });
+  return modes.map((m) => (m.id === id ? { ...m, apps: mine } : { ...m, apps: m.apps.filter((a) => !mine.includes(a)) }));
 }
 
 /** A site as the person typed it ("https://Example.com/inbox") reduced to its host name; "" when it is not a host name. */
@@ -109,33 +89,26 @@ const PAGE_BROWSERS = new Set([
 ]);
 export const reportsPages = (exe: string | undefined): boolean => !!exe && PAGE_BROWSERS.has(exeKey(exe));
 
-/** Sites belong to one mode: giving them to a mode takes them from any other. The default mode lists no sites. */
+/** Sites belong to one mode: giving them to a mode takes them from any other. */
 export function setSites(modes: readonly Mode[], id: string, sites: readonly string[]): Mode[] {
   const mine = [...new Set(sites.map(normalizeSite).filter(Boolean))];
-  return modes.map((m) => {
-    if (m.id === DEFAULT_MODE_ID) return m;
-    return m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((x) => !mine.includes(x)) };
-  });
+  return modes.map((m) => (m.id === id ? { ...m, sites: mine } : { ...m, sites: m.sites.filter((x) => !mine.includes(x)) }));
 }
 
 /**
  * The mode for the program in front, and the page in it when the browser reports one. The mode that lists the most specific matching site wins,
- * then the first mode that lists the program, else the default.
+ * then the first mode that lists the program, else the built-in default.
  */
 export function resolveMode(modes: readonly Mode[], exe: string | undefined, site?: string): Mode {
   const key = exe ? exeKey(exe) : "";
   const host = site && reportsPages(exe) ? normalizeSite(site) : "";
   let bySite: Mode | undefined;
   let longest = 0;
-  if (host)
-    for (const m of modes) {
-      if (m.id === DEFAULT_MODE_ID) continue;
-      for (const s of m.sites) if (s.length > longest && siteMatches(s, host)) [bySite, longest] = [m, s.length];
-    }
-  return bySite || (key && modes.find((m) => m.id !== DEFAULT_MODE_ID && m.apps.includes(key))) || modes.find((m) => m.id === DEFAULT_MODE_ID) || defaultMode();
+  if (host) for (const m of modes) for (const s of m.sites) if (s.length > longest && siteMatches(s, host)) [bySite, longest] = [m, s.length];
+  return bySite || (key && modes.find((m) => m.apps.includes(key))) || defaultMode();
 }
 
-export type ModeSettings = Pick<Settings, "autoCapitalize" | "stripFinalStop" | "insertMode" | "terms" | "replacements">;
+export type ModeSettings = Pick<Settings, "terms" | "replacements">;
 
 /** Shared replacements plus a mode's own: for the same phrase (ignoring capitals) the mode's wins. */
 export function mergeReplacements(shared: readonly Replacement[], own: readonly Replacement[]): Replacement[] {
@@ -143,14 +116,11 @@ export function mergeReplacements(shared: readonly Replacement[], own: readonly 
   return [...shared.filter((r) => !taken.has(r.from.toLowerCase())), ...own];
 }
 
-/** The rule switches for one dictation: the person's settings, with the mode's own choices on top. The default mode changes nothing. */
+/** The words and replacements for one dictation: the person's settings, with the mode's own on top. The default mode changes nothing. */
 export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean } {
   if (mode.id === DEFAULT_MODE_ID) return { ...base, rewrite: mode.rewrite };
   return {
     ...base,
-    autoCapitalize: mode.capitals === "sentence",
-    stripFinalStop: mode.end === "no-full-stop",
-    insertMode: mode.insertMode,
     terms: mergeTerms(base.terms, mode.terms),
     replacements: mergeReplacements(base.replacements, mode.replacements),
     rewrite: mode.rewrite,

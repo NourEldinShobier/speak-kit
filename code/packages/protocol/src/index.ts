@@ -10,7 +10,7 @@ export type { EngineState, ErrorCode, Health, HoldRequest, SpeakRequest, Voice, 
 export { FrameDecoder, encodeFrame, floatToInt16 } from "./frames";
 export type { Frame, FrameHeader } from "./frames";
 export type { BgToContent, ContentToBg, ExtractReply, HelloReply, PlayerCommand, PlayerState, PlayerStatus, ReadDoc, ReadSentence, SentenceStart } from "./messages";
-export { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, SETTINGS_KEY, TOKEN_KEY, defaultSettings } from "./settings";
+export { DEFAULT_SENTENCE_COLOR, DEFAULT_WORD_COLOR, PORT_KEY, SETTINGS_KEY, TOKEN_KEY, defaultSettings } from "./settings";
 export type { Settings, SiteDefault, SiteRule } from "./settings";
 export type { EngineId, EngineInfo, EngineList, ExportJob, ExportRequest, ExportState } from "./engines";
 export { engineListSchema, errorBodySchema, exportJobSchema, healthSchema, parseHealth, parseVoiceList, voiceListSchema } from "./schemas";
@@ -18,14 +18,12 @@ export { VOICE_PORT } from "./voice-chat";
 export type { VoiceDown, VoicePage, VoicePhase, VoiceProblem, VoiceUp, VoiceUsage, VoiceView } from "./voice-chat";
 export { clock, compareNames, plural } from "./format";
 export * from "./voice-chat-app";
-export * from "./screen-look";
 export {
   AUTOMATION_COMMANDS,
   AUTOMATION_ERROR_CODES,
   AUTOMATION_ERROR_STATUS,
   AUTOMATION_ERROR_TEXT,
   AUTOMATION_LIMITS,
-  EXIT_CODES,
   automationErrorSchema,
   automationExportRequestSchema,
   automationExportSchema,
@@ -37,7 +35,6 @@ export {
   automationStopRequestSchema,
   capabilities,
   capabilitiesSchema,
-  exitCodeFor,
 } from "./automation";
 export type {
   AutomationCommand,

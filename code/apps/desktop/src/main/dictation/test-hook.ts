@@ -30,4 +30,7 @@ export const dictationTestHook = (d: DictationService) => ({
   /** Whether the level meter is holding the microphone open. */
   meterOn: () => d.mic.meter,
   state: () => d.state,
+  /** Starts and cancels a recording the way the key does, so a test can dictate without a keyboard. */
+  start: () => void d.core?.start(),
+  cancel: () => void d.core?.cancel(),
 });

@@ -4,7 +4,6 @@ import type { PlayerCommand, PlayerState, ReadDoc, SentenceStart } from "@speakk
 import type { AppState } from "../../../shared/ipc";
 import type { DocMeta } from "../../../shared/library/contract";
 import { change } from "../../change";
-import { library } from "../library";
 import { fractionAt, SentenceClock, sleepMsPerMinute, SleepTimer, toReadDoc, type ProgressSaver, type ReaderDoc } from "./model";
 import type { ReaderAction, ReaderUi } from "./state";
 
@@ -82,7 +81,7 @@ function usePlayStart({ s, autoplay, meta, doc, ui, st, refs, dispatch, play, co
 
 /** Playback controls of one reading: where it starts, play or pause, seeking, speed, voice, sleep timer. */
 export function useReaderControl(args: Args) {
-  const { meta, doc, st, refs, dispatch, command } = args;
+  const { doc, st, refs, dispatch, command } = args;
   const start = usePlayStart(args);
   const active = st.status === "playing" || st.status === "paused" || st.status === "preparing";
   const seekFraction = (f: number) => {
@@ -105,8 +104,7 @@ export function useReaderControl(args: Args) {
   const changeVoice = (v: string) => {
     dispatch({ type: "voice", voiceId: v });
     command({ cmd: "set-voice", voice: v });
-    void library.setVoice(meta.id, v);
+    void change({ voice: v });
   };
-  /** `here` is the sentence the bookmark button saves: the one being heard, else where reading would start. */
-  return { ...start, active, here: active ? st.sentenceIndex : start.resumeIndex, seekFraction, changeSleep, changeSpeed, changeVoice };
+  return { ...start, active, seekFraction, changeSleep, changeSpeed, changeVoice };
 }

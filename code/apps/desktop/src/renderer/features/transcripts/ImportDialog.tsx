@@ -68,16 +68,12 @@ function DropZone({ file, working, onAccept }: { file: Chosen | null; working: b
   );
 }
 
-function Fields({ language, setLanguage, modelName, disabled }: { language: string; setLanguage(l: string): void; modelName: string; disabled: boolean }) {
+function Fields({ language, setLanguage, disabled }: { language: string; setLanguage(l: string): void; disabled: boolean }) {
   return (
     <div className="tr-dlg__fields">
       <div className="tr-dlg__field">
         <span className="tr-dlg__label">Language</span>
         <Select label="Language" size="md" value={language} onChange={setLanguage} options={TRANSCRIPT_LANGUAGES.map((l) => ({ value: l, label: LANGUAGES[l]! }))} disabled={disabled} />
-      </div>
-      <div className="tr-dlg__field">
-        <span className="tr-dlg__label">Model</span>
-        <Select label="Model" size="md" value="current" options={[{ value: "current", label: modelName }]} disabled />
       </div>
     </div>
   );
@@ -97,7 +93,7 @@ interface Props {
   onStarted(id: string): void;
 }
 
-/** The Import an audio file dialog: a drop zone and chooser, the language, the model dictation uses, and Import (disabled until a usable file is chosen). A file that cannot be used is named in a red line. */
+/** The Import an audio file dialog: a drop zone and chooser, the language, and Import (disabled until a usable file is chosen). A file that cannot be used is named in a red line. */
 export function ImportDialog({ open, settings, onClose, onStarted }: Props) {
   const choice = useChoice();
   const [language, setLanguage] = useState<string>(settings?.config.language ?? "auto");
@@ -107,8 +103,7 @@ export function ImportDialog({ open, settings, onClose, onStarted }: Props) {
     onClose();
   };
   const run = useStart(choice.file, language, (id) => (onStarted(id), close()));
-  const model = settings?.model;
-  const noModel = model?.installed === false;
+  const noModel = settings?.model.installed === false;
   return (
     <Modal
       open={open}
@@ -137,7 +132,7 @@ export function ImportDialog({ open, settings, onClose, onStarted }: Props) {
       )}
       {run.failed ? <Problem text={run.failed} /> : null}
       {noModel ? <Banner tone="warning">No speech model is installed yet. Download one in Dictation, then come back.</Banner> : null}
-      <Fields language={language} setLanguage={setLanguage} modelName={model?.name ?? "Speech model"} disabled={run.working} />
+      <Fields language={language} setLanguage={setLanguage} disabled={run.working} />
       {run.working ? (
         <div className="tr-dlg__working">
           <LoadingLabel>Reading the file</LoadingLabel>

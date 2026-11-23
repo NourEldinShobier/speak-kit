@@ -22,7 +22,6 @@ export interface StoreOptions {
 
 export interface NewEntry extends Partial<Omit<Entry, "createdAt">> {
   title: string;
-  source: Entry["source"];
 }
 
 /**
@@ -68,13 +67,13 @@ export class Store {
     let changed = false;
     for (const e of parsed.entries as Entry[]) {
       if (!e || typeof e.id !== "string") continue;
-      // Work that was running when the app stopped is not lost: it waits to be resumed (a recording is kept as what was spooled).
+      // Work that was running when the app stopped is not lost: it waits to be resumed. A recording from a version that had the recorder cannot be resumed.
       if (e.status === "transcribing" || e.status === "queued") {
         e.status = "interrupted";
         changed = true;
-      } else if (e.status === "recording") {
-        e.status = "interrupted";
-        e.recovered = true;
+      } else if (String(e.status) === "recording") {
+        e.status = "failed";
+        e.failure = { code: "failed", message: "This recording was not finished and can no longer be transcribed." };
         changed = true;
       }
       this.#entries.set(e.id, e);
@@ -82,8 +81,8 @@ export class Store {
     if (changed && !this.newer) await this.#commit(new Map(this.#entries));
   }
 
-  list(trashed = false): Entry[] {
-    return [...this.#entries.values()].filter((e) => !!e.trashedAt === trashed).sort((a, b) => b.createdAt - a.createdAt);
+  list(): Entry[] {
+    return [...this.#entries.values()].sort((a, b) => b.createdAt - a.createdAt);
   }
 
   get(id: string): Entry | undefined {
@@ -120,7 +119,6 @@ export class Store {
       chunksDone: 0,
       chunksTotal: 0,
       audioBytes: 0,
-      exports: [],
       ...n,
       id: n.id ?? this.#o.newId(),
       createdAt: this.#o.now(),
@@ -173,11 +171,6 @@ export class Store {
     }
   }
 
-  /** Raw 16 kHz 16-bit samples of a recording still in progress. */
-  spoolPath(id: string): string {
-    return this.#p("audio", `${id}.raw`);
-  }
-
   audioPath(id: string): string {
     return this.#p("audio", `${id}.wav`);
   }
@@ -214,23 +207,6 @@ export class Store {
     if (this.#entries.has(id)) await this.update(id, { audioBytes: 0, audioRemovedAt: this.#o.now() });
   }
 
-  async trash(id: string): Promise<void> {
-    if (!this.#entries.has(id)) throw new StoreError("not-found", "That transcript is gone.");
-    const at = this.#o.now();
-    await this.#mutate((d) => {
-      const e = d.get(id);
-      if (e && !e.trashedAt) e.trashedAt = at;
-    });
-  }
-
-  async restore(id: string): Promise<void> {
-    if (!this.#entries.has(id)) throw new StoreError("not-found", "That transcript is gone.");
-    await this.#mutate((d) => {
-      const e = d.get(id);
-      if (e) delete e.trashedAt;
-    });
-  }
-
   /** Deletes the transcript, its words and its audio for good. The manifest row goes first: a crash in between leaves orphan files, never a row without data. */
   async remove(id: string): Promise<void> {
     if (!this.#entries.has(id)) return;
@@ -239,14 +215,8 @@ export class Store {
       await this.#o.fs.remove(this.#p("items", `${id}.json`));
       await this.#o.fs.remove(this.#p("items", `${id}.notes.json`));
       await this.#o.fs.remove(this.audioPath(id));
-      await this.#o.fs.remove(this.spoolPath(id));
+      await this.#o.fs.remove(this.#p("audio", `${id}.raw`));
     });
-  }
-
-  async emptyTrash(): Promise<number> {
-    const ids = this.list(true).map((e) => e.id);
-    for (const id of ids) await this.remove(id);
-    return ids.length;
   }
 }
 

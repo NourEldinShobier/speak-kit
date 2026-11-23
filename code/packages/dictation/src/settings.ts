@@ -17,10 +17,6 @@ export interface Settings {
    * "double-tap": only a double-tap starts a (locked) recording. "tap-or-hold": a long hold dictates until release, a short tap toggles.
    */
   mode: Mode;
-  /** A press shorter than this is a tap: nothing is kept. */
-  holdMs: number;
-  /** Dictates with text clean-up and replacements off; "" is unset. */
-  rawKey: string;
   /** Types the last dictation again; "" is unset. Handled by the app, which owns the key hook. */
   pasteLastKey: string;
   /** "auto" or a language code such as "en", "de", "ar". */
@@ -33,8 +29,6 @@ export interface Settings {
   keepReady: boolean;
   /** Paste leaves the dictated text on the clipboard instead of putting the old content back. */
   keepOnClipboard: boolean;
-  /** At output time, bring the window the key was pressed in back to the front; paste nothing when that fails. */
-  returnToApp: boolean;
   insertMode: InsertMode;
   /** Insert mode per program, keyed by executable name such as "putty". */
   appModes: Record<string, InsertMode>;
@@ -63,15 +57,12 @@ export const defaultSettings: Readonly<Settings> = {
   hotkey: "ControlRight",
   cancelKey: "Escape",
   mode: "hold",
-  holdMs: 300,
-  rawKey: "",
   pasteLastKey: "",
   language: "auto",
   duck: false,
   skipPauses: false,
   keepReady: false,
   keepOnClipboard: false,
-  returnToApp: true,
   insertMode: "paste",
   appModes: {},
   fillers: true,

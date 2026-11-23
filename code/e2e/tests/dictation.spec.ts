@@ -110,13 +110,13 @@ function dictationSpec() {
     });
 
     test("the Audio and Output settings are saved and the microphone list comes back", async () => {
-      const status = await rig.bridge("patchSettings", { keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false });
+      const status = await rig.bridge("patchSettings", { keepReady: true, avoidBluetooth: false });
       try {
-        expect(status.settings).toMatchObject({ keepReady: true, keepReadyMinutes: 15, avoidBluetooth: false });
+        expect(status.settings).toMatchObject({ keepReady: true, avoidBluetooth: false });
         await rig.bridge("micDevices");
         await until(async () => (await rig.bridge("status")).devices.length > 0, "the microphone list", 8000);
       } finally {
-        await rig.bridge("patchSettings", { keepReady: false, keepReadyMinutes: 0, avoidBluetooth: true });
+        await rig.bridge("patchSettings", { keepReady: false, avoidBluetooth: true });
       }
     });
 
@@ -249,7 +249,7 @@ function dictationSpec() {
       ...extra,
     });
 
-    test("rows show details, several can be selected and deleted at once, and the statistics add up", async () => {
+    test("rows show details, several can be selected and deleted at once", async () => {
       const history = JSON.stringify([entry(1, { outcome: "sent" }), entry(2, { outcome: "copied", kind: "interrupted" }), entry(3, { outcome: "failed", displayName: "Notes" }), entry(4)]);
       const rig = await startRig({ files: { "dictation-history.json": history } });
       try {
@@ -259,10 +259,6 @@ function dictationSpec() {
         await expect(rig.page.getByText("Cut short", { exact: true })).toBeVisible();
         await expect(rig.page.getByText("Not inserted", { exact: true })).toBeVisible();
         await expect(rig.page.getByText("Notes", { exact: true })).toBeVisible();
-
-        await rig.page.getByRole("button", { name: "Statistics" }).click();
-        await expect(rig.page.getByRole("dialog", { name: "Dictation statistics" })).toContainText("Dictations4");
-        await rig.page.getByRole("button", { name: "Close" }).click();
 
         await rig.page.getByRole("button", { name: "Select", exact: true }).click();
         await rig.page.getByRole("checkbox", { name: "Select: Entry number 1" }).check({ force: true });

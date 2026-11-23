@@ -23,7 +23,6 @@ export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
 export const OUTPUTS = ["restore", "keep", "copy"] as const;
-export const MAX_KEEP_READY_MINUTES = 120;
 
 export const MAX_TERMS = 500;
 export const MAX_MODES = 24;
@@ -95,23 +94,15 @@ const modeEntries = {
     ),
     [],
   ),
-  insertMode: v.picklist(["paste", "type", "copy"]),
-  /** A mode saved with "lower" (removed) keeps its text as spoken. */
-  capitals: v.pipe(
-    v.picklist(["keep", "sentence", "lower"]),
-    v.transform((c): "keep" | "sentence" => (c === "lower" ? "keep" : c)),
-  ),
-  end: v.picklist(["keep", "no-full-stop"]),
   rewrite: v.boolean(),
   /** Replacements only for this mode; a file from before they existed loads with none. */
   replacements,
 };
 type ModeOut = v.InferOutput<ReturnType<typeof v.object<typeof modeEntries & { terms: typeof termList }>>>;
-// The built-in default mode lists no apps and keeps its name; no other mode may take that name.
-const nameFree = (m: ModeOut): boolean => m.id === DEFAULT_ID || lower(m.name) !== "default";
-const settleDefault = (m: ModeOut): ModeOut => (m.id === DEFAULT_ID ? { ...m, name: "Default", apps: [], sites: [] } : m);
-const Mode = v.pipe(v.object({ ...modeEntries, terms: termList }), v.check(nameFree, "That name is taken"), v.transform(settleDefault));
-const LenientMode = v.pipe(v.object({ ...modeEntries, terms: lenient(Term, MAX_TERMS, termKeys) }), v.check(nameFree), v.transform(settleDefault));
+// The built-in default mode is not stored: a saved one (from before it was fixed) is dropped, and no mode may take its id or name.
+const notDefault = (m: ModeOut): boolean => m.id !== DEFAULT_ID && lower(m.name) !== "default";
+const Mode = v.pipe(v.object({ ...modeEntries, terms: termList }), v.check(notDefault, "That name is taken"));
+const LenientMode = v.pipe(v.object({ ...modeEntries, terms: lenient(Term, MAX_TERMS, termKeys) }), v.check(notDefault));
 const modeKeys = (m: { id: string; name: string }) => [`i:${m.id}`, `n:${lower(m.name)}`];
 const modeList = v.pipe(
   v.array(Mode),
@@ -143,15 +134,12 @@ const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTK
 /** "" is unset. */
 const optionalHotkey = (fallback: string) => v.fallback(v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]), fallback);
 export const MODES = ["hold", "hold-only", "toggle", "double-tap", "tap-or-hold"] as const;
-export const HOLD_TIMES = [150, 200, 300, 400, 500, 750, 1000] as const;
 
 /** Persisted under `dictation` in config.json. Off until the person turns it on; every key falls back to its default, which is also how files from before dictation existed load. */
 const CORE_KEYS = {
   enabled: v.fallback(v.boolean(), false),
   hotkey,
   mode: v.fallback(v.picklist(MODES), "hold"),
-  holdMs: v.fallback(v.picklist(HOLD_TIMES), 300),
-  rawHotkey: optionalHotkey(""),
   pasteLastHotkey: optionalHotkey(DEFAULT_PASTE_LAST),
   cancelKey: v.fallback(v.pipe(v.string(), v.check(validCancelKey)), "Escape"),
   /** Set when a saved shortcut was refused at load and replaced: the page says so once. */
@@ -166,10 +154,7 @@ const CORE_KEYS = {
   avoidBluetooth: v.fallback(v.boolean(), true),
   /** Keep the microphone open between recordings, for the audio before the key press. */
   keepReady: v.fallback(v.boolean(), false),
-  /** Close an idle open microphone after this many minutes; 0 keeps it open while dictation is on. */
-  keepReadyMinutes: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)), 0),
   output: v.fallback(v.picklist(OUTPUTS), "restore"),
-  returnToApp: v.fallback(v.boolean(), true),
   skipPauses: v.fallback(v.boolean(), false),
   terms: v.fallback(lenient(Term, MAX_TERMS, termKeys), []),
   readAs: v.fallback(
@@ -195,9 +180,8 @@ const CORE_KEYS = {
   /** Percent of the current volume kept while dictating when other audio is lowered; 0 is silent, 100 changes nothing. */
   duckLevel: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)), 30),
 };
-export const hotkeySlots = (c: { hotkey: string; rawHotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
+export const hotkeySlots = (c: { hotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
   dictation: c.hotkey,
-  raw: c.rawHotkey,
   pasteLast: c.pasteLastHotkey,
   cancel: c.cancelKey,
 });
@@ -209,12 +193,11 @@ export const DictationConfigSchema = v.pipe(
     for (let i = 0; i < 6; i++) {
       const clash = firstClash(hotkeySlots(out));
       if (!clash) break;
-      const drop = (["raw", "pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
+      const drop = (["pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
       out = {
         ...out,
         resetNotice: "clash" as const,
-        ...(drop === "raw" && { rawHotkey: "" }),
         ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
         ...(drop === "cancel" && { cancelKey: "Escape" }),
       };
@@ -234,7 +217,9 @@ export function countDropped(raw: unknown): number {
   if (typeof raw !== "object" || raw === null) return 0;
   const r = raw as Record<string, unknown>;
   const kept = v.parse(DictationConfigSchema, r);
-  const lists = (["terms", "readAs", "replacements", "modes"] as const).reduce((n, k) => n + Math.max(0, count(r[k]) - kept[k].length), 0);
+  // A saved default mode is dropped on purpose, so it is not counted as lost.
+  const savedModes = Array.isArray(r.modes) ? r.modes.filter((m: unknown) => (m as { id?: unknown } | null)?.id !== DEFAULT_ID) : [];
+  const lists = (["terms", "readAs", "replacements", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
   // Words inside the modes that were kept: a bad word costs the word, not the mode.
   const insideKept = kept.modes.reduce((n, m) => n + m.terms.length, 0);
   const insideRaw = (Array.isArray(r.modes) ? r.modes : []).reduce((n: number, m: unknown) => (v.safeParse(LenientMode, m).success ? n + count((m as { terms?: unknown }).terms) : n), 0);
@@ -246,8 +231,6 @@ export const DictationPatchSchema = v.partial(
   v.strictObject({
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
     mode: v.picklist(MODES),
-    holdMs: v.picklist(HOLD_TIMES),
-    rawHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
     pasteLastHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
     cancelKey: v.pipe(v.string(), v.check(validCancelKey)),
     language: v.picklist(DICTATION_LANGUAGES),
@@ -257,9 +240,7 @@ export const DictationPatchSchema = v.partial(
     microphone: v.pipe(v.string(), v.maxLength(300)),
     avoidBluetooth: v.boolean(),
     keepReady: v.boolean(),
-    keepReadyMinutes: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(MAX_KEEP_READY_MINUTES)),
     output: v.picklist(OUTPUTS),
-    returnToApp: v.boolean(),
     skipPauses: v.boolean(),
     terms: termList,
     readAs: v.pipe(
