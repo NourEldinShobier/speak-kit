@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 // @ts-expect-error plain ESM script without types
-import { foreignMacArch, fusePlan, icoFromPngs, importedPackages, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
+import { foreignMacArch, fusePlan, icoFromPngs, importedPackages, keepLlamaPackage, keepWhisperPackage, macSigningPlan, packageOf } from "../scripts/stage-lib.mjs";
 
 describe("packageOf", () => {
   it("returns the package of a bare specifier, and null for relative, builtin and electron imports", () => {
@@ -62,6 +62,9 @@ describe("foreignMacArch", () => {
     expect(foreignMacArch("sharp-libvips-darwin-arm64", "x64")).toBe(true);
     expect(foreignMacArch("koffi-darwin-x64", "arm64")).toBe(true);
     expect(foreignMacArch("darwin_x64", "arm64")).toBe(true);
+    expect(foreignMacArch("mac-x64", "arm64")).toBe(true);
+    expect(foreignMacArch("mac-arm64-metal", "x64")).toBe(true);
+    expect(foreignMacArch("mac-arm64-metal", "arm64")).toBe(false);
     expect(foreignMacArch("darwin_arm64", "arm64")).toBe(false);
     for (const d of ["win32_x64", "linux-x64", "sharp-wasm32"]) expect(foreignMacArch(d, "arm64")).toBe(false);
   });
@@ -80,12 +83,31 @@ describe("keepWhisperPackage", () => {
   });
 });
 
+describe("keepLlamaPackage", () => {
+  it("keeps the CPU and the Vulkan build on Windows, and drops CUDA, Windows on ARM, macOS and Linux", () => {
+    for (const d of ["win-x64", "win-x64-vulkan"]) expect(keepLlamaPackage(d, false)).toBe(true);
+    for (const d of ["win-x64-cuda", "win-x64-cuda-ext", "win-arm64", "mac-arm64-metal", "mac-x64", "linux-x64", "linux-x64-vulkan"]) expect(keepLlamaPackage(d, false)).toBe(false);
+  });
+
+  it("keeps the Metal and the Intel build on a Mac, and nothing for Windows or Linux", () => {
+    for (const d of ["mac-arm64-metal", "mac-x64"]) expect(keepLlamaPackage(d, true)).toBe(true);
+    for (const d of ["win-x64", "win-x64-vulkan", "linux-x64", "linux-x64-cuda"]) expect(keepLlamaPackage(d, true)).toBe(false);
+  });
+});
+
 describe("the lockfile and the macOS packaging config", () => {
   const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
 
   it("pins the Metal whisper builds and the koffi builds for both Mac architectures", () => {
     const lock = read("../../../pnpm-lock.yaml");
-    for (const pkg of ["@fugood/node-whisper-darwin-arm64@1.2.0-rc.2", "@fugood/node-whisper-darwin-x64@1.2.0-rc.2", "@koromix/koffi-darwin-arm64@", "@koromix/koffi-darwin-x64@"])
+    for (const pkg of [
+      "@fugood/node-whisper-darwin-arm64@1.2.0-rc.2",
+      "@fugood/node-whisper-darwin-x64@1.2.0-rc.2",
+      "@node-llama-cpp/mac-arm64-metal@",
+      "@node-llama-cpp/mac-x64@",
+      "@koromix/koffi-darwin-arm64@",
+      "@koromix/koffi-darwin-x64@",
+    ])
       expect(lock).toContain(pkg);
   });
 

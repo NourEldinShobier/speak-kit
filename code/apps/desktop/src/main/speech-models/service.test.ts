@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { Transfers, type Hardware } from "@speakkit/engine";
+import { Transfers, WRITER_MODEL, type Hardware } from "@speakkit/engine";
+import { WriterModels } from "./writer";
 import { DictationConfigSchema } from "../../shared/dictation/settings";
 import type { DictationConfig } from "../../shared/dictation/settings";
 import { ModelManager } from "../dictation/models";
@@ -35,18 +36,23 @@ function setup(over: Partial<SpeechModelsDeps> = {}, hw: Hardware = { platform: 
   const cfg = { dictation: v.parse(DictationConfigSchema, {}) as DictationConfig, engines: parseEnginesConfig({}) };
   const state = { recording: false, saves: 0, changes: 0 };
   const speechRef: { current?: SpeechModels } = {};
+  const transfers = new Transfers();
   const models = new ModelManager({
     stt,
     selected: () => cfg.dictation.model,
     select: (id) => (cfg.dictation.model = id),
     changed: () => void state.changes++,
     models: () => speechRef.current!.catalog(),
-    transfers: new Transfers(),
+    transfers,
   });
+  const writerLog: string[] = [];
+  const writerEngine = { downloaded: async () => writerLog.includes("download"), download: async () => void writerLog.push("download"), unload: async () => void writerLog.push("unload") };
+  const writer = new WriterModels({ modelsDir: dir, writer: writerEngine, transfers, scanDirs: () => [], changed: () => void state.changes++ });
   const speech = (speechRef.current = new SpeechModels({
     modelsDir: dir,
     stt,
     models,
+    writer,
     config: () => cfg,
     save: () => void state.saves++,
     choose: (id, language) => {
@@ -66,7 +72,7 @@ function setup(over: Partial<SpeechModelsDeps> = {}, hw: Hardware = { platform: 
     now: () => 1000,
     ...over,
   }));
-  return { fake, stt, cfg, state, models, speech };
+  return { fake, stt, cfg, state, models, speech, transfers, writerLog };
 }
 
 describe("SpeechModels: switching", () => {
@@ -369,5 +375,45 @@ describe("SpeechModels: small settings", () => {
     expect(speech.wantsLayout()).toBe(true);
     speech.setAutoSwitch({ enabled: false, rules: [{ id: "b", layout: "de", model: TURBO }] });
     expect(speech.wantsLayout()).toBe(false);
+  });
+});
+
+describe("SpeechModels: the rewrite pass's writer", () => {
+  it("shows the writer with the models on disk, and counts its file in the disk total", async () => {
+    const { speech } = setup();
+    await speech.init();
+    expect(speech.view().writer).toMatchObject({ id: WRITER_MODEL.id, installed: false, diskBytes: 0, bytes: WRITER_MODEL.bytes });
+    await mkdir(join(dir, "stt"), { recursive: true });
+    await writeFile(join(dir, "stt", WRITER_MODEL.file), "abc");
+    await speech.refreshDisk();
+    await speech.init();
+    expect(speech.view().writer.diskBytes).toBe(3);
+    expect(speech.view().disk.total).toBe(3);
+  });
+
+  it("downloads it by its id, without touching the speech models", async () => {
+    const { speech, writerLog, stt } = setup();
+    const view = await speech.download(WRITER_MODEL.id);
+    expect(writerLog).toEqual(["download"]);
+    expect(view.writer.installed).toBe(true);
+    expect(stt.status().state).toBe("unloaded");
+  });
+
+  it("stops its download by its id", async () => {
+    const { speech, transfers } = setup();
+    const done = transfers.start(WRITER_MODEL.id, ({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })));
+    done.catch(() => undefined);
+    await speech.cancelDownload(WRITER_MODEL.id);
+    await expect(done).rejects.toThrow("download cancelled");
+    expect(transfers.get(WRITER_MODEL.id)).toBeUndefined();
+  });
+
+  it("deletes its file by its id: the model is stopped first and the bytes freed are returned", async () => {
+    const { speech, writerLog } = setup();
+    await mkdir(join(dir, "stt"), { recursive: true });
+    await writeFile(join(dir, "stt", WRITER_MODEL.file), "abc");
+    expect(await speech.remove(WRITER_MODEL.id)).toBe(3);
+    expect(writerLog).toEqual(["unload"]);
+    await expect(stat(join(dir, "stt", WRITER_MODEL.file))).rejects.toThrow();
   });
 });

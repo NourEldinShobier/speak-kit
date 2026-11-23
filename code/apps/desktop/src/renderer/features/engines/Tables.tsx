@@ -4,8 +4,9 @@ import { models } from "./api";
 import { sizeText } from "../../speech-text";
 import type { Run } from "./run";
 
-export function DiskSpace({ v, run, onDelete }: { v: SpeechModelsView; run: Run; onDelete(c: ModelCard): void }) {
+export function DiskSpace({ v, run, onDelete, onDeleteWriter }: { v: SpeechModelsView; run: Run; onDelete(c: ModelCard): void; onDeleteWriter(): void }) {
   const have = v.models.filter((m) => m.diskBytes > 0 && !m.fileMissing);
+  const writer = v.writer.diskBytes > 0 ? v.writer : undefined;
   return (
     <section className="sk-engines-section" aria-labelledby="disk-h">
       <div className="sk-engines-section__head">
@@ -13,7 +14,7 @@ export function DiskSpace({ v, run, onDelete }: { v: SpeechModelsView; run: Run;
         <span>{sizeText(v.disk.total)} used by models</span>
       </div>
       <div className="lm-card">
-        {have.length === 0 ? (
+        {have.length === 0 && !writer ? (
           <SettingRow label="No models on disk" description="Downloaded models appear here." />
         ) : (
           have.map((m) => (
@@ -30,6 +31,18 @@ export function DiskSpace({ v, run, onDelete }: { v: SpeechModelsView; run: Run;
             />
           ))
         )}
+        {writer ? (
+          <SettingRow
+            className="lm-row--control"
+            label={writer.name}
+            description={`Writer model of the rewrite pass, ${sizeText(writer.diskBytes)}.`}
+            control={
+              <Button variant="danger" aria-label={`Delete ${writer.name}`} onClick={onDeleteWriter}>
+                Delete
+              </Button>
+            }
+          />
+        ) : null}
       </div>
       <p className="sk-engines-section__foot">
         Models are stored in {v.disk.folder}.{" "}

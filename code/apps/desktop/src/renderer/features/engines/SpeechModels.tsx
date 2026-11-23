@@ -7,7 +7,7 @@ import { ImportDialog } from "./ImportDialog";
 import { ModelCardView } from "./ModelCards";
 import { Performance } from "./Performance";
 import { DiskSpace } from "./Tables";
-import { deleteConfirm, recommendationText, sampleText, sortedModels } from "../../speech-text";
+import { deleteConfirm, recommendationText, sampleText, sortedModels, writerDeleteConfirm } from "../../speech-text";
 import type { Run } from "./run";
 import { useSpeechModels } from "./useSpeechModels";
 import "./speech-models.css";
@@ -124,10 +124,16 @@ function Status({ v, message, clear, run }: { v: SpeechModelsView; message: stri
   );
 }
 
-function DeleteDialog({ card, v, onClose, run }: { card: ModelCard | null; v: SpeechModelsView; onClose(): void; run: Run }) {
-  const confirm = card ? deleteConfirm(card, v) : null;
+/** What a delete button asks about: the id to delete and the sentence that says what it frees. */
+interface DeleteTarget {
+  id: string;
+  title: string;
+  body: string;
+}
+
+function DeleteDialog({ target, onClose, run }: { target: DeleteTarget | null; onClose(): void; run: Run }) {
   const remove = () => {
-    const id = card!.id;
+    const id = target!.id;
     onClose();
     run(() => models.remove(id).then(() => models.view()));
   };
@@ -142,9 +148,9 @@ function DeleteDialog({ card, v, onClose, run }: { card: ModelCard | null; v: Sp
     </>
   );
   return (
-    <Modal open={card !== null} onClose={onClose} title={confirm?.title ?? ""} width={440} footer={footer}>
+    <Modal open={target !== null} onClose={onClose} title={target?.title ?? ""} width={440} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        {confirm?.body}
+        {target?.body}
       </p>
     </Modal>
   );
@@ -201,16 +207,16 @@ function ModelsSection({ v, run, state }: { v: SpeechModelsView; run: Run; state
 export function SpeechModelsSection() {
   const { view: v, failed, set } = useSpeechModels();
   const { busy, message, run, clear } = useRunner(set);
-  const [deleting, setDeleting] = useState<ModelCard | null>(null);
+  const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
   const [importing, setImporting] = useState(false);
   if (!v) return <Loading failed={failed} retry={() => run(() => models.view().then(set))} />;
   return (
     <>
-      <ModelsSection v={v} run={run} state={{ busy, message, clear, setDeleting, setImporting: () => setImporting(true) }} />
+      <ModelsSection v={v} run={run} state={{ busy, message, clear, setDeleting: (c) => setDeleting({ id: c.id, ...deleteConfirm(c, v) }), setImporting: () => setImporting(true) }} />
       <Performance v={v} run={run} />
-      <DiskSpace v={v} run={run} onDelete={setDeleting} />
+      <DiskSpace v={v} run={run} onDelete={(c) => setDeleting({ id: c.id, ...deleteConfirm(c, v) })} onDeleteWriter={() => setDeleting({ id: v.writer.id, ...writerDeleteConfirm(v.writer) })} />
       <ImportDialog open={importing} onClose={() => setImporting(false)} run={run} />
-      <DeleteDialog card={deleting} v={v} onClose={() => setDeleting(null)} run={run} />
+      <DeleteDialog target={deleting} onClose={() => setDeleting(null)} run={run} />
     </>
   );
 }

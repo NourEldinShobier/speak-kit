@@ -21,6 +21,8 @@ export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
 export const DUCK_MODES = ["nothing", "mute", "lower", "pause"] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;
+/** Who tidies the text in the rewrite pass: OpenAI (the text leaves the computer) or the model on this computer. */
+export const REWRITE_WRITERS = ["openai", "local"] as const;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
 export const OUTPUTS = ["restore", "keep", "copy"] as const;
 
@@ -166,6 +168,7 @@ const CORE_KEYS = {
   cleanup: CleanupSchema,
   modes: v.fallback(lenient(LenientMode, MAX_MODES, modeKeys), []),
   rewrite: RewriteSchema,
+  rewriteWriter: v.fallback(v.picklist(REWRITE_WRITERS), "openai"),
   keepRecordings: bool(false),
   /** Add a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: bool(false),
@@ -259,6 +262,7 @@ export const DictationPatchSchema = v.partial(
     }),
     modes: modeList,
     rewrite: v.strictObject({ enabled: v.boolean(), deadlineMs: v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)) }),
+    rewriteWriter: v.picklist(REWRITE_WRITERS),
     keepRecordings: v.boolean(),
     smartSpacing: v.boolean(),
     sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),

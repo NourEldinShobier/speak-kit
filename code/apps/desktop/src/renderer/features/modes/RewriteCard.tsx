@@ -1,13 +1,23 @@
 import { useState } from "react";
-import { Banner, Button, Modal, Select, SettingRow } from "@speakkit/ui";
+import { Banner, Button, Modal, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
+import type { WriterCard } from "../../../shared/speech-models/contract";
+import { sizeText } from "../../speech-text";
 import { patchDictation } from "../dictation-bridge";
-import { deadlineLabel, DEADLINES, WRITER } from "./model";
-import { Toggle } from "@speakkit/ui";
+import { useSpeechModels } from "../engines";
+import { deadlineLabel, DEADLINES, LOCAL_WRITER, WRITER, writerName } from "./model";
+import { WriterDownload } from "./WriterDownload";
 
-function OptInBody({ hasKey, deadline, onDeadline }: { hasKey: boolean; deadline: number; onDeadline(ms: number): void }) {
+type Writer = DictationStatus["settings"]["rewriteWriter"];
+
+const WRITER_OPTIONS = [
+  { value: "local", label: "On this computer (Gemma 4, offline)" },
+  { value: "openai", label: "OpenAI" },
+];
+
+function OpenAiNotes({ hasKey }: { hasKey: boolean }) {
   return (
-    <div className="modes-optin">
+    <>
       {!hasKey ? (
         <Banner tone="warning" title="No OpenAI key saved">
           Save your OpenAI key on the Voice chat page first. The writer needs it.
@@ -24,6 +34,49 @@ function OptInBody({ hasKey, deadline, onDeadline }: { hasKey: boolean; deadline
           <b>If the writer is slow</b>, the text is pasted as you said it. Text that is only numbers is never sent.
         </li>
       </ul>
+    </>
+  );
+}
+
+function LocalNotes({ w }: { w: WriterCard | undefined }) {
+  return (
+    <>
+      <ul className="modes-optin__list">
+        <li>
+          <b>Your text stays on this computer.</b> The writer runs offline here, with no key and no account.
+        </li>
+        <li>
+          <b>Writer:</b> {LOCAL_WRITER}
+          {w ? `, a ${sizeText(w.bytes)} download (${w.license.name})` : ""}. It is loaded when you start dictating and uses memory while it is.
+        </li>
+        <li>
+          <b>If the writer is slow</b>, for example for the first dictation after it loads, the text is pasted as you said it. Text that is only numbers is never sent.
+        </li>
+      </ul>
+      {w ? <WriterDownload w={w} /> : null}
+    </>
+  );
+}
+
+interface BodyProps {
+  writer: Writer;
+  onWriter(w: Writer): void;
+  hasKey: boolean;
+  w: WriterCard | undefined;
+  deadline: number;
+  onDeadline(ms: number): void;
+}
+
+function OptInBody({ writer, onWriter, hasKey, w, deadline, onDeadline }: BodyProps) {
+  return (
+    <div className="modes-optin">
+      <SettingRow
+        className="lm-row--control"
+        label="Writer"
+        description="The model that tidies the text."
+        control={<Select label="Writer" value={writer} onChange={(v) => onWriter(v as Writer)} options={WRITER_OPTIONS} />}
+      />
+      {writer === "local" ? <LocalNotes w={w} /> : <OpenAiNotes hasKey={hasKey} />}
       <SettingRow
         className="lm-row--control"
         label="Give up after"
@@ -34,30 +87,40 @@ function OptInBody({ hasKey, deadline, onDeadline }: { hasKey: boolean; deadline
   );
 }
 
-function OptInDialog({ open, s, onClose }: { open: boolean; s: DictationStatus; onClose(): void }) {
+function OptInDialog({ open, s, w, onClose }: { open: boolean; s: DictationStatus; w: WriterCard | undefined; onClose(): void }) {
   const [deadline, setDeadline] = useState<number>(s.settings.rewrite.deadlineMs);
+  const [writer, setWriter] = useState<Writer>(s.settings.rewriteWriter);
+  const ready = writer === "local" ? !!w?.installed : s.rewriteKey;
   const turnOn = () => {
-    void patchDictation({ rewrite: { enabled: true, deadlineMs: deadline } });
+    void patchDictation({ rewrite: { enabled: true, deadlineMs: deadline }, rewriteWriter: writer });
     onClose();
   };
   const footer = (
     <>
       <Button onClick={onClose}>Cancel</Button>
-      <Button variant="primary" disabled={!s.rewriteKey} onClick={turnOn}>
+      <Button variant="primary" disabled={!ready} onClick={turnOn}>
         Turn on rewrite pass
       </Button>
     </>
   );
   return (
     <Modal open={open} onClose={onClose} title="Turn on the rewrite pass?" width={480} footer={footer}>
-      <OptInBody hasKey={s.rewriteKey} deadline={deadline} onDeadline={setDeadline} />
+      <OptInBody writer={writer} onWriter={setWriter} hasKey={s.rewriteKey} w={w} deadline={deadline} onDeadline={setDeadline} />
     </Modal>
   );
 }
 
-/** The opt-in for the rewrite pass: off until the person sets it up, because the text leaves the computer. */
+/** What the card says about the writer once the pass is on; a local writer whose file was deleted is called out. */
+function enabledNote(s: DictationStatus, w: WriterCard | undefined): string {
+  const r = s.settings.rewrite;
+  const missing = s.settings.rewriteWriter === "local" && w && !w.installed ? " The writer model is not downloaded, so the text is pasted as you said it." : "";
+  return `Writer: ${writerName(s.settings.rewriteWriter)}. Gives up after ${deadlineLabel(r.deadlineMs)} and pastes what you said. Choose which modes use it in each mode.${missing}`;
+}
+
+/** The opt-in for the rewrite pass: off until the person sets it up, because the text leaves the computer when the writer is OpenAI. */
 export function RewriteCard({ s }: { s: DictationStatus }) {
   const [asking, setAsking] = useState(false);
+  const { view } = useSpeechModels();
   const r = s.settings.rewrite;
   return (
     <section className="lm-section" aria-label="Rewrite pass">
@@ -69,7 +132,7 @@ export function RewriteCard({ s }: { s: DictationStatus }) {
         {r.enabled ? (
           <SettingRow
             label="Rewrite dictated text"
-            description={`Writer: ${WRITER}. Gives up after ${deadlineLabel(r.deadlineMs)} and pastes what you said. Choose which modes use it in each mode.`}
+            description={enabledNote(s, view?.writer)}
             control={
               <div className="modes-acts">
                 <Button onClick={() => setAsking(true)}>Change</Button>
@@ -80,12 +143,12 @@ export function RewriteCard({ s }: { s: DictationStatus }) {
         ) : (
           <SettingRow
             label="Rewrite dictated text"
-            description="The text is sent to the writer you choose, so it leaves this computer. Without it, dictation never leaves."
+            description="The text is tidied by the writer you choose: a model on this computer, or OpenAI, which means the text leaves this computer. Without it, dictation never leaves."
             control={<Button onClick={() => setAsking(true)}>Set up</Button>}
           />
         )}
       </div>
-      <OptInDialog key={String(asking)} open={asking} s={s} onClose={() => setAsking(false)} />
+      <OptInDialog key={String(asking)} open={asking} s={s} w={view?.writer} onClose={() => setAsking(false)} />
     </section>
   );
 }

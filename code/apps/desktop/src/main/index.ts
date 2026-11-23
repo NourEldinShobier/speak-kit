@@ -28,7 +28,7 @@ import { watchPairingActivity, watchPower } from "./watchers";
 import { startPort } from "./ports";
 import { ServerApi } from "./server-api";
 import { settingsChangeDeps } from "./settings-deps";
-import { sttWorkerUrl } from "./dictation/service-support";
+import { sttWorkerUrl, writerWorkerUrl } from "./dictation/service-support";
 import { engineWorkerUrl, ServerRuntime } from "./server-lifecycle";
 import { testEnv, fakeMicSwitches } from "./test-env";
 import { createMicOwners } from "./mic-owners";
@@ -55,6 +55,7 @@ const modelsDir = process.env.SPEAKKIT_MODELS_DIR ?? path.join(dataDir, "models"
 const logsDir = path.join(dataDir, "logs");
 
 const sttWorker = await sttWorkerUrl(here);
+const writerWorker = await writerWorkerUrl(here);
 const store = await openConfig(dataDir);
 const config = store.config;
 
@@ -212,6 +213,7 @@ function startDesktop() {
         dataDir,
         modelsDir,
         sttWorker,
+        writerWorker,
         micOwner: micOwners.owner,
         micClaim: micOwners.claim,
         pageSite: () => runtime.page.current(),

@@ -68,6 +68,25 @@ export function prepareModel(models: ModelManager, o: { quiet: boolean; idleMinu
   if (models.installed && (!o.quiet || o.idleMinutes === 0)) models.warm();
 }
 
+type WriterChoice = Pick<DictationConfig, "rewrite" | "rewriteWriter">;
+const wantsLocalWriter = (cfg: WriterChoice): boolean => cfg.rewrite.enabled && cfg.rewriteWriter === "local";
+
+/** Loads the rewrite pass's writer ahead of the dictation that needs it: only when the pass is on and set to run on this computer. A model that is not downloaded stays unloaded. */
+export const warmWriter = (writer: { warm(): Promise<void> }, cfg: WriterChoice): void => {
+  if (wantsLocalWriter(cfg)) void writer.warm();
+};
+
+/** A recording starts: a speech model and a writer that were released while idle start loading, so the load overlaps the recording. */
+export function onRecordingStart(models: Pick<ModelManager, "warm">, writer: { warm(): Promise<void> }, cfg: WriterChoice): void {
+  models.warm(true);
+  warmWriter(writer, cfg);
+}
+
+/** Settings changed while dictation is on: if the rewrite choice was among them, the writer on this computer loads now when it is wanted, and is released when it is not, so it does not hold memory for nothing. */
+export function syncWriter(writer: { warm(): Promise<void>; unload(): Promise<void> }, cfg: WriterChoice & { enabled: boolean }, patch: { rewrite?: unknown; rewriteWriter?: unknown }): void {
+  if (cfg.enabled && (patch.rewrite || patch.rewriteWriter)) void (wantsLocalWriter(cfg) ? writer.warm() : writer.unload());
+}
+
 /** Keeps the computer awake while a recording runs; a failure is logged and the recording goes on. */
 export const sleepBlock = (warn: (why: string) => void) => createSleepBlock(powerSaveBlocker, warn);
 

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { copyFile, mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { isCustomModelId, type CustomSttModelId, type ModelFile, type SttModel, type SttModelId } from "./catalog";
+import { isCustomModelId, type CustomSttModelId, type ModelFile, type SttModel } from "./catalog";
 import { LANGUAGES } from "./languages";
 
 const MIN_MODEL_BYTES = 1_000_000;
@@ -227,7 +227,7 @@ export function removeImported(modelsDir: string, id: string): Promise<void> {
 }
 
 export interface FoundModel {
-  id: SttModelId;
+  id: string;
   /** Where the identical file sits now. */
   path: string;
 }
@@ -236,7 +236,7 @@ export interface FoundModel {
  * Looks in `dirs` (not below them) for files that are exactly a catalog model: same size first, then the same SHA-256. Read-only. A file with the
  * right name but another fingerprint is ignored, so a renamed or broken file is never used.
  */
-export async function findModelsOnDisk(dirs: readonly string[], catalog: readonly (ModelFile & { id: SttModelId })[]): Promise<FoundModel[]> {
+export async function findModelsOnDisk(dirs: readonly string[], catalog: readonly (ModelFile & { id: string })[]): Promise<FoundModel[]> {
   const found = new Map<string, FoundModel>();
   for (const dir of dirs) {
     const names = await readdir(dir).catch(() => [] as string[]);
@@ -274,7 +274,7 @@ export interface DiskUse {
 }
 
 /** Bytes each model takes in our folder (finished files and partial downloads). */
-export async function diskUse(modelsDir: string, models: readonly Pick<SttModel, "id" | "file">[]): Promise<DiskUse> {
+export async function diskUse(modelsDir: string, models: readonly { id: string; file: string }[]): Promise<DiskUse> {
   const perModel: Record<string, number> = {};
   let total = 0;
   for (const m of models) {

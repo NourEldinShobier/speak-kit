@@ -171,7 +171,8 @@ function floorOf(hw: Hardware | undefined): string | undefined {
   return fits.fits ? undefined : fits.reason;
 }
 
-export function buildView(i: ViewInput): SpeechModelsView {
+/** The page's view without the writer's card, which the service adds from the writer's file. */
+export function buildView(i: ViewInput): Omit<SpeechModelsView, "writer"> {
   const rows = languageTable(i.catalog, quickGraphics(i) ? PREFERRED_MODEL : PREFERRED_MODEL_CPU);
   const current = i.catalog.find((m) => m.id === i.selected);
   const rec = rows.find((r) => r.language === i.language)?.recommended;

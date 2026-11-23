@@ -57,6 +57,9 @@ export function modeRow(m: Mode, rewriteOn: boolean): ModeRow {
 }
 
 export const WRITER = "OpenAI gpt-4o-mini";
+export const LOCAL_WRITER = "Gemma 4 on this computer";
+/** The writer a setting names, as the page calls it. */
+export const writerName = (writer: "openai" | "local"): string => (writer === "local" ? LOCAL_WRITER : WRITER);
 export const DEADLINES = [2000, 4000, 6000, 10_000] as const;
 export const deadlineLabel = (ms: number): string => `${ms / 1000} seconds`;
 

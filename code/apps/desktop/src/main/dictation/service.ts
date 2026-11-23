@@ -6,6 +6,7 @@ import { STATUS_EVENT } from "../../shared/dictation/channels";
 import { SPEECH_MODELS_EVENT } from "../../shared/speech-models/channels";
 import type { SpeechModels } from "../speech-models/service";
 import { createSpeechParts, startSpeech } from "../speech-models/wiring";
+import type { WriterParts } from "../speech-models/writer-wiring";
 import type { DictationStatus, RecorderEvent } from "../../shared/dictation/contract";
 import type { DictationServiceOptions } from "./service-options";
 import { filePickers, type HistoryApi } from "./history-api";
@@ -22,7 +23,7 @@ import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
 import { createOutputSide } from "./service-output";
-import { createRecovery, onStateChange, prepareModel, warmCaret } from "./service-extras";
+import { createRecovery, onRecordingStart, onStateChange, prepareModel, syncWriter, warmCaret, warmWriter } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import type { Stt } from "./stt";
@@ -43,6 +44,8 @@ export class DictationService {
   readonly fake: FakeStt | undefined;
   readonly models: ModelManager;
   readonly speech: SpeechModels;
+  /** The rewrite pass's writer on this computer: the engine, the port the rewriter uses, and its file. */
+  readonly writer: WriterParts;
   readonly presenter: HudPresenter;
   readonly controls: Parts["controls"];
   readonly history: Parts["history"];
@@ -89,7 +92,7 @@ export class DictationService {
     // SPEAKKIT_REAL_STT keeps the real engine in a test run (a manual check against the models on this computer).
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
     const sp = createSpeechParts({ ctx, o, stt: o.stt ?? this.fake, svc: this, select: (id) => this.#choose(id), push: (soon) => this.#push(soon) });
-    [this.stt, this.models, this.speech] = [sp.stt, sp.models, sp.speech];
+    [this.stt, this.models, this.speech, this.writer] = [sp.stt, sp.models, sp.speech, sp.writer];
     this.presenter = createPresenter({ os: () => this.os, cfg: () => this.#cfg, failure: this.#failure, lastInsert: () => this.#lastInsert });
     const parts = createParts({
       ready: () => this.ready,
@@ -162,7 +165,7 @@ export class DictationService {
   #onState(s: DictationState): void {
     if (isRecording(this.state) && !isRecording(s)) this.speech.recordingEnded();
     // A model released while idle starts loading as soon as the person starts talking, so the load overlaps the recording.
-    if (!isRecording(this.state) && isRecording(s)) this.models.warm(true);
+    if (!isRecording(this.state) && isRecording(s)) onRecordingStart(this.models, this.writer.engine, this.#cfg);
     onStateChange({ prev: this.state, next: s, cfg: this.#cfg, failure: this.#failure, recorder: this.#recorder, hotkeys: this.#hotkeys, typing: this.#output.typing(), now: Date.now() });
     this.#output.onState(this.state, s);
     this.state = s;
@@ -235,6 +238,7 @@ export class DictationService {
     this.core?.configure(coreSettings(this.#cfg));
     this.#hotkeys?.layout(hotkeyLayout(this.#cfg));
     warmCaret(this.os, this.#cfg);
+    syncWriter(this.writer.engine, this.#cfg, patch);
     if (patch.retention !== undefined) void this.history.refresh();
     if (this.#cfg.enabled && touchesMicrophone(patch)) void this.mic.refresh();
     this.#push(true);
@@ -276,6 +280,7 @@ export class DictationService {
     this.#recover?.();
     await this.models.refresh();
     prepareModel(this.models, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
+    if (!quiet || this.#ctx.config.engines.idleMinutes === 0) warmWriter(this.writer.engine, this.#cfg);
     if (!quiet && ready && this.models.installed) this.presenter.flashReady();
   }
 
@@ -288,6 +293,7 @@ export class DictationService {
     this.presenter.dismiss();
     this.os?.hud.dispose(); // the HUD window goes now; the next recording makes a new one
     await this.models.unload();
+    await settle(this.writer.engine.unload());
   }
 
   async download(id: DictationModelId): Promise<DictationStatus> {
@@ -336,5 +342,6 @@ export class DictationService {
     this.#recorder?.dispose();
     await this.os?.dispose();
     await settle(this.stt.unload());
+    await this.writer.dispose();
   }
 }

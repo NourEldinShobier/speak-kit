@@ -13,6 +13,7 @@
     "@fugood/whisper.node": "catalog:",
     "@speakkit/protocol": "workspace:*",
     "kokoro-js": "catalog:",
+    "node-llama-cpp": "catalog:",
     "valibot": "catalog:"
   }
 }

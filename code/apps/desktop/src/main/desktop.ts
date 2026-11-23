@@ -40,7 +40,7 @@ interface DesktopOptions {
   /** Version the fake updater announces (tests only; see test-env.ts). */
   fakeUpdate?: string | undefined;
   /** Where dictation keeps its history and models, and its speech worker. */
-  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "micOwner" | "pageSite" | "readKey" | "hasKey"> & {
+  dictation: Pick<DictationServiceOptions, "dataDir" | "modelsDir" | "sttWorker" | "writerWorker" | "micOwner" | "pageSite" | "readKey" | "hasKey"> & {
     /** Claims the microphone for a feature (dictation waits while it is held); returns the release. */
     micClaim: (name: string) => () => void;
   };

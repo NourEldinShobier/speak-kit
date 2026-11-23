@@ -41,9 +41,9 @@ export function icoFromPngs(images) {
   return Buffer.concat([head, ...images.map((m) => m.png)]);
 }
 
-/** Is this directory name a native build for the other macOS architecture ("sharp-darwin-x64" or "darwin_x64" while packaging arm64)? */
+/** Is this directory name a native build for the other macOS architecture ("sharp-darwin-x64", "darwin_x64" or "mac-x64" while packaging arm64)? */
 export function foreignMacArch(name, arch) {
-  const m = /darwin[-_](arm64|x64)$/.exec(name);
+  const m = /(?:darwin[-_]|mac-)(arm64|x64)(?:-metal)?$/.exec(name);
   return !!m && m[1] !== arch;
 }
 
@@ -54,6 +54,14 @@ export function foreignMacArch(name, arch) {
  */
 export function keepWhisperPackage(name, mac) {
   return name === "whisper.node" || (mac ? /-darwin-(arm64|x64)$/ : /-win32-x64(-vulkan)?$/).test(name);
+}
+
+/**
+ * Which directory of node_modules/@node-llama-cpp to keep: the CPU build and the Vulkan build on Windows, the Metal build and the Intel one on macOS. CUDA, Windows on ARM and
+ * Linux builds are never loaded.
+ */
+export function keepLlamaPackage(name, mac) {
+  return (mac ? /^mac-(arm64-metal|x64)$/ : /^win-x64(-vulkan)?$/).test(name);
 }
 
 /**

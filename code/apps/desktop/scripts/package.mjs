@@ -9,7 +9,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync,
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ICO_SIZES, macIconPng, winIconPng } from "./icons-lib.mjs";
-import { icoFromPngs, importedPackages, keepWhisperPackage } from "./stage-lib.mjs";
+import { icoFromPngs, importedPackages, keepLlamaPackage, keepWhisperPackage } from "./stage-lib.mjs";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const code = path.resolve(desktop, "../..");
@@ -49,11 +49,11 @@ console.log("== stage");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(path.join(stage, "dist/worker"), { recursive: true });
 for (const d of ["main", "preload", "renderer"]) cpSync(path.join(desktop, "dist", d), path.join(stage, "dist", d), { recursive: true });
-// The two workers and the chunks they share (everything the engine build emits except the library entry).
+// The three workers and the chunks they share (everything the engine build emits except the library entry).
 const engineDist = path.join(code, "packages/engine/dist");
 for (const f of readdirSync(engineDist)) if (f.endsWith(".js") && f !== "index.js") cpSync(path.join(engineDist, f), path.join(stage, "dist/worker", f));
 
-const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js", "dist/worker/stt-worker.js"];
+const built = ["dist/main/index.js", "dist/main/mp3-worker.js", "dist/preload/index.cjs", "dist/worker/worker.js", "dist/worker/stt-worker.js", "dist/worker/writer-worker.js"];
 const needed = new Set(built.flatMap((f) => importedPackages(readFileSync(path.join(stage, f), "utf8"))));
 const engineDir = path.join(code, "packages/engine");
 const dependencies = {};
@@ -61,7 +61,7 @@ for (const name of [...needed].sort()) {
   try {
     dependencies[name] = installedVersion(name, desktop);
   } catch {
-    dependencies[name] = installedVersion(name, engineDir); // packages only the engine workers import (kokoro-js, whisper.node)
+    dependencies[name] = installedVersion(name, engineDir); // packages only the engine workers import (kokoro-js, whisper.node, node-llama-cpp)
   }
 }
 // kokoro-js pulls transformers.js and onnxruntime; pin what was tested instead of whatever npm finds today.
@@ -127,6 +127,11 @@ if (existsSync(ort)) {
 // whisper.node: the speech worker loads the Vulkan addon on Windows (falling back to the plain CPU one) and the Metal one on macOS; the CUDA addon (125 MB), the WASM build and other CPUs are never loaded.
 const fugood = path.join(stage, "node_modules/@fugood");
 if (existsSync(fugood)) for (const d of readdirSync(fugood)) if (!keepWhisperPackage(d, mac)) rm(path.join(fugood, d));
+// node-llama-cpp: the writer worker loads the Vulkan build on Windows (the CPU one when the card cannot run it) and the Metal one on macOS; CUDA, Windows on ARM and Linux are never loaded.
+// The llama.cpp git bundle in the package is only for building from source, which the app never does.
+const llamaBins = path.join(stage, "node_modules/@node-llama-cpp");
+if (existsSync(llamaBins)) for (const d of readdirSync(llamaBins)) if (!keepLlamaPackage(d, mac)) rm(path.join(llamaBins, d));
+rm(path.join(stage, "node_modules/node-llama-cpp/llama/gitRelease.bundle"));
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
 if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ? d.startsWith("darwin_") : d === "win32_x64")) rm(path.join(koffiBuild, d));
 

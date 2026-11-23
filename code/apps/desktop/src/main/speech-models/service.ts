@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { IdleRelease, ModelSwitcher, AutoSwitch, checkFloor, resolveLanguage, type Hardware, type SttLanguage, type SttModel, type SttModelId } from "@speakkit/engine";
+import { IdleRelease, ModelSwitcher, AutoSwitch, WRITER_MODEL, checkFloor, resolveLanguage, type Hardware, type SttLanguage, type SttModel, type SttModelId } from "@speakkit/engine";
 import type { DictationConfig } from "../../shared/dictation/settings";
 import type { DictationModelId } from "../../shared/dictation/settings";
 import type { EnginesConfig } from "../../shared/speech-models/config";
@@ -9,6 +9,7 @@ import type { Stt } from "../dictation/stt";
 import { DevicePolicy } from "./device-policy";
 import { ModelLibrary } from "./library";
 import { buildView } from "./view";
+import type { WriterModels } from "./writer";
 
 /** What the service needs from the engine besides the speech interface. */
 export interface SttExtras {
@@ -21,6 +22,8 @@ export interface SpeechModelsDeps {
   modelsDir: string;
   stt: Stt & SttExtras;
   models: ModelManager;
+  /** The file of the rewrite pass's writer, listed with the models on disk. */
+  writer: WriterModels;
   config(): { dictation: DictationConfig; engines: EnginesConfig };
   save(): void;
   /** Writes the model (and a fitting language) into the dictation settings. */
@@ -117,6 +120,7 @@ export class SpeechModels {
   /** Reads the models the person added, looks at the hardware and the disk, then takes in models that are already on this computer. Safe to call again. */
   async init(): Promise<void> {
     await this.#lib.init();
+    await this.#d.writer.init();
     await this.hardwareKnown();
     this.#d.changed();
     // A model that cannot be copied (disk full, file in use) stays where it is and can be downloaded as usual.
@@ -179,7 +183,8 @@ export class SpeechModels {
 
   view(): SpeechModelsView {
     const cat = this.catalog();
-    return buildView({
+    const writer = this.#d.writer.card();
+    const v = buildView({
       catalog: cat,
       installed: new Set(cat.filter((m) => this.#d.models.isInstalled(m.id) && !this.#lib.missing.has(m.id)).map((m) => m.id)),
       missingFiles: this.#lib.missing,
@@ -203,11 +208,16 @@ export class SpeechModels {
       platform: this.#d.platform,
       languageNote: this.#languageNote,
     });
+    return { ...v, writer, disk: { ...v.disk, total: v.disk.total + writer.diskBytes } };
   }
 
   // ---- actions ----------------------------------------------------------------------------------------------
 
   async download(id: string): Promise<SpeechModelsView> {
+    if (id === WRITER_MODEL.id) {
+      await this.#d.writer.download();
+      return this.view();
+    }
     if (!this.#lib.find(id) || this.#lib.find(id)!.origin === "custom") return this.view();
     this.#cfg.skippedModel = false;
     await this.#d.models.download(id as DictationModelId);
@@ -224,6 +234,10 @@ export class SpeechModels {
     return this.view();
   }
   async cancelDownload(id: string): Promise<SpeechModelsView> {
+    if (id === WRITER_MODEL.id) {
+      this.#d.models.transfers.cancel(id);
+      return this.view();
+    }
     if (this.#d.models.queued === id) this.#d.models.unqueue();
     else if (this.#d.models.transfers.get(id)) this.#d.models.transfers.cancel(id);
     else await this.#d.models.cancel();
@@ -257,7 +271,7 @@ export class SpeechModels {
   }
 
   async remove(id: string): Promise<number> {
-    return this.#lib.remove(id);
+    return id === WRITER_MODEL.id ? this.#d.writer.remove() : this.#lib.remove(id);
   }
 
   setIdleMinutes(minutes: EnginesConfig["idleMinutes"]): SpeechModelsView {

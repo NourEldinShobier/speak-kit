@@ -18,6 +18,15 @@ export async function sttWorkerUrl(distDir: string): Promise<URL> {
   );
 }
 
+/** The writer worker, found the same way. */
+export async function writerWorkerUrl(distDir: string): Promise<URL> {
+  const built = path.join(distDir, "../worker/writer-worker.js");
+  return access(built).then(
+    () => pathToFileURL(built),
+    () => new URL("./writer/worker.ts", import.meta.resolve("@speakkit/engine")),
+  );
+}
+
 export const clock = {
   now: () => Date.now(),
   after(ms: number, fn: () => void) {

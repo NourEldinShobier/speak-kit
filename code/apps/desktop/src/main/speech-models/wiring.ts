@@ -10,10 +10,11 @@ import { modelFetch } from "./download-fetch";
 import { parseHardware } from "./hardware-probe";
 import { memoryOf, openFolder, openProxySettings, pickModelFile, probeThisComputer, scanDirs } from "./ports";
 import { SpeechModels, type SttExtras } from "./service";
+import { createWriterParts, type WriterParts } from "./writer-wiring";
 
 interface Args {
   ctx: Ctx;
-  o: { modelsDir: string; sttWorker: URL; test: boolean; parent(): BrowserWindow | null };
+  o: { modelsDir: string; sttWorker: URL; writerWorker: URL; test: boolean; parent(): BrowserWindow | null };
   /** An engine given by a test or the scripted one; the real engine is made when absent. */
   stt: Stt | undefined;
   select(id: DictationModelId): void;
@@ -22,11 +23,13 @@ interface Args {
   svc: { readonly supported: boolean; readonly state: { status: string }; readonly core: { configure(s: Partial<Settings>): void } | undefined };
 }
 
+/** A test run keeps the plain fetch for local servers, except when it asks for the real engine, whose downloads must take the app path. */
+const downloadFetch = (a: Args) => modelFetch(__TEST_CODE__ && a.o.test && !process.env.SPEAKKIT_REAL_STT);
+
 /** The real engine (unless a test gave one): it asks the speech models service where to run, and downloads through the browser engine's fetch. */
 function createEngine(a: Args, speech: () => SpeechModels): Stt & SttExtras {
   if (a.stt) return a.stt;
-  // A test run keeps the plain fetch for local servers, except when it asks for the real engine, whose downloads must take the app path.
-  const systemFetch = modelFetch(__TEST_CODE__ && a.o.test && !process.env.SPEAKKIT_REAL_STT);
+  const systemFetch = downloadFetch(a);
   return new WhisperStt({
     modelsDir: a.o.modelsDir,
     workerUrl: a.o.sttWorker,
@@ -43,18 +46,34 @@ function createEngine(a: Args, speech: () => SpeechModels): Stt & SttExtras {
   });
 }
 
+/** The rewrite pass's writer: it runs where the speech models run, is released after the same quiet spell, and downloads through the same transfers. */
+const createWriter = (a: Args, speech: () => SpeechModels, transfers: Transfers): WriterParts =>
+  createWriterParts({
+    modelsDir: a.o.modelsDir,
+    writerWorker: a.o.writerWorker,
+    gpu: () => speech().gpuWanted(),
+    idleMinutes: () => a.ctx.config.engines.idleMinutes,
+    recording: () => isRecording(a.svc.state),
+    fetch: downloadFetch(a),
+    transfers,
+    scanDirs,
+    changed: () => a.push(true),
+  });
+
 /** The speech engine, the model manager and the speech models service, wired to each other and to the app's config. */
-export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; speech: SpeechModels } {
+export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; speech: SpeechModels; writer: WriterParts } {
   const cfg = (): DictationConfig => a.ctx.config.dictation;
   let speech!: SpeechModels;
   const stt = createEngine(a, () => speech);
+  const transfers = new Transfers();
+  const writer = createWriter(a, () => speech, transfers);
   const models = new ModelManager({
     stt,
     selected: () => cfg().model,
     select: a.select,
     changed: a.push,
     models: () => speech.catalog(),
-    transfers: new Transfers(),
+    transfers,
     blocked: () => speech.floorMessage(),
     switching: () => !!speech.switcher.switching,
   });
@@ -62,6 +81,7 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
     modelsDir: a.o.modelsDir,
     stt,
     models,
+    writer: writer.files,
     config: () => ({ dictation: cfg(), engines: a.ctx.config.engines }),
     save: () => a.ctx.saveConfig(),
     choose: (id, language) => {
@@ -82,7 +102,7 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
     platform: process.platform,
   });
   stt.onStatus((s) => s.state === "ready" && speech.used());
-  return { stt, models, speech };
+  return { stt, models, speech, writer };
 }
 
 /** Starts the speech models service (hardware probe, models on disk) and, while dictation is on, feeds the program in front and its keyboard layout to the automatic switching rules; the rules wait 300 ms for them to settle. Returns the stop function. */

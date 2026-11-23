@@ -16,6 +16,7 @@ import { RECORDER_RATE } from "../../shared/dictation/contract";
 import { openRecorderWindow, recorderHandle } from "./recorder-window";
 import { clock, coreSettings, keepOpenMs } from "./service-support";
 import { createOpenAiRewriter } from "./openai-rewriter";
+import { chooseRewriter, createLocalRewriter } from "./local-rewriter";
 import { historyFiles, scriptedRewriter, trashViaShell } from "./service-wiring";
 import type { Failure } from "./service-parts";
 import { createTranscriber } from "./stt";
@@ -27,7 +28,7 @@ export interface CoreHost {
   /** The words were not sent because the model cannot read a prompt. */
   onPromptDropped(): void;
   /** The service's public parts: the speech engine, the models, the HUD, the microphone state, and the test switch that refuses the microphone. */
-  svc: Pick<DictationService, "stt" | "speech" | "models" | "presenter" | "mic" | "micDenied" | "fakeRewrite">;
+  svc: Pick<DictationService, "stt" | "speech" | "models" | "writer" | "presenter" | "mic" | "micDenied" | "fakeRewrite">;
   failure: Failure;
   os: DictationOs;
   hotkeys: SwitchableHotkeys;
@@ -36,6 +37,13 @@ export interface CoreHost {
   onMicEvent(e: RecorderEvent): void;
   inserted(r: InsertResult): void;
 }
+
+/** The writer the settings name, read at every dictation: OpenAI with the saved key, or the model on this computer. */
+const realRewriter = ({ ctx, o, svc }: CoreHost) =>
+  chooseRewriter(() => ctx.config.dictation.rewriteWriter, {
+    openai: createOpenAiRewriter({ readKey: async () => (await o.readKey?.()) ?? null }),
+    local: createLocalRewriter(svc.writer.port),
+  });
 
 /** The microphone window and the dictation core over it, with the speech engine, the inserter and the history file. */
 export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictation; audio: AudioStore; spool: Spool; spooled: SpooledRecorder } {
@@ -81,7 +89,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     hotkeys: h.hotkeys,
     storage: files.storage,
     audio: files.audio,
-    rewriter: o.rewriter ?? (__TEST_CODE__ && o.test ? scriptedRewriter(() => svc.fakeRewrite) : createOpenAiRewriter({ readKey: async () => (await o.readKey?.()) ?? null })),
+    rewriter: o.rewriter ?? (__TEST_CODE__ && o.test ? scriptedRewriter(() => svc.fakeRewrite) : realRewriter(h)),
     settings: coreSettings(cfg()),
     ...(o.micOwner && { micOwner: o.micOwner }),
   });

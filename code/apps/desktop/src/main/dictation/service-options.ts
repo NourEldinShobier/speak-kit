@@ -11,6 +11,8 @@ export interface DictationServiceOptions {
   distDir: string;
   /** The speech worker file (dist/worker/stt-worker.js when built, the source file in development). */
   sttWorker: URL;
+  /** The writer worker file (dist/worker/writer-worker.js when built, the source file in development). */
+  writerWorker: URL;
   parent(): BrowserWindow | null;
   /** The test hook is on: a scripted speech engine replaces the real one and the microphone can be refused. */
   test: boolean;

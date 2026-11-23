@@ -1,5 +1,5 @@
 import { SPOKEN_LANGUAGE_LABELS } from "../shared/speech-models/config";
-import type { AccuracyFigure, ModelCard, SpeechModelsView } from "../shared/speech-models/contract";
+import type { AccuracyFigure, ModelCard, SpeechModelsView, WriterCard } from "../shared/speech-models/contract";
 
 export const languageName = (code: string): string => SPOKEN_LANGUAGE_LABELS[code] ?? code;
 
@@ -87,7 +87,7 @@ export function etaText(seconds: number | undefined): string {
 }
 
 /** "214 MB of 356 MB. About 3 minutes left." */
-export function transferText(c: ModelCard): string {
+export function transferText(c: Pick<ModelCard, "transfer" | "bytes">): string {
   const t = c.transfer;
   if (!t) return "";
   if (t.state === "preparing") return "Getting the model ready. This takes a few seconds.";
@@ -97,7 +97,7 @@ export function transferText(c: ModelCard): string {
 }
 
 /** The sentence under a failed download: what happened (it names the host) and that the part already there is kept. */
-export function failureText(c: ModelCard): string {
+export function failureText(c: Pick<ModelCard, "failure">): string {
   const f = c.failure;
   if (!f) return "";
   const kept = f.keptBytes > 0 && f.kind !== "checksum" ? ` ${sizeText(f.keptBytes)} are kept and the download resumes from there.` : "";
@@ -118,6 +118,14 @@ export function deleteConfirm(c: ModelCard, view: Pick<SpeechModelsView, "models
   const stops = c.inUse && last ? " Dictation stops until a model is downloaded." : "";
   const custom = c.origin === "custom" ? " The file you added it from is not touched." : "";
   return { title: `Delete ${c.name}?`, body: `${frees}${stops}${custom}` };
+}
+
+/** Title and body of the confirmation for deleting the rewrite pass's writer. */
+export function writerDeleteConfirm(w: Pick<WriterCard, "name" | "bytes" | "diskBytes">): { title: string; body: string } {
+  return {
+    title: `Delete ${w.name}?`,
+    body: `This frees ${sizeText(Math.max(w.diskBytes, w.bytes))} of disk space. The rewrite pass pastes the text as you said it until the model is downloaded again.`,
+  };
 }
 
 /** The model in use first, then the ones recommended for a language, then the rest; the order of the list decides inside each group. */

@@ -25,6 +25,7 @@ const DEFAULTS = {
   cleanup: CLEANUP,
   modes: [],
   rewrite: { enabled: false, deadlineMs: 4000 },
+  rewriteWriter: "openai",
   keepRecordings: false,
   smartSpacing: false,
   sounds: { enabled: false, volume: 50 },
@@ -234,6 +235,15 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
     expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
+  });
+
+  it("chooses the writer of the rewrite pass: OpenAI unless saved otherwise, and a file saved before the choice existed keeps working", () => {
+    const saved = { rewrite: { enabled: true, deadlineMs: 6000 } };
+    expect(v.parse(DictationConfigSchema, saved)).toMatchObject({ rewrite: { enabled: true, deadlineMs: 6000 }, rewriteWriter: "openai" });
+    expect(v.parse(DictationConfigSchema, { ...saved, rewriteWriter: "local" }).rewriteWriter).toBe("local");
+    expect(v.parse(DictationConfigSchema, { ...saved, rewriteWriter: "gpt" }).rewriteWriter).toBe("openai");
+    expect(v.safeParse(DictationPatchSchema, { rewriteWriter: "local" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { rewriteWriter: "gpt" }).success).toBe(false);
   });
 
   it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {

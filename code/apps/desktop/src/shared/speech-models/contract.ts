@@ -54,6 +54,20 @@ export interface ModelCard {
   diskBytes: number;
 }
 
+/** The text model of the rewrite pass that runs on this computer: its download, its place on disk, and why it failed. */
+export interface WriterCard {
+  id: string;
+  name: string;
+  description: string;
+  bytes: number;
+  installed: boolean;
+  license: { name: string; url: string };
+  /** Bytes it takes in our models folder, a partial download included. */
+  diskBytes: number;
+  transfer?: { state: "running" | "paused"; fraction: number; etaSeconds?: number };
+  failure?: NonNullable<ModelCard["failure"]>;
+}
+
 /** The model Speak Kit picks when the person chooses this dictation language. */
 export interface TableRow {
   language: string;
@@ -86,6 +100,8 @@ export interface SwitchRuleView {
 export interface SpeechModelsView {
   /** The model in use first, then installed ones, then the rest. */
   models: ModelCard[];
+  /** The writer of the rewrite pass that runs on this computer; it is downloaded and deleted by its id, like a speech model. */
+  writer: WriterCard;
   table: TableRow[];
   /** Model id to name. */
   names: Record<string, string>;

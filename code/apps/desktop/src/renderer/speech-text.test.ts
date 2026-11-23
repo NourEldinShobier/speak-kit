@@ -165,6 +165,7 @@ describe("sortedModels", () => {
 const base = (over: Partial<SpeechModelsView> = {}): SpeechModelsView => ({
   models: [card({ inUse: true }), parakeet],
   table: [],
+  writer: { id: "writer-gemma-4-e2b", name: "Gemma 4 E2B", description: "", bytes: 3349516256, installed: false, license: { name: "Apache 2.0", url: "" }, diskBytes: 0 },
   names: { "parakeet-tdt-0.6b-v3-q4_0": "Parakeet v3" },
   dictationLanguage: "en",
   sample: { recordings: { en: 4, de: 4, ar: 4 }, words: { en: 79, de: 80, ar: 60 }, machine: "one test computer" },

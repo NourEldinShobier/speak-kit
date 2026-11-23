@@ -122,6 +122,7 @@ try {
     check("bundles the extension", existsSync(path.join(resources, "extension/manifest.json")));
     check("bundles the engine worker next to the app", existsSync(path.join(resources, "app/dist/worker/worker.js")));
     check("bundles the speech worker next to the app", existsSync(path.join(resources, "app/dist/worker/stt-worker.js")));
+    check("bundles the writer worker next to the app", existsSync(path.join(resources, "app/dist/worker/writer-worker.js")));
   }
 
   const q = spawn(exe, ["--quit"], { env, stdio: "ignore" });

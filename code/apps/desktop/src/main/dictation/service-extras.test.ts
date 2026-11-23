@@ -4,7 +4,7 @@ import { DEFAULT_DICTATION } from "../../shared/dictation/settings";
 
 vi.mock("electron", () => ({ powerSaveBlocker: { start: () => 1, stop: () => undefined, isStarted: () => false }, clipboard: {}, shell: {} }));
 vi.mock("../system/clipboard", () => ({ electronClipboard: {} }));
-const { createRecovery, onStateChange, prepareModel, recoverTakes } = await import("./service-extras");
+const { createRecovery, onStateChange, prepareModel, onRecordingStart, recoverTakes, syncWriter, warmWriter } = await import("./service-extras");
 
 const idle: DictationState = { status: "idle" };
 
@@ -87,6 +87,53 @@ describe("prepareModel", () => {
     const a = models(false);
     prepareModel(a.m, { quiet: false, idleMinutes: 0 });
     expect(a.log).toEqual([]);
+  });
+});
+
+describe("warmWriter", () => {
+  const warmed = (cfg: { enabled: boolean; writer: "openai" | "local" }) => {
+    const log: string[] = [];
+    warmWriter({ warm: async () => void log.push("warm") }, { rewrite: { enabled: cfg.enabled, deadlineMs: 4000 }, rewriteWriter: cfg.writer });
+    return log;
+  };
+
+  it("loads the writer on this computer when the rewrite pass is on and set to use it", () => {
+    expect(warmed({ enabled: true, writer: "local" })).toEqual(["warm"]);
+  });
+
+  it("loads nothing when the pass is off or the writer is OpenAI", () => {
+    expect(warmed({ enabled: false, writer: "local" })).toEqual([]);
+    expect(warmed({ enabled: true, writer: "openai" })).toEqual([]);
+  });
+});
+
+describe("syncWriter", () => {
+  const synced = (cfg: { on?: boolean; pass: boolean; writer: "openai" | "local" }, patch: { rewrite?: object; rewriteWriter?: string }) => {
+    const log: string[] = [];
+    const writer = { warm: async () => void log.push("warm"), unload: async () => void log.push("unload") };
+    syncWriter(writer, { enabled: cfg.on ?? true, rewrite: { enabled: cfg.pass, deadlineMs: 4000 }, rewriteWriter: cfg.writer }, patch);
+    return log;
+  };
+
+  it("loads the writer when the pass is switched to it, and releases it when the pass is switched off or to OpenAI", () => {
+    expect(synced({ pass: true, writer: "local" }, { rewriteWriter: "local" })).toEqual(["warm"]);
+    expect(synced({ pass: false, writer: "local" }, { rewrite: {} })).toEqual(["unload"]);
+    expect(synced({ pass: true, writer: "openai" }, { rewriteWriter: "openai" })).toEqual(["unload"]);
+  });
+
+  it("does nothing when the change was about something else, or dictation is off", () => {
+    expect(synced({ pass: true, writer: "local" }, {})).toEqual([]);
+    expect(synced({ on: false, pass: true, writer: "local" }, { rewrite: {} })).toEqual([]);
+  });
+});
+
+describe("onRecordingStart", () => {
+  it("starts loading the speech model, and the writer when the pass is set to use it", () => {
+    const log: string[] = [];
+    const models = { warm: (quiet?: boolean) => void log.push(`models:${quiet}`) };
+    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true, deadlineMs: 4000 }, rewriteWriter: "local" });
+    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true, deadlineMs: 4000 }, rewriteWriter: "openai" });
+    expect(log).toEqual(["models:true", "writer", "models:true"]);
   });
 });
 
