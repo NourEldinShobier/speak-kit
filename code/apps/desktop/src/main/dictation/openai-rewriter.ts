@@ -1,19 +1,16 @@
-import type { Rewriter, RewriteStyle } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, GUARD, TEMPLATES, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
 import { OPENAI_BASE_URL } from "../voice-chat/openai";
 
 /** The writer model the rewrite pass uses; the opt-in dialog names it. */
 export const REWRITE_MODEL = "gpt-4o-mini";
 
-const BASE = "Keep the meaning, the language, every number, every list item and every line break as they are. Do not add, remove or explain anything. Answer with the tidied text only.";
-
 const CASE_NOTE = { sentence: "", keep: " Do not change any capital or small letter." } as const;
 
-/** The system prompt: the clean-up choices about capitals and the final full stop are told to the model, not left to it. */
+/** The system prompt: the template's task, then the clean-up choices about capitals and the final full stop (told to the model, not left to it), then the guard. */
 export const instructions = (style?: RewriteStyle): string => {
-  const fixes = style && style.capitals !== "sentence" ? "Fix punctuation and clear speech-recognition mistakes." : "Fix punctuation, capital letters and clear speech-recognition mistakes.";
   const case_ = style ? CASE_NOTE[style.capitals] : "";
   const stop = style?.stripFinalStop ? " Do not end the text with a full stop." : "";
-  return `You tidy text that was dictated aloud. ${fixes}${case_}${stop} ${BASE}`;
+  return `${TEMPLATES[style?.template ?? DEFAULT_TEMPLATE].prompt}${case_}${stop} ${GUARD}`;
 };
 
 interface Options {

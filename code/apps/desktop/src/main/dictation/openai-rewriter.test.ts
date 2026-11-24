@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { GUARD, TEMPLATE_IDS, type TemplateId } from "@speakkit/dictation";
 import { createOpenAiRewriter, instructions, REWRITE_MODEL } from "./openai-rewriter";
 
 const reply =
@@ -48,5 +49,32 @@ describe("OpenAI rewriter", () => {
     expect(instructions({ capitals: "sentence", stripFinalStop: false })).toContain("capital letters");
     expect(instructions({ capitals: "keep", stripFinalStop: true })).toContain("Do not change any capital");
     expect(instructions({ capitals: "keep", stripFinalStop: true })).toContain("Do not end the text with a full stop");
+  });
+
+  const KEY: Record<TemplateId, string> = {
+    tidy: "You tidy dictated text.",
+    exact: "Change nothing else: keep every word, filler and repetition exactly as said.",
+    message: "as a relaxed chat message",
+    email: "as the body of an email",
+    formal: "in a formal, neutral register",
+    notes: "into brief notes",
+    concise: "Shorten this dictated text.",
+    technical: "for a code editor or terminal",
+  };
+
+  it("builds the prompt of every template from its task and the guard, in at most 80 words", () => {
+    for (const id of TEMPLATE_IDS) {
+      const text = instructions({ capitals: "sentence", stripFinalStop: false, template: id });
+      expect(text, id).toContain(KEY[id]);
+      expect(text.endsWith(GUARD), id).toBe(true);
+      expect(text.split(/\s+/).length, id).toBeLessThanOrEqual(80);
+    }
+  });
+
+  it("uses Tidy when no template is named, and puts the capital and full-stop notes before the guard", () => {
+    expect(instructions()).toBe(instructions({ capitals: "sentence", stripFinalStop: false, template: "tidy" }));
+    const text = instructions({ capitals: "keep", stripFinalStop: true, template: "email" });
+    expect(text).toContain("as the body of an email");
+    expect(text.endsWith(`Do not change any capital or small letter. Do not end the text with a full stop. ${GUARD}`)).toBe(true);
   });
 });

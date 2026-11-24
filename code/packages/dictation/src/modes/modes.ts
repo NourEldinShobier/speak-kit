@@ -1,6 +1,7 @@
 import { exeKey } from "../paste-plan";
 import type { Replacement, Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
+import { DEFAULT_TEMPLATE, type TemplateId } from "./templates";
 
 /** How dictation behaves in some apps: its own words and replacements and an optional rewrite. */
 export interface Mode {
@@ -11,6 +12,8 @@ export interface Mode {
   /** Website host names such as "mail.google.com": in a supported browser these pick the mode by the page in front, ahead of `apps`. */
   sites: string[];
   rewrite: boolean;
+  /** How the rewrite pass words the text. The default mode uses the app default. */
+  template: TemplateId;
   terms: Term[];
   /** Phrases swapped after speaking, only in this mode; they win over a shared replacement of the same phrase. */
   replacements: Replacement[];
@@ -26,6 +29,7 @@ export const defaultMode = (): Mode => ({
   apps: [],
   sites: [],
   rewrite: false,
+  template: DEFAULT_TEMPLATE,
   terms: [],
   replacements: [],
 });
@@ -117,13 +121,14 @@ export function mergeReplacements(shared: readonly Replacement[], own: readonly 
 }
 
 /** The words and replacements for one dictation: the person's settings, with the mode's own on top. The default mode changes nothing. */
-export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean } {
-  if (mode.id === DEFAULT_MODE_ID) return { ...base, rewrite: mode.rewrite };
+export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean; template: TemplateId } {
+  if (mode.id === DEFAULT_MODE_ID) return { ...base, rewrite: mode.rewrite, template: mode.template };
   return {
     ...base,
     terms: mergeTerms(base.terms, mode.terms),
     replacements: mergeReplacements(base.replacements, mode.replacements),
     rewrite: mode.rewrite,
+    template: mode.template,
   };
 }
 

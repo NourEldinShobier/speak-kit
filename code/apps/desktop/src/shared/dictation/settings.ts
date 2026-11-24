@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { normalizeSite } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
 export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
@@ -97,6 +97,8 @@ const modeEntries = {
     [],
   ),
   rewrite: v.boolean(),
+  /** How the rewrite pass words the text; modes saved before templates existed, or with an unknown one, use Tidy. */
+  template: v.fallback(v.picklist(TEMPLATE_IDS), DEFAULT_TEMPLATE),
   /** Replacements only for this mode; a file from before they existed loads with none. */
   replacements,
 };

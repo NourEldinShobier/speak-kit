@@ -3,6 +3,7 @@ import { skipPauses } from "./capture/outage";
 import type { History } from "./history";
 import { applyMode, resolveMode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
+import type { TemplateId } from "./modes/templates";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
 import { spaceBefore } from "./spacing";
@@ -208,7 +209,11 @@ async function keepRecording(ctx: Context, id: string, clip: Clip): Promise<void
   }
 }
 
-const rewriteStyle = (s: Pick<Settings, "autoCapitalize" | "stripFinalStop">): RewriteStyle => ({ capitals: s.autoCapitalize ? "sentence" : "keep", stripFinalStop: s.stripFinalStop });
+const rewriteStyle = (s: Pick<Settings, "autoCapitalize" | "stripFinalStop"> & { template: TemplateId }): RewriteStyle => ({
+  capitals: s.autoCapitalize ? "sentence" : "keep",
+  stripFinalStop: s.stripFinalStop,
+  template: s.template,
+});
 
 /** A take with no sound is refused and kept; one cut short is kept too, and goes on. */
 function checkClip(ctx: Context, clip: Clip): Outcome | undefined {
@@ -238,7 +243,7 @@ async function transcribe(ctx: Context, clip: Clip, prompt: string): Promise<{ h
 }
 
 /** The rewrite pass, when the mode asks for one, it is switched on and a writer is there; otherwise undefined. */
-async function rewriteStep(ctx: Context, eff: Settings, text: string): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
+async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId }, text: string): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
   if (!eff.rewrite || !ctx.settings.rewrite.enabled || !ctx.deps.rewriter) return undefined;
   return rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock, style: rewriteStyle(eff) });
 }

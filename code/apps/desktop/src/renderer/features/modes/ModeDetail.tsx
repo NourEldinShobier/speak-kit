@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { overridesShared, type WritingMode as Mode, type Term } from "@speakkit/dictation";
+import { overridesShared, TEMPLATE_IDS, TEMPLATES, type TemplateId, type WritingMode as Mode, type Term } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
@@ -210,6 +210,28 @@ function RewriteRow({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady
   );
 }
 
+const TEMPLATE_OPTIONS = TEMPLATE_IDS.map((id) => ({ value: id, label: `${TEMPLATES[id].name}: ${TEMPLATES[id].line}` }));
+
+function TemplateRow({ mode, active, onChange }: { mode: Mode; active: boolean; onChange(next: Mode): void }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Rewrite style"
+      description="How the writer words the text in this mode."
+      control={
+        <Select
+          label="Rewrite style"
+          value={mode.template}
+          disabled={!active}
+          onChange={(v) => onChange({ ...mode, template: v as TemplateId })}
+          options={TEMPLATE_OPTIONS}
+          renderValue={(o) => TEMPLATES[o?.value as TemplateId]?.name}
+        />
+      }
+    />
+  );
+}
+
 export interface ModeDetailProps {
   s: DictationStatus;
   mode: Mode;
@@ -243,6 +265,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
       <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
       <div className="lm-card">
         <RewriteRow mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
+        <TemplateRow mode={mode} active={mode.rewrite && s.settings.rewrite.enabled} onChange={onChange} />
       </div>
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <ModeReplacements mode={mode} onChange={onChange} />

@@ -1,5 +1,6 @@
 import { dropFinalStop, isNumbersOnly } from "../rules";
 import type { Clock } from "../types";
+import { DEFAULT_TEMPLATE, TEMPLATES, type TemplateId } from "./templates";
 
 export const DEFAULT_REWRITE_DEADLINE_MS = 4000;
 export const MIN_REWRITE_DEADLINE_MS = 1000;
@@ -9,6 +10,8 @@ export const MAX_REWRITE_DEADLINE_MS = 15_000;
 export interface RewriteStyle {
   capitals: "sentence" | "keep";
   stripFinalStop: boolean;
+  /** The wording of the task; the app default when absent. */
+  template?: TemplateId;
 }
 const SENTENCE_STYLE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
 
@@ -25,8 +28,9 @@ const digits = (s: string): string => (s.match(/\d+/g) ?? []).join(" ");
 const upperCount = (s: string): number => (s.match(/\p{Lu}/gu) ?? []).length;
 const listLines = (s: string): number => (s.match(/^\s*(?:[-*•]|\d+[.)])\s/gm) ?? []).length;
 
-/** A rewrite may change wording, never the figures or the shape of a list the person dictated. */
-export const keepsFacts = (original: string, rewritten: string): boolean => digits(original) === digits(rewritten) && listLines(original) === listLines(rewritten);
+/** A rewrite may change wording and never the figures; it may change a dictated list only when the template's job is to make or merge lists. */
+export const keepsFacts = (original: string, rewritten: string, template: TemplateId = DEFAULT_TEMPLATE): boolean =>
+  digits(original) === digits(rewritten) && (!TEMPLATES[template].keepsLists || listLines(original) === listLines(rewritten));
 
 /** The writer's answer, or null when it throws (also at once, before any await). */
 async function ask(rewriter: Rewriter, req: { text: string; signal: AbortSignal; style: RewriteStyle }): Promise<string | null> {
@@ -67,7 +71,7 @@ export async function rewritePass(req: {
     // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
     if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
     if (style.stripFinalStop) next = dropFinalStop(next);
-    if (!keepsFacts(text, next)) return { text, outcome: "changed-facts" };
+    if (!keepsFacts(text, next, style.template)) return { text, outcome: "changed-facts" };
     // The text came with its trailing space (or not); the rewrite keeps that.
     return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
   } finally {

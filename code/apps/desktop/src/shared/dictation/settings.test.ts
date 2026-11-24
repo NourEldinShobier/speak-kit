@@ -172,7 +172,7 @@ describe("audio and output settings", () => {
 
   it("loads a mode saved with the removed insert, capitals and end choices and drops them", () => {
     const saved = { id: "m1", name: "Code", apps: ["code"], insertMode: "type", capitals: "keep", end: "no-full-stop", rewrite: true, terms: [] };
-    expect(v.parse(DictationConfigSchema, { modes: [saved] }).modes).toEqual([{ id: "m1", name: "Code", apps: ["code"], sites: [], rewrite: true, terms: [], replacements: [] }]);
+    expect(v.parse(DictationConfigSchema, { modes: [saved] }).modes).toEqual([{ id: "m1", name: "Code", apps: ["code"], sites: [], rewrite: true, template: "tidy", terms: [], replacements: [] }]);
   });
 
   it("ignores the removed micExclusions and appRules keys of an older config", () => {
@@ -215,7 +215,17 @@ describe("vocabulary, modes and rewrite in the config", () => {
   it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
     const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], rewrite: false, terms: [] };
     const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", rewrite: "yes" }, { ...mode, id: "m3", name: "" }] }).modes;
-    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], replacements: [] }]);
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], template: "tidy", replacements: [] }]);
+  });
+
+  it("loads a mode saved before templates as Tidy, keeps a known template and falls back to Tidy for an unknown one", () => {
+    const old = { id: "m1", name: "Mail", apps: [], rewrite: true, terms: [] };
+    const template = (t: unknown) => v.parse(DictationConfigSchema, { modes: [{ ...old, template: t }] }).modes[0]?.template;
+    expect(v.parse(DictationConfigSchema, { modes: [old] }).modes[0]?.template).toBe("tidy");
+    expect(template("email")).toBe("email");
+    expect(template("poem")).toBe("tidy");
+    expect(template(3)).toBe("tidy");
+    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...old, template: "notes", sites: [], replacements: [] }] }).success).toBe(true);
   });
 
   it("gives a mode saved before websites existed an empty list, and keeps sites as host names, once each", () => {
@@ -259,7 +269,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     const mode = { id: "m1", name: "Code", apps: ["code"], rewrite: false };
     const good = { id: "t1", word: "pnpm", soundsLike: [] };
     const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
-    expect(got).toEqual([{ ...mode, sites: [], replacements: [], terms: [good] }]);
+    expect(got).toEqual([{ ...mode, sites: [], replacements: [], template: "tidy", terms: [good] }]);
   });
 
   it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {

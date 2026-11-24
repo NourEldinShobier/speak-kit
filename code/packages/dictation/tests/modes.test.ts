@@ -14,6 +14,8 @@ import {
   removeMode,
   resolveMode,
   rewritePass,
+  TEMPLATE_IDS,
+  TEMPLATES,
   setApps,
   type WritingMode as Mode,
   type Rewriter,
@@ -59,10 +61,12 @@ describe("modes", () => {
 
   it("adds its own words and the rewrite choice for its apps and changes nothing for the default mode", () => {
     const base = { ...defaultSettings };
-    expect(applyMode(base, defaultMode())).toEqual({ ...base, rewrite: false });
+    expect(applyMode(base, defaultMode())).toEqual({ ...base, rewrite: false, template: "tidy" });
     const out = applyMode(base, mode({ rewrite: true, terms: [{ id: "1", word: "pnpm", soundsLike: [] }] }));
     expect(out).toMatchObject({ autoCapitalize: true, stripFinalStop: false, insertMode: "paste", rewrite: true });
     expect(out.terms.map((t) => t.word)).toEqual(["pnpm"]);
+    expect(out.template).toBe("tidy");
+    expect(applyMode(base, mode({ template: "notes" })).template).toBe("notes");
   });
 });
 
@@ -338,5 +342,54 @@ describe("replacements per mode", () => {
     await r.hold(1000);
     await r.time.advance(200);
     expect(r.ins.inserted[1]?.text).toBe("Hello world ");
+  });
+});
+
+describe("rewrite templates", () => {
+  it("lists the eight templates, and only notes and concise may change list lines", () => {
+    expect([...TEMPLATE_IDS]).toEqual(["tidy", "exact", "message", "email", "formal", "notes", "concise", "technical"]);
+    expect(TEMPLATE_IDS.filter((id) => !TEMPLATES[id].keepsLists)).toEqual(["notes", "concise"]);
+    expect(TEMPLATES.tidy.name).toBe("Tidy");
+  });
+
+  it("accepts a different number of list lines for notes and concise, and rejects it for the others", () => {
+    expect(keepsFacts("pack the tent the stove and the bags", "- tent\n- stove\n- bags", "notes")).toBe(true);
+    expect(keepsFacts("- tent\n- stove\n- bags", "Tent, stove and bags", "concise")).toBe(true);
+    for (const id of ["tidy", "exact", "message", "email", "formal", "technical"] as const) {
+      expect(keepsFacts("- tent\n- stove", "Tent and stove", id), id).toBe(false);
+      expect(keepsFacts("- tent\n- stove", "- Tent\n- Stove", id), id).toBe(true);
+    }
+    expect(keepsFacts("- tent\n- stove", "Tent and stove")).toBe(false);
+  });
+
+  it("rejects changed figures for every template", () => {
+    for (const id of TEMPLATE_IDS) {
+      expect(keepsFacts("call 50 people", "Call 15 people.", id), id).toBe(false);
+      expect(keepsFacts("bring 3 contracts", "Bring three contracts.", id), id).toBe(false);
+      expect(keepsFacts("bring 3 contracts", "Bring 3 contracts.", id), id).toBe(true);
+    }
+  });
+
+  it("lets the pass turn prose into notes with the notes template and drops the same answer with Tidy", async () => {
+    const rw: Rewriter = { rewrite: async () => "- tent\n- stove\n- bags" };
+    const text = "the tent the stove and the bags ";
+    const ask = (template: "notes" | "tidy") => rewritePass({ text, rewriter: rw, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: false, template } });
+    expect((await ask("notes")).outcome).toBe("rewritten");
+    expect(await ask("tidy")).toEqual({ text, outcome: "changed-facts" });
+  });
+
+  it("gives the writer the template of the mode in use, and no call where the mode has no rewrite", async () => {
+    const styles: unknown[] = [];
+    const rewriter: Rewriter = { rewrite: async ({ text, style }) => (styles.push(style), text) };
+    const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], rewrite: true, template: "message" });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter });
+    const say = async (exe: string) => {
+      r.ins.state.current = target({ exe });
+      await r.hold(1000);
+      await r.time.advance(200);
+    };
+    await say("slack.exe");
+    await say("notepad.exe");
+    expect(styles).toEqual([{ capitals: "sentence", stripFinalStop: false, template: "message" }]);
   });
 });
