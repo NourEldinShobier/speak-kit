@@ -2,8 +2,8 @@ import { Checkbox, Icon } from "@speakkit/ui";
 import type { HistoryItem } from "../../../shared/dictation/contract";
 import { clockText, entryLabel, expiryText, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
 
-function RowMeta({ item, deadlineMs }: { item: HistoryItem; deadlineMs: number }) {
-  const tag = rewriteTag(item.rewrite, deadlineMs);
+function RowMeta({ item }: { item: HistoryItem }) {
+  const tag = rewriteTag(item.rewrite);
   return (
     <div className="dict-hist__body">
       <p className="dict-hist__text">{item.text}</p>
@@ -71,7 +71,6 @@ export function HistoryRow({
   onDelete,
   open,
   onToggle,
-  rewriteDeadlineMs = 4000,
   selection,
 }: {
   item: HistoryItem;
@@ -80,7 +79,6 @@ export function HistoryRow({
   onDelete: () => void;
   open?: boolean;
   onToggle?: () => void;
-  rewriteDeadlineMs?: number;
   /** Selection mode: whether the entry is ticked and how to tick it. */
   selection?: { checked: boolean; toggle: () => void };
 }) {
@@ -89,7 +87,7 @@ export function HistoryRow({
     <div className="lm-row dict-hist__row" data-testid="history-row" data-row={item.id}>
       {selection && <Checkbox aria-label={`Select: ${label}`} checked={selection.checked} onChange={selection.toggle} />}
       <RowWhen item={item} label={label} open={open} onToggle={onToggle} />
-      <RowMeta item={item} deadlineMs={rewriteDeadlineMs} />
+      <RowMeta item={item} />
       <RowActions label={label} copied={copied} onCopy={onCopy} onDelete={onDelete} />
     </div>
   );

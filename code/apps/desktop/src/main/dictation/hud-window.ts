@@ -2,7 +2,7 @@ import { screen } from "electron";
 import { HUD_EVENT } from "../../shared/dictation/channels";
 import { createSecureWindow } from "../secure-window";
 import { hudChrome, raiseAboveEverything } from "./hud-chrome";
-import { hudPosition } from "./hud-place";
+import { hudPosition, takesClicks } from "./hud-place";
 import type { HudState, HudWindow } from "./hud";
 import { activeLocale } from "../../shared/i18n";
 
@@ -86,7 +86,7 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
     push(state) {
       if (state.kind === "view") {
         // Buttons in the pill need the mouse; everything else lets clicks fall through to the app underneath.
-        w.setIgnoreMouseEvents(!(state.view.kind === "error" && state.view.action));
+        w.setIgnoreMouseEvents(!takesClicks(state.view));
         w.webContents.send(HUD_EVENT, { ...state.view, locale: activeLocale() });
         return;
       }

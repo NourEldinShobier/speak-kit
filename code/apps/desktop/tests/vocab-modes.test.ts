@@ -208,7 +208,7 @@ describe("Modes page", () => {
     await rewrite.getByText("Your text leaves this computer.").waitFor();
     await rewrite.getByRole("button", { name: "Turn on rewrite pass" }).click();
     await l.page.getByRole("button", { name: "Change" }).waitFor();
-    expect((await settings(l)).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
+    expect((await settings(l)).rewrite).toEqual({ enabled: true });
 
     await row.click();
     await l.page.getByRole("combobox", { name: "Rewrite pass" }).click();
@@ -294,7 +294,7 @@ describe("History page", () => {
       model: "large-v3-turbo-q5_0",
       audio: "e1.wav",
     },
-    { id: "e2", at: now - 3_600_000, text: "Deploy Kubernetes today.", raw: "deploy cooper netties today", durationMs: 2000, app: "chrome.exe", rewrite: "deadline" },
+    { id: "e2", at: now - 3_600_000, text: "Deploy Kubernetes today.", raw: "deploy cooper netties today", durationMs: 2000, app: "chrome.exe", rewrite: "skipped" },
   ];
 
   it("shows the retention on each entry and finds a word by its sounds-like spelling", async () => {
@@ -304,7 +304,7 @@ describe("History page", () => {
     await l.page.evaluate(() => window.speakkitDictation.patchSettings({ terms: [{ id: "k", word: "Kubernetes", soundsLike: ["cooper netties"] }] }));
     await open(l, "History");
     expect(await l.page.locator(".dict-hist__meta").first().textContent()).toContain("Removed in 7 days");
-    expect(await l.page.getByText("Pasted as said after 4 seconds").count()).toBe(1);
+    expect(await l.page.getByText("Pasted as said (skipped)").count()).toBe(1);
 
     await l.page.getByLabel("Search what you dictated").fill("cooper netties");
     await l.page.getByText("Matched “cooper netties” from your Vocabulary entry Kubernetes").waitFor();

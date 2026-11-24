@@ -56,6 +56,9 @@ export const ES_MAIN: Record<keyof typeof MAIN, string> = {
 
   "hud.ready": "Dictado listo",
   "hud.transcribing": "Transcribiendo",
+  "hud.tidying": "Puliendo el texto",
+  "hud.skip": "Omitir",
+  "hud.skipHint": "{key} omite",
   "hud.copied": "Copiado",
   "hud.pressPaste": "Pulsa {key} V para pegar",
   "hud.copiedSecure": "Copiado: hay un campo de contraseña o la entrada segura de teclado activa",

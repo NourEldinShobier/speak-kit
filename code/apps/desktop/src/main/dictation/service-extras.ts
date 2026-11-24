@@ -37,8 +37,9 @@ export function createRecovery(h: { spool: { spool: Spool; spooled: SpooledRecor
   };
 }
 
-/** Escape is taken from the program in front only when it cancels something: a toggled recording, or typing that is going in (a paste cannot be stopped, so Escape stays with the app). */
-export const cancelGrab = (s: DictationState, typing: boolean): boolean => (s.status === "recording" && s.mode === "toggle") || (s.status === "pasting" && typing);
+/** Escape is taken from the program in front only when it cancels something: a toggled recording, a rewrite that can be skipped, or typing that is going in (a paste cannot be stopped, so Escape stays with the app). */
+export const cancelGrab = (s: DictationState, typing: boolean): boolean =>
+  (s.status === "recording" && s.mode === "toggle") || (s.status === "transcribing" && !!s.rewriting) || (s.status === "pasting" && typing);
 
 /** What a change of the dictation state sets off outside the pill: a tone, the cancel key's grab, and the last failure the page keeps. */
 export function onStateChange(h: {
@@ -55,7 +56,7 @@ export function onStateChange(h: {
   const { next, failure } = h;
   const kind = soundFor(h.prev, next);
   if (kind) h.recorder?.tone(tonesFor(kind, h.cfg.sounds));
-  // Escape cancels a toggled recording, and typing that is going in; in a held or locked recording it belongs to the app in front.
+  // Escape cancels a toggled recording, skips a rewrite, and stops typing that is going in; in a held or locked recording it belongs to the app in front.
   h.hotkeys?.setCancelGrab(cancelGrab(next, h.typing));
   if (next.status === "error") {
     failure.error = next.code;

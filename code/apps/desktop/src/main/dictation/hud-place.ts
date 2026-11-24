@@ -14,9 +14,13 @@ export function hudPosition(area: { x: number; y: number; width: number; height:
 
 /**
  * Whether a view is drawn when the indicator is switched off. Off hides the recording, transcribing and ready pills; anything the person has to read or
- * answer (a failure, a message, a button) still shows, because those are not the recording indicator.
+ * answer (a failure, a message, a button) still shows, because those are not the recording indicator. The skip button of the rewrite is one of them: the
+ * cancel key is taken while it shows.
  */
 export function drawn(indicator: Indicator, view: HudView): boolean {
   if (indicator !== "off") return true;
-  return !(view.kind === "recording" || view.kind === "transcribing" || view.kind === "ready" || view.kind === "pasted");
+  return !(view.kind === "recording" || (view.kind === "transcribing" && !view.skip) || view.kind === "ready" || view.kind === "pasted");
 }
+
+/** Whether the pill has a button to click; only then does the HUD window take the mouse, otherwise clicks fall through to the app underneath. */
+export const takesClicks = (view: HudView): boolean => (view.kind === "error" && !!view.action) || (view.kind === "transcribing" && !!view.skip);

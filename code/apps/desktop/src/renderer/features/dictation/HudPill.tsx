@@ -100,6 +100,18 @@ function Failure({ view }: { view: Extract<HudView, { kind: "error" }> }) {
   );
 }
 
+function Transcribing({ skip }: { skip: Extract<HudView, { kind: "transcribing" }>["skip"] }) {
+  const { t } = useT();
+  return (
+    <>
+      <Spinner size={14} />
+      <b>{skip ? t("hud.tidying") : t("hud.transcribing")}</b>
+      {skip?.key && <Hint>{t("hud.skipHint", { key: skip.key })}</Hint>}
+      {skip && <Act action={skip} />}
+    </>
+  );
+}
+
 function Content({ view }: { view: HudView }) {
   const { t } = useT();
   switch (view.kind) {
@@ -114,12 +126,7 @@ function Content({ view }: { view: HudView }) {
     case "recording":
       return <Recording view={view} />;
     case "transcribing":
-      return (
-        <>
-          <Spinner size={14} />
-          <b>{t("hud.transcribing")}</b>
-        </>
-      );
+      return <Transcribing skip={view.skip} />;
     case "pasted":
       return <Lead name="check" />; // a check and nothing else: the text is already in the app
     case "copied":
@@ -136,7 +143,7 @@ function Content({ view }: { view: HudView }) {
   }
 }
 
-/** One dark pill that states what dictation is doing. Only the error buttons take clicks; a click anywhere else on a failure dismisses it. */
+/** One dark pill that states what dictation is doing. Only the error buttons and the skip button take clicks; a click anywhere else on a failure dismisses it. */
 export function Pill({ view }: { view: HudView }) {
   const { t } = useT();
   return (

@@ -129,11 +129,8 @@ export const CleanupSchema = v.fallback(
 );
 export type Cleanup = v.InferOutput<typeof CleanupSchema>;
 
-/** The rewrite pass is off until the person turns it on, because the text leaves the computer. */
-export const RewriteSchema = v.fallback(v.object({ enabled: bool(false), deadlineMs: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)), 4000) }), {
-  enabled: false,
-  deadlineMs: 4000,
-});
+/** The rewrite pass is off until the person turns it on, because the text leaves the computer. A file from before the time limit was removed still carries `deadlineMs`; it is ignored. */
+export const RewriteSchema = v.fallback(v.object({ enabled: bool(false) }), { enabled: false });
 const hotkey = v.fallback(v.pipe(v.string(), v.check(validHotkey)), DEFAULT_HOTKEY);
 /** "" is unset. */
 const optionalHotkey = (fallback: string) => v.fallback(v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]), fallback);
@@ -171,6 +168,8 @@ const CORE_KEYS = {
   modes: v.fallback(lenient(LenientMode, MAX_MODES, modeKeys), []),
   rewrite: RewriteSchema,
   rewriteWriter: v.fallback(v.picklist(REWRITE_WRITERS), "openai"),
+  /** The style for apps that are in no mode; "off" leaves their text as said, which is what a file from before this setting does. */
+  rewriteDefault: v.fallback(v.picklist(["off", ...TEMPLATE_IDS]), "off"),
   keepRecordings: bool(false),
   /** Add a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: bool(false),
@@ -263,8 +262,9 @@ export const DictationPatchSchema = v.partial(
       stripFinalStop: v.boolean(),
     }),
     modes: modeList,
-    rewrite: v.strictObject({ enabled: v.boolean(), deadlineMs: v.pipe(v.number(), v.integer(), v.minValue(1000), v.maxValue(15_000)) }),
+    rewrite: v.strictObject({ enabled: v.boolean() }),
     rewriteWriter: v.picklist(REWRITE_WRITERS),
+    rewriteDefault: v.picklist(["off", ...TEMPLATE_IDS]),
     keepRecordings: v.boolean(),
     smartSpacing: v.boolean(),
     sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),

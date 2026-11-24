@@ -89,6 +89,7 @@ export function hudViewFor(i: HudInput): HudView | null {
     case "locked":
       return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, i.platform) };
     case "transcribing":
+      return s.rewriting ? { kind: "transcribing", skip: { label: at("hud.skip"), id: "skip-rewrite", ...(i.cancelLabel && { key: i.cancelLabel }) } } : { kind: "transcribing" };
     case "pasting":
       return { kind: "transcribing" };
     case "error":

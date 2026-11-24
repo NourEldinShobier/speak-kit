@@ -106,7 +106,8 @@ export type DictationState =
   | { status: "idle"; notice?: Notice }
   | { status: "recording"; mode: "hold" | "toggle" }
   | { status: "locked" }
-  | { status: "transcribing" }
+  /** `rewriting` while the writer works: the person can skip it, and the text is then pasted as said. */
+  | { status: "transcribing"; rewriting?: true }
   | { status: "pasting" }
   | { status: "error"; code: DictationErrorCode; owner?: string };
 

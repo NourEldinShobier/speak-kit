@@ -63,6 +63,12 @@ describe("answering the last failure", () => {
     expect(r.failure.last).toBeDefined();
   });
 
+  it("Skip ends the wait for the writer through the core and leaves the pill to it", () => {
+    const r = rig();
+    r.actions.hudAction("skip-rewrite");
+    expect(r.log).toEqual(["cancel"]);
+  });
+
   it("Dismiss with nothing to clear does not announce a change", () => {
     const r = rig();
     r.failure.last = undefined;

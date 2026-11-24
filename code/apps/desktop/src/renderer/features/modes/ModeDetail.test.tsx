@@ -30,7 +30,7 @@ const { ModeDetail } = await import("./ModeDetail");
 const { createRoot } = await import("react-dom/client");
 
 const chat: WritingMode = { ...defaultMode(), id: "m1", name: "Chat", apps: ["slack"], rewrite: true };
-const status = (enabled: boolean) => ({ settings: { rewrite: { enabled, deadlineMs: 4000 }, terms: [] } }) as unknown as DictationStatus;
+const status = (enabled: boolean) => ({ settings: { rewrite: { enabled }, terms: [] } }) as unknown as DictationStatus;
 
 async function mount(mode: WritingMode, { writer = true, onChange = () => {} }: { writer?: boolean; onChange?(m: WritingMode): void } = {}) {
   const { window, document } = parseHTML('<!doctype html><html><body><div id="root"></div></body></html>');
@@ -63,9 +63,11 @@ describe("mode detail rewrite style", () => {
   it("is switched off while the mode does not rewrite or the writer is not set up", async () => {
     const off = await mount({ ...chat, rewrite: false });
     expect(off.querySelector('[aria-label="Rewrite style"]')?.hasAttribute("disabled")).toBe(true);
+    expect(off.body.textContent).toContain("Turn on the rewrite pass for this mode first.");
     const noWriter = await mount(chat, { writer: false });
     expect(noWriter.querySelector('[aria-label="Rewrite style"]')?.hasAttribute("disabled")).toBe(true);
     const on = await mount(chat);
     expect(on.querySelector('[aria-label="Rewrite style"]')?.hasAttribute("disabled")).toBe(false);
+    expect(on.body.textContent).not.toContain("Turn on the rewrite pass for this mode first.");
   });
 });

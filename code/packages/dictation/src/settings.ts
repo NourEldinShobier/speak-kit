@@ -1,4 +1,5 @@
 import type { Mode as WritingMode } from "./modes/modes";
+import type { TemplateId } from "./modes/templates";
 import type { Term } from "./vocabulary/terms";
 
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
@@ -46,7 +47,9 @@ export interface Settings {
   /** Send the words to the speech model as a prompt, within a character budget. */
   prompt: boolean;
   modes: WritingMode[];
-  rewrite: { enabled: boolean; deadlineMs: number };
+  rewrite: { enabled: boolean };
+  /** The style for apps that are in no mode, or "off" to leave their text as said. A mode with its own rewrite choice ignores it. */
+  rewriteDefault: "off" | TemplateId;
   /** Adds a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: boolean;
   /** Keep the audio of each dictation next to its history entry (needs an audio store). */
@@ -76,7 +79,8 @@ export const defaultSettings: Readonly<Settings> = {
   terms: [],
   prompt: true,
   modes: [],
-  rewrite: { enabled: false, deadlineMs: 4000 },
+  rewrite: { enabled: false },
+  rewriteDefault: "off",
   smartSpacing: false,
   keepRecordings: false,
 };

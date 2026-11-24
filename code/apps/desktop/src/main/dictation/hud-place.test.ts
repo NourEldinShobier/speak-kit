@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { HudView } from "../../shared/dictation/contract";
-import { drawn, hudPosition } from "./hud-place";
+import { drawn, hudPosition, takesClicks } from "./hud-place";
 
 const area = { x: 1920, y: 0, width: 2560, height: 1400 };
 const size = { width: 560, height: 64 };
@@ -35,5 +35,17 @@ describe("drawn", () => {
   });
   it("hides the recording indicator when it is off, and keeps what needs reading", () => {
     expect(views.filter((v) => drawn("off", v)).map((v) => v.kind)).toEqual(["copied", "notice", "error"]);
+  });
+  it("keeps the skip button of the rewrite even when the indicator is off, because the cancel key is taken then", () => {
+    expect(drawn("off", { kind: "transcribing", skip: { label: "Skip", id: "skip-rewrite" } })).toBe(true);
+  });
+});
+
+describe("takesClicks", () => {
+  it("is true only for a failure with a button and the skip button of the rewrite", () => {
+    const skip = { label: "Skip", id: "skip-rewrite" } as const;
+    expect(takesClicks({ kind: "transcribing", skip })).toBe(true);
+    expect(takesClicks({ kind: "error", text: "e", icon: "alert-triangle", action: { label: "Try again", id: "retry" } })).toBe(true);
+    expect([{ kind: "transcribing" }, { kind: "error", text: "e", icon: "alert-triangle" }, { kind: "pasted" }].map((v) => takesClicks(v as HudView))).toEqual([false, false, false]);
   });
 });

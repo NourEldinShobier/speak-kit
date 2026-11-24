@@ -136,12 +136,12 @@ export function toggled(picked: ReadonlySet<string> | null, id: string): Set<str
 }
 
 /** The tag under an entry that went through the rewrite pass, or nothing. */
-export function rewriteTag(outcome: HistoryItem["rewrite"], deadlineMs: number): string | undefined {
+export function rewriteTag(outcome: HistoryItem["rewrite"]): string | undefined {
   switch (outcome) {
     case "rewritten":
       return "Rewritten";
-    case "deadline":
-      return `Pasted as said after ${deadlineMs / 1000} seconds`;
+    case "skipped":
+      return "Pasted as said (skipped)";
     case "failed":
       return "Pasted as said, the writer could not be reached";
     case "numbers-only":

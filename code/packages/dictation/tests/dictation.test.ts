@@ -28,7 +28,8 @@ describe("defaults", () => {
       terms: [],
       prompt: true,
       modes: [],
-      rewrite: { enabled: false, deadlineMs: 4000 },
+      rewrite: { enabled: false },
+      rewriteDefault: "off",
       keepRecordings: false,
     });
   });

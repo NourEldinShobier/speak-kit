@@ -107,6 +107,18 @@ describe("local writer", () => {
     expect(w.busy).toBe(false);
   });
 
+  it("answers the next job normally after a skipped one", async () => {
+    const { w } = await make();
+    await w.load();
+    const skip = new AbortController();
+    const job = w.complete({ system: "s", text: "hang", signal: skip.signal });
+    await expect.poll(() => w.busy).toBe(true);
+    skip.abort();
+    await expect(job).rejects.toThrow();
+    expect(w.busy).toBe(false);
+    expect(await w.complete({ system: "s", text: "next", signal: live() })).toBe("s|NEXT");
+  });
+
   it("rejects at once with the reason of a signal that fired before the job", async () => {
     const { w } = await make();
     const stop = new AbortController();

@@ -1,7 +1,7 @@
 import { chunkPcm, QUIET_PEAK } from "./capture/policy";
 import { skipPauses } from "./capture/outage";
 import type { History } from "./history";
-import { applyMode, resolveMode } from "./modes/modes";
+import { applyMode, DEFAULT_MODE_ID, resolveMode, type Mode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
 import type { TemplateId } from "./modes/templates";
 import { planPaste, type Target } from "./paste-plan";
@@ -33,6 +33,8 @@ export interface Context {
   settings: Settings;
   /** Called when the text is ready and insertion starts. */
   inserting(): void;
+  /** Called when the rewrite starts: the signal fires when the person skips it; `end` is called when it is over. */
+  rewriting(): { signal: AbortSignal; end(): void };
 }
 
 type Heard = Extract<TranscribeResult, { ok: true }>;
@@ -245,8 +247,17 @@ async function transcribe(ctx: Context, clip: Clip, prompt: string): Promise<{ h
 /** The rewrite pass, when the mode asks for one, it is switched on and a writer is there; otherwise undefined. */
 async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId }, text: string): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
   if (!eff.rewrite || !ctx.settings.rewrite.enabled || !ctx.deps.rewriter) return undefined;
-  return rewritePass({ text, rewriter: ctx.deps.rewriter, deadlineMs: ctx.settings.rewrite.deadlineMs, clock: ctx.deps.clock, style: rewriteStyle(eff) });
+  const wait = ctx.rewriting();
+  try {
+    return await rewritePass({ text, rewriter: ctx.deps.rewriter, skip: wait.signal, style: rewriteStyle(eff) });
+  } finally {
+    wait.end();
+  }
 }
+
+/** Apps in no mode rewrite only when the person chose a style for them; every other mode has its own choice. */
+const withDefaultStyle = (mode: Mode, s: Pick<Settings, "rewriteDefault">): Mode =>
+  mode.id === DEFAULT_MODE_ID && s.rewriteDefault !== "off" ? { ...mode, rewrite: true, template: s.rewriteDefault } : mode;
 
 /** One log line per take: numbers only, never the spoken text. */
 function logTake(ctx: Context, { clip, heard, transcribeMs }: { clip: Clip; heard: string; transcribeMs: number }): void {
@@ -266,7 +277,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const silent = checkClip(ctx, clip);
   if (silent) return silent;
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
-  const eff = applyMode(ctx.settings, resolveMode(ctx.settings.modes, target?.exe, target?.site));
+  const eff = applyMode(ctx.settings, withDefaultStyle(resolveMode(ctx.settings.modes, target?.exe, target?.site), ctx.settings));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
   const got = await transcribe(ctx, clip, prompt);
   if ("error" in got) return got;

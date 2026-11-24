@@ -37,6 +37,13 @@ describe("onStateChange", () => {
     expect(r.log.filter((l) => l.startsWith("grab"))).toEqual(["grab:true", "grab:false", "grab:true"]);
   });
 
+  it("grabs the cancel key while the writer works, so it can skip the rewrite, and lets it go afterwards", () => {
+    const r = stateRig();
+    r.run({ status: "transcribing" }, { status: "transcribing", rewriting: true });
+    r.run({ status: "transcribing", rewriting: true }, { status: "transcribing" });
+    expect(r.log.filter((l) => l.startsWith("grab"))).toEqual(["grab:true", "grab:false"]);
+  });
+
   it("plays nothing when sounds are off", () => {
     const r = stateRig({ sounds: false });
     r.run(idle, { status: "recording", mode: "hold" });
@@ -93,7 +100,7 @@ describe("prepareModel", () => {
 describe("warmWriter", () => {
   const warmed = (cfg: { enabled: boolean; writer: "openai" | "local" }) => {
     const log: string[] = [];
-    warmWriter({ warm: async () => void log.push("warm") }, { rewrite: { enabled: cfg.enabled, deadlineMs: 4000 }, rewriteWriter: cfg.writer });
+    warmWriter({ warm: async () => void log.push("warm") }, { rewrite: { enabled: cfg.enabled }, rewriteWriter: cfg.writer });
     return log;
   };
 
@@ -111,7 +118,7 @@ describe("syncWriter", () => {
   const synced = (cfg: { on?: boolean; pass: boolean; writer: "openai" | "local" }, patch: { rewrite?: object; rewriteWriter?: string }) => {
     const log: string[] = [];
     const writer = { warm: async () => void log.push("warm"), unload: async () => void log.push("unload") };
-    syncWriter(writer, { enabled: cfg.on ?? true, rewrite: { enabled: cfg.pass, deadlineMs: 4000 }, rewriteWriter: cfg.writer }, patch);
+    syncWriter(writer, { enabled: cfg.on ?? true, rewrite: { enabled: cfg.pass }, rewriteWriter: cfg.writer }, patch);
     return log;
   };
 
@@ -131,8 +138,8 @@ describe("onRecordingStart", () => {
   it("starts loading the speech model, and the writer when the pass is set to use it", () => {
     const log: string[] = [];
     const models = { warm: (quiet?: boolean) => void log.push(`models:${quiet}`) };
-    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true, deadlineMs: 4000 }, rewriteWriter: "local" });
-    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true, deadlineMs: 4000 }, rewriteWriter: "openai" });
+    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true }, rewriteWriter: "local" });
+    onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true }, rewriteWriter: "openai" });
     expect(log).toEqual(["models:true", "writer", "models:true"]);
   });
 });

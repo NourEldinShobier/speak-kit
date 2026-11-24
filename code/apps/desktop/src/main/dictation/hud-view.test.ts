@@ -33,6 +33,8 @@ describe("the HUD for each dictation state", () => {
   it("shows transcribing for both the recognition and the paste", () => {
     expect(hudViewFor(input({ status: "transcribing" }))).toEqual({ kind: "transcribing" });
     expect(hudViewFor(input({ status: "pasting" }))).toEqual({ kind: "transcribing" });
+    expect(hudViewFor(input({ status: "transcribing", rewriting: true }))).toEqual({ kind: "transcribing", skip: { label: "Skip", id: "skip-rewrite" } });
+    expect(hudViewFor({ ...input({ status: "transcribing", rewriting: true }), cancelLabel: "Esc" })).toEqual({ kind: "transcribing", skip: { label: "Skip", id: "skip-rewrite", key: "Esc" } });
   });
 
   it("shows the check after an insert, unless the system only managed to copy", () => {

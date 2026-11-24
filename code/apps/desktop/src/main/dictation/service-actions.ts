@@ -51,7 +51,7 @@ export function createActions(h: Host) {
     if (url) await shell.openExternal(url);
   };
   const hudAction = (a: HudAction): void => {
-    if (a !== "cancel-recording") h.presenter.dismiss();
+    if (a !== "cancel-recording" && a !== "skip-rewrite") h.presenter.dismiss();
     if (a === "dismiss" && h.failure.last) {
       h.failure.last = undefined;
       h.changed?.();
@@ -60,7 +60,7 @@ export function createActions(h: Host) {
     else if (a === "download") h.download();
     else if (a === "sound-settings") void openSoundSettings();
     else if (a === "undo-cancel") void h.undoCancel();
-    else if (a === "cancel-recording") h.core()?.cancel();
+    else if (a === "cancel-recording" || a === "skip-rewrite") h.core()?.cancel();
     else if (a === "copy-last") void h.copyLast();
     else if (a === "paste-again") void h.pasteAgain();
   };

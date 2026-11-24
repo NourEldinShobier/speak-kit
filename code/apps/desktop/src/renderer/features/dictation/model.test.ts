@@ -188,13 +188,13 @@ describe("history numbers and tags", () => {
   });
 
   it("names what the rewrite pass did", () => {
-    expect(rewriteTag("rewritten", 4000)).toBe("Rewritten");
-    expect(rewriteTag("deadline", 4000)).toBe("Pasted as said after 4 seconds");
-    expect(rewriteTag("numbers-only", 4000)).toBe("Not rewritten, only numbers");
-    expect(rewriteTag("failed", 4000)).toContain("could not be reached");
-    expect(rewriteTag("changed-facts", 4000)).toContain("changed a number");
-    expect(rewriteTag("changed-style", 4000)).toContain("capital letters");
-    expect(rewriteTag(undefined, 4000)).toBeUndefined();
+    expect(rewriteTag("rewritten")).toBe("Rewritten");
+    expect(rewriteTag("skipped")).toBe("Pasted as said (skipped)");
+    expect(rewriteTag("numbers-only")).toBe("Not rewritten, only numbers");
+    expect(rewriteTag("failed")).toContain("could not be reached");
+    expect(rewriteTag("changed-facts")).toContain("changed a number");
+    expect(rewriteTag("changed-style")).toContain("capital letters");
+    expect(rewriteTag(undefined)).toBeUndefined();
   });
 });
 

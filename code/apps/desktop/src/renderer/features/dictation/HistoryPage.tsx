@@ -82,7 +82,6 @@ function Groups({ items, load, s, picked, toggle, openSettings }: GroupsProps) {
               item={item}
               copied={copied === item.id}
               open={open === item.id}
-              rewriteDeadlineMs={s.settings.rewrite.deadlineMs}
               onToggle={() => setOpen((o) => (o === item.id ? null : item.id))}
               onCopy={() => void copy(item.id)}
               onDelete={() => void remove(item.id)}

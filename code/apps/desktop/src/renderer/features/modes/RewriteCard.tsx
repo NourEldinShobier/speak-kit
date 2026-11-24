@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { TEMPLATES, type TemplateId } from "@speakkit/dictation";
 import { Banner, Button, Modal, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import type { WriterCard } from "../../../shared/speech-models/contract";
 import { sizeText } from "../../speech-text";
 import { patchDictation } from "../dictation-bridge";
 import { useSpeechModels } from "../engines";
-import { deadlineLabel, DEADLINES, LOCAL_WRITER, WRITER, writerName } from "./model";
+import { LOCAL_WRITER, STYLE_NAMES, STYLE_OPTIONS, WRITER, writerName } from "./model";
 import { WriterDownload } from "./WriterDownload";
 
 type Writer = DictationStatus["settings"]["rewriteWriter"];
@@ -31,7 +32,7 @@ function OpenAiNotes({ hasKey }: { hasKey: boolean }) {
           <b>Writer:</b> {WRITER}, with the key you saved for voice chat.
         </li>
         <li>
-          <b>If the writer is slow</b>, the text is pasted as you said it. Text that is only numbers is never sent.
+          <b>While it works you can skip it</b> and the text is pasted as you said it. Text that is only numbers is never sent.
         </li>
       </ul>
     </>
@@ -50,7 +51,7 @@ function LocalNotes({ w }: { w: WriterCard | undefined }) {
           {w ? `, a ${sizeText(w.bytes)} download (${w.license.name})` : ""}. It is loaded when you start dictating and uses memory while it is.
         </li>
         <li>
-          <b>If the writer is slow</b>, for example for the first dictation after it loads, the text is pasted as you said it. Text that is only numbers is never sent.
+          <b>While it works you can skip it</b> and the text is pasted as you said it. Text that is only numbers is never sent.
         </li>
       </ul>
       {w ? <WriterDownload w={w} /> : null}
@@ -63,11 +64,9 @@ interface BodyProps {
   onWriter(w: Writer): void;
   hasKey: boolean;
   w: WriterCard | undefined;
-  deadline: number;
-  onDeadline(ms: number): void;
 }
 
-function OptInBody({ writer, onWriter, hasKey, w, deadline, onDeadline }: BodyProps) {
+function OptInBody({ writer, onWriter, hasKey, w }: BodyProps) {
   return (
     <div className="modes-optin">
       <SettingRow
@@ -77,22 +76,15 @@ function OptInBody({ writer, onWriter, hasKey, w, deadline, onDeadline }: BodyPr
         control={<Select label="Writer" value={writer} onChange={(v) => onWriter(v as Writer)} options={WRITER_OPTIONS} />}
       />
       {writer === "local" ? <LocalNotes w={w} /> : <OpenAiNotes hasKey={hasKey} />}
-      <SettingRow
-        className="lm-row--control"
-        label="Give up after"
-        description="The longest dictation waits for the writer."
-        control={<Select label="Give up after" value={String(deadline)} onChange={(v) => onDeadline(Number(v))} options={DEADLINES.map((d) => ({ value: String(d), label: deadlineLabel(d) }))} />}
-      />
     </div>
   );
 }
 
 function OptInDialog({ open, s, w, onClose }: { open: boolean; s: DictationStatus; w: WriterCard | undefined; onClose(): void }) {
-  const [deadline, setDeadline] = useState<number>(s.settings.rewrite.deadlineMs);
   const [writer, setWriter] = useState<Writer>(s.settings.rewriteWriter);
   const ready = writer === "local" ? !!w?.installed : s.rewriteKey;
   const turnOn = () => {
-    void patchDictation({ rewrite: { enabled: true, deadlineMs: deadline }, rewriteWriter: writer });
+    void patchDictation({ rewrite: { enabled: true }, rewriteWriter: writer });
     onClose();
   };
   const footer = (
@@ -105,16 +97,37 @@ function OptInDialog({ open, s, w, onClose }: { open: boolean; s: DictationStatu
   );
   return (
     <Modal open={open} onClose={onClose} title="Turn on the rewrite pass?" width={480} footer={footer}>
-      <OptInBody writer={writer} onWriter={setWriter} hasKey={s.rewriteKey} w={w} deadline={deadline} onDeadline={setDeadline} />
+      <OptInBody writer={writer} onWriter={setWriter} hasKey={s.rewriteKey} w={w} />
     </Modal>
   );
 }
 
 /** What the card says about the writer once the pass is on; a local writer whose file was deleted is called out. */
 function enabledNote(s: DictationStatus, w: WriterCard | undefined): string {
-  const r = s.settings.rewrite;
   const missing = s.settings.rewriteWriter === "local" && w && !w.installed ? " The writer model is not downloaded, so the text is pasted as you said it." : "";
-  return `Writer: ${writerName(s.settings.rewriteWriter)}. Gives up after ${deadlineLabel(r.deadlineMs)} and pastes what you said. Choose which modes use it in each mode.${missing}`;
+  return `Writer: ${writerName(s.settings.rewriteWriter)}. While it works you can skip it and the text is pasted as you said it. Choose which modes use it in each mode.${missing}`;
+}
+
+const DEFAULT_STYLE_OPTIONS = [{ value: "off", label: "Off: the text is pasted as you said it" }, ...STYLE_OPTIONS];
+
+/** The style for apps in no mode, and the list of every style: a mode picks its own in its settings. */
+function DefaultStyleRow({ value }: { value: DictationStatus["settings"]["rewriteDefault"] }) {
+  return (
+    <SettingRow
+      className="lm-row--control"
+      label="Style for apps in no mode"
+      description={`Writing styles: ${STYLE_NAMES}. Pick one in each mode too; a mode's own style wins.`}
+      control={
+        <Select
+          label="Style for apps in no mode"
+          value={value}
+          onChange={(v) => void patchDictation({ rewriteDefault: v as typeof value })}
+          options={DEFAULT_STYLE_OPTIONS}
+          renderValue={(o) => (o?.value === "off" ? "Off" : TEMPLATES[o?.value as TemplateId]?.name)}
+        />
+      }
+    />
+  );
 }
 
 /** The opt-in for the rewrite pass: off until the person sets it up, because the text leaves the computer when the writer is OpenAI. */
@@ -130,16 +143,19 @@ export function RewriteCard({ s }: { s: DictationStatus }) {
       </header>
       <div className="lm-card">
         {r.enabled ? (
-          <SettingRow
-            label="Rewrite dictated text"
-            description={enabledNote(s, view?.writer)}
-            control={
-              <div className="modes-acts">
-                <Button onClick={() => setAsking(true)}>Change</Button>
-                <Toggle aria-label="Rewrite dictated text" checked onChange={() => void patchDictation({ rewrite: { enabled: false, deadlineMs: r.deadlineMs } })} />
-              </div>
-            }
-          />
+          <>
+            <SettingRow
+              label="Rewrite dictated text"
+              description={enabledNote(s, view?.writer)}
+              control={
+                <div className="modes-acts">
+                  <Button onClick={() => setAsking(true)}>Change</Button>
+                  <Toggle aria-label="Rewrite dictated text" checked onChange={() => void patchDictation({ rewrite: { enabled: false } })} />
+                </div>
+              }
+            />
+            <DefaultStyleRow value={s.settings.rewriteDefault} />
+          </>
         ) : (
           <SettingRow
             label="Rewrite dictated text"

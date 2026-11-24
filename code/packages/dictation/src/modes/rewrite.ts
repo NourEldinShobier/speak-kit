@@ -1,10 +1,5 @@
 import { dropFinalStop, isNumbersOnly } from "../rules";
-import type { Clock } from "../types";
 import { DEFAULT_TEMPLATE, TEMPLATES, type TemplateId } from "./templates";
-
-export const DEFAULT_REWRITE_DEADLINE_MS = 4000;
-export const MIN_REWRITE_DEADLINE_MS = 1000;
-export const MAX_REWRITE_DEADLINE_MS = 15_000;
 
 /** The clean-up choices about capitals and the final full stop, which the rewrite must not undo. */
 export interface RewriteStyle {
@@ -15,14 +10,12 @@ export interface RewriteStyle {
 }
 const SENTENCE_STYLE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
 
-/** The writer model. It gets the text and a signal that fires at the deadline; it must stop when it does. */
+/** The writer model. It gets the text and a signal that fires when the person skips the rewrite; it must stop when it does. */
 export interface Rewriter {
   rewrite(req: { text: string; signal: AbortSignal; style?: RewriteStyle }): Promise<string>;
 }
 
-export type RewriteOutcome = "rewritten" | "deadline" | "failed" | "numbers-only" | "changed-facts" | "changed-style";
-
-export const clampDeadline = (ms: number): number => (Number.isFinite(ms) ? Math.min(MAX_REWRITE_DEADLINE_MS, Math.max(MIN_REWRITE_DEADLINE_MS, Math.round(ms))) : DEFAULT_REWRITE_DEADLINE_MS);
+export type RewriteOutcome = "rewritten" | "skipped" | "failed" | "numbers-only" | "changed-facts" | "changed-style";
 
 const digits = (s: string): string => (s.match(/\d+/g) ?? []).join(" ");
 const upperCount = (s: string): number => (s.match(/\p{Lu}/gu) ?? []).length;
@@ -42,39 +35,23 @@ async function ask(rewriter: Rewriter, req: { text: string; signal: AbortSignal;
 }
 
 /**
- * Runs the rewrite with a hard deadline that covers everything, finding the writer included. Whatever goes wrong (no answer in time, an error,
- * an empty answer, changed figures) gives back the text as said. Numbers-only text is never sent.
+ * Runs the rewrite and waits for the writer for as long as it works; only `skip` (the person's choice) ends the wait early. Whatever goes wrong (a skip,
+ * an error, an empty answer, changed figures) gives back the text as said. Numbers-only text is never sent.
  */
-export async function rewritePass(req: {
-  text: string;
-  rewriter: Rewriter;
-  deadlineMs: number;
-  clock: Pick<Clock, "after">;
-  style?: RewriteStyle;
-}): Promise<{ text: string; outcome: RewriteOutcome }> {
-  const { text, rewriter, clock } = req;
+export async function rewritePass(req: { text: string; rewriter: Rewriter; skip: AbortSignal; style?: RewriteStyle }): Promise<{ text: string; outcome: RewriteOutcome }> {
+  const { text, rewriter, skip } = req;
   const style = req.style ?? SENTENCE_STYLE;
   if (isNumbersOnly(text)) return { text, outcome: "numbers-only" };
-  const ac = new AbortController();
-  let cancel = (): void => {};
-  const late = new Promise<"deadline">((resolve) => {
-    cancel = clock.after(clampDeadline(req.deadlineMs), () => {
-      ac.abort();
-      resolve("deadline");
-    });
-  });
-  try {
-    const answer = await Promise.race([ask(rewriter, { text: text.trimEnd(), signal: ac.signal, style }), late]);
-    if (answer === "deadline") return { text, outcome: "deadline" };
-    if (answer === null || !answer.trim()) return { text, outcome: "failed" };
-    let next = answer.trim();
-    // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
-    if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
-    if (style.stripFinalStop) next = dropFinalStop(next);
-    if (!keepsFacts(text, next, style.template)) return { text, outcome: "changed-facts" };
-    // The text came with its trailing space (or not); the rewrite keeps that.
-    return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
-  } finally {
-    cancel();
-  }
+  if (skip.aborted) return { text, outcome: "skipped" };
+  const skipped = new Promise<"skipped">((resolve) => skip.addEventListener("abort", () => resolve("skipped"), { once: true }));
+  const answer = await Promise.race([ask(rewriter, { text: text.trimEnd(), signal: skip, style }), skipped]);
+  if (answer === "skipped") return { text, outcome: "skipped" };
+  if (answer === null || !answer.trim()) return { text, outcome: "failed" };
+  let next = answer.trim();
+  // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
+  if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
+  if (style.stripFinalStop) next = dropFinalStop(next);
+  if (!keepsFacts(text, next, style.template)) return { text, outcome: "changed-facts" };
+  // The text came with its trailing space (or not); the rewrite keeps that.
+  return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
 }

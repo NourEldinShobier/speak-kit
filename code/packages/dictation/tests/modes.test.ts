@@ -2,7 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   addMode,
   applyMode,
-  clampDeadline,
   defaultMode,
   defaultSettings,
   keepsFacts,
@@ -20,7 +19,7 @@ import {
   type WritingMode as Mode,
   type Rewriter,
 } from "../src";
-import { fakeClock, flush, rig, target } from "./fakes";
+import { flush, rig, target } from "./fakes";
 
 const mode = (extra: Partial<Mode>): Mode => ({ ...defaultMode(), id: "x", name: "X", ...extra });
 
@@ -137,59 +136,56 @@ describe("modes by website", () => {
 });
 
 describe("rewrite pass", () => {
-  const run = async (rewriter: Rewriter, text = "hello there ", deadlineMs = 4000) => {
-    const time = fakeClock();
-    const p = rewritePass({ text, rewriter, deadlineMs, clock: time.clock });
-    return { p, time };
-  };
+  const run = (rewriter: Rewriter, text = "hello there ", skip = new AbortController()) => ({ p: rewritePass({ text, rewriter, skip: skip.signal }), skip });
 
   it("returns the rewritten text and keeps the trailing space", async () => {
-    const { p } = await run({ rewrite: async ({ text }) => `${text.toUpperCase()}!` });
+    const { p } = run({ rewrite: async ({ text }) => `${text.toUpperCase()}!` });
     expect(await p).toEqual({ text: "HELLO THERE! ", outcome: "rewritten" });
   });
 
-  it("gives back the text as said when the writer is silent past the deadline, and aborts it", async () => {
-    let signal: AbortSignal | undefined;
-    const { p, time } = await run({ rewrite: ({ signal: s }) => ((signal = s), new Promise(() => {})) });
-    await time.advance(3999);
-    expect(signal?.aborted).toBe(false);
-    await time.advance(1);
-    expect(await p).toEqual({ text: "hello there ", outcome: "deadline" });
-    expect(signal?.aborted).toBe(true);
-    expect(time.pending()).toBe(0);
+  it("waits for a slow writer as long as it works, then uses its answer", async () => {
+    const { p } = run({ rewrite: ({ text }) => new Promise((r) => setTimeout(() => r(text.toUpperCase()), 30)) });
+    expect(await p).toEqual({ text: "HELLO THERE ", outcome: "rewritten" });
   });
 
-  it("cuts the deadline short even when finding the writer takes all the time", async () => {
-    const { p, time } = await run({ rewrite: () => new Promise((r) => setTimeout(r, 60_000)) }, "x", 1000);
-    await time.advance(1000);
-    expect((await p).outcome).toBe("deadline");
+  it("gives back the text as said when the person skips, and aborts the writer", async () => {
+    let signal: AbortSignal | undefined;
+    const { p, skip } = run({ rewrite: ({ signal: s }) => ((signal = s), new Promise(() => {})) });
+    await Promise.resolve();
+    expect(signal?.aborted).toBe(false);
+    skip.abort();
+    expect(await p).toEqual({ text: "hello there ", outcome: "skipped" });
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it("does not call the writer when the rewrite was skipped before it started", async () => {
+    let called = false;
+    const skip = new AbortController();
+    skip.abort();
+    expect(await run({ rewrite: async () => ((called = true), "x") }, "hello ", skip).p).toEqual({ text: "hello ", outcome: "skipped" });
+    expect(called).toBe(false);
   });
 
   it("falls back on an error, an empty answer and a writer that throws at once", async () => {
-    expect((await (await run({ rewrite: async () => Promise.reject(new Error("401")) })).p).outcome).toBe("failed");
-    expect((await (await run({ rewrite: async () => "  " })).p).outcome).toBe("failed");
-    expect(
-      (
-        await (
-          await run({
-            rewrite: () => {
-              throw new Error("sync");
-            },
-          })
-        ).p
-      ).outcome,
-    ).toBe("failed");
+    expect((await run({ rewrite: async () => Promise.reject(new Error("401")) }).p).outcome).toBe("failed");
+    expect((await run({ rewrite: async () => "  " }).p).outcome).toBe("failed");
+    const sync = run({
+      rewrite: () => {
+        throw new Error("sync");
+      },
+    });
+    expect((await sync.p).outcome).toBe("failed");
   });
 
   it("never sends numbers-only text", async () => {
     let called = false;
-    const { p } = await run({ rewrite: async () => ((called = true), "x") }, "1 2 3.5 ");
+    const { p } = run({ rewrite: async () => ((called = true), "x") }, "1 2 3.5 ");
     expect(await p).toEqual({ text: "1 2 3.5 ", outcome: "numbers-only" });
     expect(called).toBe(false);
   });
 
   it("rejects an answer that changes figures or a dictated list", async () => {
-    expect((await (await run({ rewrite: async () => "call 15 people" }, "call 50 people")).p).outcome).toBe("changed-facts");
+    expect((await run({ rewrite: async () => "call 15 people" }, "call 50 people").p).outcome).toBe("changed-facts");
     expect(keepsFacts("- a\n- b", "a and b")).toBe(false);
     expect(keepsFacts("1. a\n2. b", "1. A\n2. B")).toBe(true);
     expect(keepsFacts("pay 5 now", "Pay 5 now")).toBe(true);
@@ -197,7 +193,7 @@ describe("rewrite pass", () => {
 
   it("keeps the missing final full stop the setting chose, whatever the writer returns", async () => {
     const loud: Rewriter = { rewrite: async () => "Hello There." };
-    const stop = await rewritePass({ text: "Hello there ", rewriter: loud, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: true } });
+    const stop = await rewritePass({ text: "Hello there ", rewriter: loud, skip: new AbortController().signal, style: { capitals: "sentence", stripFinalStop: true } });
     expect(stop.text).toBe("Hello There ");
   });
 
@@ -205,25 +201,21 @@ describe("rewrite pass", () => {
     let seen: unknown;
     const rw: Rewriter = { rewrite: async ({ style }) => ((seen = style), "Hello there") };
     const style = { capitals: "keep", stripFinalStop: false } as const;
-    expect(await rewritePass({ text: "hello there ", rewriter: rw, deadlineMs: 4000, clock: fakeClock().clock, style })).toEqual({ text: "hello there ", outcome: "changed-style" });
+    expect(await rewritePass({ text: "hello there ", rewriter: rw, skip: new AbortController().signal, style })).toEqual({ text: "hello there ", outcome: "changed-style" });
     expect(seen).toEqual(style);
     const same: Rewriter = { rewrite: async () => "hello there, friend" };
-    expect((await rewritePass({ text: "hello there ", rewriter: same, deadlineMs: 4000, clock: fakeClock().clock, style })).outcome).toBe("rewritten");
+    expect((await rewritePass({ text: "hello there ", rewriter: same, skip: new AbortController().signal, style })).outcome).toBe("rewritten");
   });
 
-  it("clamps the deadline to 1 to 15 seconds and falls back to 4 for nonsense", () => {
-    expect([clampDeadline(10), clampDeadline(4000), clampDeadline(99_999), clampDeadline(NaN), clampDeadline(Infinity)]).toEqual([1000, 4000, 15_000, 4000, 4000]);
-  });
-
-  it("handles two calls at once without crossing their deadlines", async () => {
-    const time = fakeClock();
+  it("handles two calls at once: skipping one leaves the other alone", async () => {
     const slow: Rewriter = { rewrite: () => new Promise(() => {}) };
     const fast: Rewriter = { rewrite: async () => "fast" };
-    const a = rewritePass({ text: "a", rewriter: slow, deadlineMs: 1000, clock: time.clock });
-    const b = rewritePass({ text: "b", rewriter: fast, deadlineMs: 1000, clock: time.clock });
+    const skipA = new AbortController();
+    const a = rewritePass({ text: "a", rewriter: slow, skip: skipA.signal });
+    const b = rewritePass({ text: "b", rewriter: fast, skip: new AbortController().signal });
     expect((await b).outcome).toBe("rewritten");
-    await time.advance(1000);
-    expect((await a).outcome).toBe("deadline");
+    skipA.abort();
+    expect((await a).outcome).toBe("skipped");
   });
 });
 
@@ -267,7 +259,7 @@ describe("dictation with modes, words and rewrite", () => {
   it("rewrites only in a mode that asks for it, with the switch on, and records the outcome", async () => {
     const rewriter: Rewriter = { rewrite: async ({ text }) => `Polished: ${text}` };
     const chat = mode({ id: "chat", apps: ["slack"], rewrite: true });
-    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter });
     r.ins.state.current = target({ exe: "slack.exe" });
     await r.hold(1000);
     await r.time.advance(200);
@@ -281,22 +273,88 @@ describe("dictation with modes, words and rewrite", () => {
     expect((await r.dictation.history.list())[0]?.rewrite).toBeUndefined();
   });
 
-  it("pastes as said after the deadline and says so in the history", async () => {
+  it("waits for a slow writer without any time limit, and shows the person can skip", async () => {
+    let answer: (t: string) => void = () => {};
     const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
-    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: () => new Promise(() => {}) } });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter: { rewrite: () => new Promise<string>((res) => (answer = res)) } });
     await r.hold(1000);
     await r.time.advance(200);
+    expect(r.dictation.state()).toEqual({ status: "transcribing", rewriting: true });
+    await r.time.advance(10 * 60_000);
     expect(r.ins.inserted).toHaveLength(0);
-    await r.time.advance(4000);
+    answer("Polished");
+    await flush();
+    expect(r.ins.inserted[0]?.text).toBe("Polished ");
+    expect(r.dictation.state()).toEqual({ status: "idle", notice: { kind: "inserted" } });
+  });
+
+  it("the cancel key while the writer works skips the rewrite: the text is pasted as said and the history says so", async () => {
+    let signal: AbortSignal | undefined;
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter: { rewrite: (req) => ((signal = req.signal), new Promise(() => {})) } });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.keys.send("Escape", true, r.time.clock.now())).toBe(true);
+    await flush();
+    expect(signal?.aborted).toBe(true);
+    expect(r.ins.inserted[0]?.text).toBe("Hello world ");
+    expect((await r.dictation.history.list())[0]?.rewrite).toBe("skipped");
+    expect(r.dictation.state().status).toBe("idle");
+  });
+
+  it("cancel() (the Skip button) skips the same way, and the next dictation rewrites normally", async () => {
+    let calls = 0;
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
+    const rewriter: Rewriter = { rewrite: () => (++calls === 1 ? new Promise(() => {}) : Promise.resolve("Second")) };
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter });
+    await r.hold(1000);
+    await r.time.advance(200);
+    r.dictation.cancel();
     await flush();
     expect(r.ins.inserted[0]?.text).toBe("Hello world ");
-    expect((await r.dictation.history.list())[0]?.rewrite).toBe("deadline");
+    await r.time.advance(2000);
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[1]?.text).toBe("Second ");
+  });
+
+  it("the cancel key does nothing to the text while no rewrite runs", async () => {
+    const r = await rig();
+    r.stt.state.result = { ok: true, text: "hello" };
+    await r.hold(1000);
+    expect(r.keys.send("Escape", true, r.time.clock.now())).toBe(false);
+  });
+
+  it("a writer that fails still falls back at once to the text as said", async () => {
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter: { rewrite: async () => Promise.reject(new Error("401")) } });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("Hello world ");
+    expect((await r.dictation.history.list())[0]?.rewrite).toBe("failed");
+  });
+
+  it("rewrites apps in no mode only with a default style chosen, and a mode's own choice wins", async () => {
+    const styles: unknown[] = [];
+    const rewriter: Rewriter = { rewrite: async ({ text, style }) => (styles.push(style?.template), text) };
+    const chat = mode({ id: "chat", apps: ["slack"], rewrite: true, template: "message" });
+    const off = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter });
+    await off.hold(1000);
+    await off.time.advance(200);
+    expect(styles).toEqual([]);
+    const r = await rig({ modes: [chat], rewrite: { enabled: true }, rewriteDefault: "email" }, undefined, { rewriter });
+    for (const exe of ["notepad.exe", "slack.exe"]) {
+      r.ins.state.current = target({ exe });
+      await r.hold(1000);
+      await r.time.advance(200);
+    }
+    expect(styles).toEqual(["email", "message"]);
   });
 
   it("does not rewrite when the opt-in switch is off, even in a mode that asks", async () => {
     let called = 0;
     const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
-    const r = await rig({ modes: [chat], rewrite: { enabled: false, deadlineMs: 4000 } }, undefined, { rewriter: { rewrite: async () => (called++, "x") } });
+    const r = await rig({ modes: [chat], rewrite: { enabled: false } }, undefined, { rewriter: { rewrite: async () => (called++, "x") } });
     await r.hold(1000);
     await r.time.advance(200);
     expect(called).toBe(0);
@@ -373,7 +431,7 @@ describe("rewrite templates", () => {
   it("lets the pass turn prose into notes with the notes template and drops the same answer with Tidy", async () => {
     const rw: Rewriter = { rewrite: async () => "- tent\n- stove\n- bags" };
     const text = "the tent the stove and the bags ";
-    const ask = (template: "notes" | "tidy") => rewritePass({ text, rewriter: rw, deadlineMs: 4000, clock: fakeClock().clock, style: { capitals: "sentence", stripFinalStop: false, template } });
+    const ask = (template: "notes" | "tidy") => rewritePass({ text, rewriter: rw, skip: new AbortController().signal, style: { capitals: "sentence", stripFinalStop: false, template } });
     expect((await ask("notes")).outcome).toBe("rewritten");
     expect(await ask("tidy")).toEqual({ text, outcome: "changed-facts" });
   });
@@ -382,7 +440,7 @@ describe("rewrite templates", () => {
     const styles: unknown[] = [];
     const rewriter: Rewriter = { rewrite: async ({ text, style }) => (styles.push(style), text) };
     const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], rewrite: true, template: "message" });
-    const r = await rig({ modes: [chat], rewrite: { enabled: true, deadlineMs: 4000 } }, undefined, { rewriter });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter });
     const say = async (exe: string) => {
       r.ins.state.current = target({ exe });
       await r.hold(1000);

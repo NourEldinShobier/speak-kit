@@ -24,8 +24,9 @@ const DEFAULTS = {
   prompt: true,
   cleanup: CLEANUP,
   modes: [],
-  rewrite: { enabled: false, deadlineMs: 4000 },
+  rewrite: { enabled: false },
   rewriteWriter: "openai",
+  rewriteDefault: "off",
   keepRecordings: false,
   smartSpacing: false,
   sounds: { enabled: false, volume: 50 },
@@ -238,29 +239,40 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(v.parse(DictationConfigSchema, { modes: [{ ...old, sites: Array.from({ length: 80 }, (_, i) => `s${i}.com`) }] }).modes[0]?.sites).toHaveLength(50);
   });
 
-  it("keeps good clean-up switches and falls back per switch, and the rewrite deadline within 1 to 15 seconds", () => {
+  it("keeps good clean-up switches and falls back per switch, and ignores the rewrite time limit an older file still carries", () => {
     expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, trailingSpace: "yes" } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
     // "lowercase" was a switch once; a saved file that still has it loads and the key is gone.
     expect(v.parse(DictationConfigSchema, { cleanup: { fillers: false, lowercase: true } }).cleanup).toEqual({ ...CLEANUP, fillers: false });
     expect(v.parse(DictationConfigSchema, { cleanup: 5 }).cleanup).toEqual(CLEANUP);
-    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true, deadlineMs: 4000 });
-    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true, deadlineMs: 9000 });
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 500 } }).rewrite).toEqual({ enabled: true });
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: 9000 } }).rewrite).toEqual({ enabled: true });
+    expect(v.parse(DictationConfigSchema, { rewrite: { enabled: true, deadlineMs: "slow" } }).rewrite).toEqual({ enabled: true });
   });
 
   it("chooses the writer of the rewrite pass: OpenAI unless saved otherwise, and a file saved before the choice existed keeps working", () => {
     const saved = { rewrite: { enabled: true, deadlineMs: 6000 } };
-    expect(v.parse(DictationConfigSchema, saved)).toMatchObject({ rewrite: { enabled: true, deadlineMs: 6000 }, rewriteWriter: "openai" });
+    expect(v.parse(DictationConfigSchema, saved)).toMatchObject({ rewrite: { enabled: true }, rewriteWriter: "openai", rewriteDefault: "off" });
     expect(v.parse(DictationConfigSchema, { ...saved, rewriteWriter: "local" }).rewriteWriter).toBe("local");
     expect(v.parse(DictationConfigSchema, { ...saved, rewriteWriter: "gpt" }).rewriteWriter).toBe("openai");
     expect(v.safeParse(DictationPatchSchema, { rewriteWriter: "local" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { rewriteWriter: "gpt" }).success).toBe(false);
   });
 
+  it("stores the style for apps in no mode: off unless saved, one of the eight styles, and nothing else", () => {
+    expect(v.parse(DictationConfigSchema, {}).rewriteDefault).toBe("off");
+    expect(v.parse(DictationConfigSchema, { rewriteDefault: "email" }).rewriteDefault).toBe("email");
+    expect(v.parse(DictationConfigSchema, { rewriteDefault: "poetry" }).rewriteDefault).toBe("off");
+    expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "notes" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "off" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "poetry" }).success).toBe(false);
+  });
+
   it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {
     const ok = (patch: unknown) => v.safeParse(DictationPatchSchema, patch).success;
     expect(ok({ terms: [{ id: "a", word: "w", soundsLike: [] }], prompt: false, keepRecordings: true })).toBe(true);
     expect(ok({ terms: Array.from({ length: 501 }, (_, i) => ({ id: `i${i}`, word: "w", soundsLike: [] })) })).toBe(false);
-    expect(ok({ rewrite: { enabled: true, deadlineMs: 20_000 } })).toBe(false);
+    expect(ok({ rewrite: { enabled: true } })).toBe(true);
+    expect(ok({ rewrite: { enabled: true, deadlineMs: 4000 } })).toBe(false);
     expect(ok({ cleanup: { fillers: true } })).toBe(false);
     expect(ok({ unknown: 1 })).toBe(false);
   });

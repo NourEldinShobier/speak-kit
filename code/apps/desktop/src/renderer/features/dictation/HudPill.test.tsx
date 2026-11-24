@@ -45,6 +45,13 @@ describe("HUD pill", () => {
     expect(html({ kind: "notice", text: "Cancelled", action: { label: "Undo", id: "undo-cancel" } })).toContain("Undo");
   });
 
+  it("shows a Skip button and the cancel key while the writer tidies the text", () => {
+    const view = { kind: "transcribing", skip: { label: "Skip", id: "skip-rewrite", key: "Esc" } } as const;
+    expect(text(view)).toBe("Tidying text Esc skips Skip");
+    expect(html(view)).toContain("<button");
+    expect(html({ kind: "transcribing" })).not.toContain("<button");
+  });
+
   it("makes every bar at least 3 px tall, even in silence", () => {
     const heights = [...html({ kind: "recording", locked: false, startedAt: 0, level: 0, hotkey: "x" }).matchAll(/block-size:(\d+)px/g)].map((m) => Number(m[1]));
     expect(heights).toHaveLength(8);

@@ -56,6 +56,9 @@ export const MAIN = definePack({
 
   "hud.ready": "Dictation ready",
   "hud.transcribing": "Transcribing",
+  "hud.tidying": "Tidying text",
+  "hud.skip": "Skip",
+  "hud.skipHint": "{key} skips",
   "hud.copied": "Copied",
   "hud.pressPaste": "Press {key} V to paste",
   "hud.copiedSecure": "Copied, a password field or Secure Keyboard Entry is on",

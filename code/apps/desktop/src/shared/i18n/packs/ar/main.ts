@@ -56,6 +56,9 @@ export const AR_MAIN: Record<keyof typeof MAIN, string> = {
 
   "hud.ready": "الإملاء جاهز",
   "hud.transcribing": "جارٍ التفريغ",
+  "hud.tidying": "جارٍ تنسيق النص",
+  "hud.skip": "تخطي",
+  "hud.skipHint": "{key} للتخطي",
   "hud.copied": "تم النسخ",
   "hud.pressPaste": "اضغط {key} V للصق",
   "hud.copiedSecure": "تم النسخ، حقل كلمة مرور أو الإدخال الآمن للوحة المفاتيح مفعّل",

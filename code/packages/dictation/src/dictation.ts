@@ -26,6 +26,8 @@ class Runtime implements Dictation {
   private readonly targets = new Map<number, Promise<Target | undefined>>();
   private pending = 0;
   private phase: "transcribing" | "pasting" = "transcribing";
+  /** Ends the wait for the writer while one is running. */
+  private skip: AbortController | undefined;
   private flashed: Flash | undefined;
   private cancelFlash: Unsubscribe | undefined;
   private cancelLimit: Unsubscribe | undefined;
@@ -72,7 +74,7 @@ class Runtime implements Dictation {
     const c = this.session.capture;
     if (c.kind === "hold" || c.kind === "toggle") return { status: "recording", mode: c.kind };
     if (c.kind === "locked") return { status: "locked" };
-    if (this.pending > 0) return { status: this.phase };
+    if (this.pending > 0) return this.phase === "transcribing" && this.skip ? { status: "transcribing", rewriting: true } : { status: this.phase };
     if (this.flashed && "error" in this.flashed) return { status: "error", code: this.flashed.error, ...(this.flashed.owner && { owner: this.flashed.owner }) };
     return this.flashed ? { status: "idle", notice: this.flashed.notice } : { status: "idle" };
   }
@@ -130,8 +132,17 @@ class Runtime implements Dictation {
     return cancel;
   }
 
+  /** The cancel key (or the Skip button) while the writer works: the rewrite ends and the text goes in as said. */
+  private skipsRewrite(event: SessionEvent): boolean {
+    const s = this.state();
+    if (s.status !== "transcribing" || !s.rewriting) return false;
+    const skip = event.type === "cancel" || (event.type === "key" && event.down && event.key === this.settings.cancelKey);
+    if (skip) this.skip?.abort();
+    return skip;
+  }
+
   private dispatch(event: SessionEvent): boolean {
-    if (this.cancelsInsert(event)) return true;
+    if (this.skipsRewrite(event) || this.cancelsInsert(event)) return true;
     if (this.micTaken(event)) return true;
     const step = reduce(this.session, event, this.settings);
     this.session = step.session;
@@ -288,7 +299,7 @@ class Runtime implements Dictation {
 
   private async process(job: Job): Promise<void> {
     this.phase = "transcribing";
-    const ctx = { deps: this.deps, history: this.store, settings: this.settings, inserting: () => this.insertingNow() };
+    const ctx = { deps: this.deps, history: this.store, settings: this.settings, inserting: () => this.insertingNow(), rewriting: () => this.rewritingNow() };
     let outcome: Outcome | undefined;
     try {
       outcome = await runJob(ctx, job);
@@ -310,6 +321,19 @@ class Runtime implements Dictation {
     } catch {
       // the take never existed (the microphone failed to start): nothing to report
     }
+  }
+
+  private rewritingNow(): { signal: AbortSignal; end(): void } {
+    const stop = new AbortController();
+    this.skip = stop;
+    this.emit();
+    return {
+      signal: stop.signal,
+      end: () => {
+        if (this.skip === stop) this.skip = undefined;
+        this.emit();
+      },
+    };
   }
 
   private insertingNow(): void {
