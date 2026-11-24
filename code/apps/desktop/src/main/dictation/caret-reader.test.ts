@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { createCaretReader, parseCaret, type LineProcess } from "./caret-reader";
+import { createCaretReader, parseCaret, parseValue, type LineProcess } from "./caret-reader";
 
 function fakeProc() {
   let line: (l: string) => void = () => undefined;
@@ -33,7 +33,37 @@ describe("parseCaret", () => {
   ])("%j", (line, expected) => expect(parseCaret(line)).toEqual(expected));
 });
 
+describe("parseValue", () => {
+  const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
+  it("reads the Windows helper's encoded text, accents and line breaks included", () => {
+    expect(parseValue(`value:${b64("Café\nnaïve")}`, "win32")).toEqual({ text: "Café\nnaïve" });
+    expect(parseValue("value:", "win32")).toEqual({ text: "" });
+  });
+  it("reads the macOS text as it is, without the line break osascript adds", () => {
+    expect(parseValue("value:two\nlines\n", "darwin")).toEqual({ text: "two\nlines" });
+  });
+  it("tells a password field apart from a field that cannot be read", () => {
+    expect(parseValue("password", "win32")).toEqual({ password: true });
+    expect(parseValue("password\n", "darwin")).toEqual({ password: true });
+  });
+  it.each(["unreadable", "", "char:100"])("gives nothing for %j", (line) => expect(parseValue(line, "win32")).toBeUndefined());
+});
+
 describe("caret reader on Windows", () => {
+  it("asks for the whole field with its own command and takes the text, and a password field gives nothing", async () => {
+    const f = fakeProc();
+    const reader = createCaretReader({ platform: "win32", start: () => f.proc, once: async () => "" });
+    reader.warm();
+    f.say("ready");
+    const field = reader.readValue();
+    f.say(`value:${Buffer.from("hello there").toString("base64")}`);
+    expect(await field).toEqual({ text: "hello there" });
+    const secret = reader.readValue();
+    f.say("password");
+    expect(await secret).toEqual({ password: true });
+    expect(f.sent).toEqual(["value", "value"]);
+  });
+
   it("starts the helper once and answers each read from its reply", async () => {
     const f = fakeProc();
     const start = vi.fn(() => f.proc);
@@ -95,6 +125,13 @@ describe("caret reader on macOS", () => {
     const reader = createCaretReader({ platform: "darwin", start: () => fakeProc().proc, once });
     expect(await reader.read()).toEqual({ before: ".", selected: false });
     expect(once).toHaveBeenCalledOnce();
+  });
+
+  it("reads a field's text through its own script and refuses a secure field", async () => {
+    const answers = ["value:abc def\n", "password\n"];
+    const reader = createCaretReader({ platform: "darwin", start: () => fakeProc().proc, once: async () => answers.shift() ?? "" });
+    expect(await reader.readValue()).toEqual({ text: "abc def" });
+    expect(await reader.readValue()).toEqual({ password: true });
   });
 
   it("is unreadable when the script fails", async () => {

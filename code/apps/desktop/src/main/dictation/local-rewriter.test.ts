@@ -26,6 +26,14 @@ describe("rewriting on this computer", () => {
     expect(asked[0]!.system).toContain("Do not end the text with a full stop");
   });
 
+  it("puts the misheard spots into the instructions", async () => {
+    const { port, asked } = fakeWriter("Hello.");
+    const hints = [{ heard: "get hug", correct: "GitHub", start: 0, end: 7 }];
+    await createLocalRewriter(port).rewrite({ text: "get hug", signal: live(), hints });
+    expect(asked[0]!.system).toBe(instructions(undefined, hints));
+    expect(asked[0]!.system).toContain('heard "get hug" may be "GitHub"');
+  });
+
   it("uses the sentence-case instructions when the pass gives no style", async () => {
     const { port, asked } = fakeWriter("Hello.");
     await createLocalRewriter(port).rewrite({ text: "hello", signal: live() });

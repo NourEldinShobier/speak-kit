@@ -1,6 +1,6 @@
 import { Checkbox, Icon } from "@speakkit/ui";
 import type { HistoryItem } from "../../../shared/dictation/contract";
-import { clockText, entryLabel, expiryText, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
+import { clockText, correctedTag, entryLabel, expiryText, rewriteTag, rowApp, rowTags, timeText, timingTags } from "./model";
 
 function RowMeta({ item }: { item: HistoryItem }) {
   const tag = rewriteTag(item.rewrite);
@@ -12,6 +12,7 @@ function RowMeta({ item }: { item: HistoryItem }) {
         {item.recording ? <span>Recording kept</span> : null}
         {item.recordingRemoved ? <span>Recording removed to stay under the limit</span> : null}
         {tag ? <span className="dict-hist__tag">{tag}</span> : null}
+        {item.corrected?.length ? <span className="dict-hist__tag">{correctedTag(item.corrected)}</span> : null}
         {[...rowTags(item), ...timingTags(item)].map((t) => (
           <span key={t} className="dict-hist__tag">
             {t}
@@ -47,11 +48,14 @@ function RowWhen({ item, label, open, onToggle }: { item: HistoryItem; label: st
   );
 }
 
-function RowActions({ label, copied, onCopy, onDelete }: { label: string; copied: boolean; onCopy: () => void; onDelete: () => void }) {
+function RowActions({ label, copied, onCopy, onFix, onDelete }: { label: string; copied: boolean; onCopy: () => void; onFix: () => void; onDelete: () => void }) {
   return (
     <div className="dict-hist__acts" data-copied={copied || undefined}>
       <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Copy: ${label}`} onClick={onCopy}>
         <Icon name={copied ? "check" : "copy"} size={14} />
+      </button>
+      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Fix: ${label}`} onClick={onFix}>
+        <Icon name="pencil" size={14} />
       </button>
       <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Delete: ${label}`} onClick={onDelete}>
         <Icon name="trash" size={14} />
@@ -68,6 +72,7 @@ export function HistoryRow({
   item,
   copied,
   onCopy,
+  onFix,
   onDelete,
   open,
   onToggle,
@@ -76,6 +81,8 @@ export function HistoryRow({
   item: HistoryItem;
   copied: boolean;
   onCopy: () => void;
+  /** Opens the editor that turns the person's fixes into corrections. */
+  onFix: () => void;
   onDelete: () => void;
   open?: boolean;
   onToggle?: () => void;
@@ -88,7 +95,7 @@ export function HistoryRow({
       {selection && <Checkbox aria-label={`Select: ${label}`} checked={selection.checked} onChange={selection.toggle} />}
       <RowWhen item={item} label={label} open={open} onToggle={onToggle} />
       <RowMeta item={item} />
-      <RowActions label={label} copied={copied} onCopy={onCopy} onDelete={onDelete} />
+      <RowActions label={label} copied={copied} onCopy={onCopy} onFix={onFix} onDelete={onDelete} />
     </div>
   );
 }

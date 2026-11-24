@@ -2,12 +2,14 @@ import { dialog, type BrowserWindow } from "electron";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  applyCorrections,
   applyMode,
   applyRules,
   defaultSettings,
   resolveMode,
   soundsLikeRules,
   timeLeft,
+  usable,
   type AudioStore,
   type Dictation,
   type HistoryHit,
@@ -134,6 +136,7 @@ export class HistoryApi {
       ...(e.timings && { timings: e.timings }),
       ...(e.outcome && { outcome: e.outcome }),
       ...(e.rewrite && { rewrite: e.rewrite }),
+      ...(e.corrected && { corrected: e.corrected }),
       ...(e.audio && { recording: true }),
       ...(e.audioRemoved && { recordingRemoved: true }),
       ...(e.versions && { versions: e.versions }),
@@ -264,11 +267,12 @@ export class HistoryApi {
     return Promise.race([running, cancelled]);
   }
 
-  /** The text of a new version: what the model heard, put through the same rules and words as a live dictation into the same program. */
+  /** The text of a new version: what the model heard, put through the same rules, words and stored corrections as a live dictation into the same program. */
   #versionText(heardText: string, language: string | undefined, app: string | undefined): string {
     const base: Settings = { ...defaultSettings, ...coreSettings(this.d.cfg()) };
     const eff = applyMode(base, resolveMode(base.modes, app));
-    return applyRules(heardText, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: language ?? this.d.cfg().language }).trimEnd();
+    const said = applyRules(heardText, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: language ?? this.d.cfg().language }).trimEnd();
+    return applyCorrections(said, usable(eff.corrections, app)).text;
   }
 
   /**

@@ -27,6 +27,10 @@ interface Host {
   copyLast(): Promise<void>;
   /** Inserts the newest dictation again into the window in front. */
   pasteAgain(): Promise<void>;
+  /** The button of a fix offered after the Learn correction key. */
+  learnSave(): void;
+  /** The button that takes back a fix that began to apply by itself. */
+  learnUndo(): void;
   /** The status changed (the last failure was answered). */
   changed?(): void;
 }
@@ -63,6 +67,8 @@ export function createActions(h: Host) {
     else if (a === "cancel-recording" || a === "skip-rewrite") h.core()?.cancel();
     else if (a === "copy-last") void h.copyLast();
     else if (a === "paste-again") void h.pasteAgain();
+    else if (a === "learn-save") h.learnSave();
+    else if (a === "learn-undo") h.learnUndo();
   };
   return { retry, openSoundSettings, hudAction };
 }

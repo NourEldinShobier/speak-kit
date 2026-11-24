@@ -4,7 +4,7 @@ import { createHotkeys, type HotkeyLayout, type SwitchableHotkeys } from "./hotk
 import { ShortcutControls } from "./shortcut-controls";
 import type { HotkeyHandlers, HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", pasteLast: "", cancelKey: "Escape" };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlLeft+AltLeft+Space", pasteLast: "", learn: "", cancelKey: "Escape" };
 
 function rig() {
   let handlers: HotkeyHandlers | undefined;
@@ -52,11 +52,24 @@ describe("pausing shortcuts during a recording", () => {
     const log: string[] = [];
     const core = { cancel: () => log.push("cancel") } as unknown as Dictation;
     const hotkeys = { pause: (on: boolean) => log.push(`pause ${on}`) } as unknown as SwitchableHotkeys;
-    const c = new ShortcutControls({ hotkeys: () => hotkeys, core: () => core, presenter: {} as never, changed: () => log.push("changed") });
+    const c = new ShortcutControls({ hotkeys: () => hotkeys, core: () => core, presenter: {} as never, changed: () => log.push("changed"), learn: async () => void log.push("learn") });
     c.setPaused(true);
     expect(log).toEqual(["cancel", "pause true", "changed"]);
     log.length = 0;
     c.setPaused(false);
     expect(log).toEqual(["pause false", "changed"]);
+  });
+
+  it("connects the Paste last and Learn correction chords to their actions", async () => {
+    const log: string[] = [];
+    const core = { pasteLast: async () => (log.push("paste"), "pasted") } as unknown as Dictation;
+    const presenter = { toast: () => undefined };
+    const chords: Record<string, () => void> = {};
+    const hotkeys = { onPasteLast: (cb: () => void) => (chords.paste = cb), onLearn: (cb: () => void) => (chords.learn = cb) } as unknown as SwitchableHotkeys;
+    new ShortcutControls({ hotkeys: () => hotkeys, core: () => core, presenter: presenter as never, changed: () => undefined, learn: async () => void log.push("learn") }).attach(hotkeys);
+    chords.paste!();
+    chords.learn!();
+    await Promise.resolve();
+    expect(log).toEqual(["paste", "learn"]);
   });
 });

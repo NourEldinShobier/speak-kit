@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { MAX_TERMS, removeTerm, soundsLikeRules, type Term } from "@speakkit/dictation";
+import { MAX_TERMS, removeTerm, soundsLikeRules, type Correction, type Term } from "@speakkit/dictation";
 import { Banner, Button, Chip, EmptyState, Icon, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { MAX_REPLACEMENTS, type Replacement } from "../../../shared/dictation/settings";
 import { patchDictation } from "../dictation-bridge";
+import { CorrectionsCard } from "../corrections";
 import { filterTerms, promptSummary, wordCount } from "./model";
 import { ReplacementRules } from "./ReplacementRules";
 import { useLive } from "./useLive";
@@ -206,14 +207,16 @@ export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onSho
   );
 }
 
-/** The Heard as tab: words, the model prompt and replacements. */
+/** The Heard as tab: words, the model prompt, replacements and corrections. */
 export function HeardAs({ s, onImport, onShowWords }: { s: DictationStatus; onImport(): void; onShowWords(): void }) {
   const [terms, update] = useLive<Term>(s.settings.terms, (next) => patchDictation({ terms: next }));
+  const [fixes, updateFixes] = useLive<Correction>(s.settings.corrections, (next) => patchDictation({ corrections: next }));
   return (
     <>
       <WordsCard terms={terms} update={update} onImport={onImport} />
       <PromptCard s={s} terms={terms} />
       <ReplacementsCard s={s} onShowWords={onShowWords} />
+      <CorrectionsCard list={fixes} update={updateFixes} />
     </>
   );
 }

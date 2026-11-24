@@ -105,6 +105,8 @@ export class DictationService {
       download: () => this.#downloadFromHud(),
       audio: () => this.#audio,
       cfg: () => this.#cfg,
+      os: () => this.os,
+      setCorrections: (list) => void this.patchSettings({ corrections: list }),
       stt: this.stt,
       catalog: () => this.speech.catalog(),
       files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),
@@ -139,7 +141,7 @@ export class DictationService {
       })));
     this.#stopPower = resyncOnPower(powerMonitor, () => this.resync());
     this.#hotkeys = createHotkeys({ os: os.hotkey, now: clock.now, onFault: (e, recovered) => this.#hook.onFault(e, recovered), changed: () => this.#push(true) });
-    this.#hotkeys.onPasteLast(() => void this.controls.pasteLast());
+    this.controls.attach(this.#hotkeys);
     const built = buildCore({
       ctx: this.#ctx,
       o: this.#o,

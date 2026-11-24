@@ -25,6 +25,8 @@ function rig(over: { clip?: Clip | undefined; status?: "idle" | "error" | "recor
     undoCancel: async () => true,
     copyLast: async () => undefined,
     pasteAgain: async () => undefined,
+    learnSave: () => log.push("learn-save"),
+    learnUndo: () => log.push("learn-undo"),
     changed: () => log.push("changed"),
   });
   return { actions, failure, log };
@@ -48,6 +50,13 @@ describe("answering the last failure", () => {
     expect(busy.failure.last).toBeDefined();
     expect(none.log).toEqual([]);
     expect(busy.log).toEqual([]);
+  });
+
+  it("the Remember and Undo buttons of a learned fix reach the learner and close the pill", () => {
+    const r = rig();
+    r.actions.hudAction("learn-save");
+    r.actions.hudAction("learn-undo");
+    expect(r.log).toEqual(["hud-dismiss", "learn-save", "hud-dismiss", "learn-undo"]);
   });
 
   it("Dismiss clears the failure from the page and the HUD", () => {

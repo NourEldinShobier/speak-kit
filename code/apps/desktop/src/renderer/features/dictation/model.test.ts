@@ -19,6 +19,7 @@ import {
   hotkeyHelp,
   mb,
   modelLine,
+  correctedTag,
   rewriteTag,
   rowApp,
   rowTags,
@@ -187,6 +188,17 @@ describe("history numbers and tags", () => {
     expect(clockText(125_000)).toBe("2:05");
   });
 
+  it("names the stored corrections that changed an entry", () => {
+    expect(correctedTag([])).toBe("");
+    expect(correctedTag([{ heard: "cloud code", correct: "Claude Code" }])).toBe("Corrected cloud code → Claude Code");
+    expect(
+      correctedTag([
+        { heard: "cloud code", correct: "Claude Code" },
+        { heard: "get hub", correct: "GitHub" },
+      ]),
+    ).toBe("Corrected cloud code → Claude Code and 1 more");
+  });
+
   it("names what the rewrite pass did", () => {
     expect(rewriteTag("rewritten")).toBe("Rewritten");
     expect(rewriteTag("skipped")).toBe("Pasted as said (skipped)");
@@ -194,6 +206,7 @@ describe("history numbers and tags", () => {
     expect(rewriteTag("failed")).toContain("could not be reached");
     expect(rewriteTag("changed-facts")).toContain("changed a number");
     expect(rewriteTag("changed-style")).toContain("capital letters");
+    expect(rewriteTag("changed-words")).toContain("changed words");
     expect(rewriteTag(undefined)).toBeUndefined();
   });
 });

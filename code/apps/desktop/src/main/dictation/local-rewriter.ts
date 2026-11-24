@@ -10,10 +10,10 @@ export interface LocalWriterPort {
 /** Tidies one dictation with the model on this computer. Any failure throws: the pass falls back to the text as said. */
 export function createLocalRewriter(writer: LocalWriterPort): Rewriter {
   return {
-    async rewrite({ text, signal, style }) {
+    async rewrite({ text, signal, style, hints }) {
       if (!(await writer.downloaded())) throw new Error("no writer model");
       signal.throwIfAborted(); // the deadline may have passed while the disk was read
-      const out = (await writer.complete({ system: instructions(style), text, signal })).trim();
+      const out = (await writer.complete({ system: instructions(style, hints), text, signal })).trim();
       if (!out) throw new Error("no answer");
       return out;
     },

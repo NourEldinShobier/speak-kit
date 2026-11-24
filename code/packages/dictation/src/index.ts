@@ -12,6 +12,7 @@ export * from "./mic";
 export * from "./capture";
 export * from "./ducking";
 export * from "./vocabulary";
+export * from "./corrections";
 export * from "./modes";
 export type { Mode as WritingMode } from "./modes";
 export { applyReplacements, applyRules, isNumbersOnly, FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES, type RulesOptions } from "./rules";

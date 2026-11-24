@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { openConfig } from "./config";
+import { droppedNotices, openConfig } from "./config";
 
 let dir: string;
 beforeEach(() => {
@@ -127,5 +127,18 @@ describe("settings repair and backup", () => {
     expect(c.config).toMatchObject({ setupDone: true });
     expect(c.config).not.toHaveProperty("controlServer");
     expect(c.config).not.toHaveProperty("mcpTools");
+  });
+});
+
+describe("the Activity line for entries that were left out", () => {
+  it("names corrections among the lists, and says how many entries and where the old file is", () => {
+    expect(droppedNotices({ count: 0, copy: null })).toEqual([]);
+    expect(droppedNotices({ count: 2, copy: "config.copy.json" })).toEqual([
+      {
+        title: "2 dictation entries could not be read",
+        body: "Words, modes, replacements or corrections in Settings were broken or repeated and were left out. The old file is kept as config.copy.json.",
+      },
+    ]);
+    expect(droppedNotices({ count: 1, copy: null })[0]?.title).toBe("1 dictation entry could not be read");
   });
 });

@@ -10,15 +10,23 @@ export interface LineProcess {
   kill(): void;
 }
 
+/** What a field read gives: the text, or the answer that the field is a password field, which nothing may be read or copied from. */
+export type FieldValue = { text: string } | { password: true };
+
 /** The reader the app calls: the context around the caret, or undefined when the focused field cannot be read. Never rejects. */
 export interface CaretReader {
   /** Starts the helper ahead of the first dictation, so the first read is not slow. */
   warm(): void;
   read(): Promise<CaretContext | undefined>;
+  /** The whole text of the focused field, read once on request; a password field says so, and undefined is a field that cannot be read. */
+  readValue(): Promise<FieldValue | undefined>;
   dispose(): void;
 }
 
-// UI Automation text pattern: the caret is the empty selection; one character to its left is the character before it.
+/** Most characters of a field one read returns; the dictation is looked for in these. */
+const VALUE_CAP = 200_000;
+
+// UI Automation text pattern: the caret is the empty selection; one character to its left is the character before it. "value" reads the whole field instead.
 const WINDOWS_LOOP = String.raw`
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -28,7 +36,14 @@ while (($l = [Console]::In.ReadLine()) -ne $null) {
   try {
     $e = [System.Windows.Automation.AutomationElement]::FocusedElement
     $p = $null
-    if ($e.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$p)) {
+    if ($l -eq 'value') {
+      $t = $null
+      if ($e.Current.IsPassword) { $out = 'password' }
+      elseif ($e.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$p)) { $t = $p.Current.Value }
+      elseif ($e.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$p)) { $t = $p.DocumentRange.GetText(${VALUE_CAP}) }
+      if ($t -ne $null) { $out = 'value:' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($t)) }
+    }
+    elseif ($e.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$p)) {
       $sel = $p.GetSelection()
       if ($sel.Length -gt 0) {
         $r = $sel[0]
@@ -44,6 +59,17 @@ while (($l = [Console]::In.ReadLine()) -ne $null) {
   [Console]::Out.WriteLine($out)
 }
 `;
+
+const MAC_VALUE_SCRIPT = `tell application "System Events"
+  try
+    set p to first application process whose frontmost is true
+    set el to value of attribute "AXFocusedUIElement" of p
+    if (value of attribute "AXSubrole" of el) is "AXSecureTextField" then return "password"
+    return "value:" & (value of attribute "AXValue" of el)
+  on error
+    return "unreadable"
+  end try
+end tell`;
 
 const MAC_SCRIPT = `tell application "System Events"
   try
@@ -70,6 +96,16 @@ export function parseCaret(line: string): CaretContext | undefined {
   if (!m) return undefined;
   const code = Number(m[1]);
   return code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? { before: String.fromCodePoint(code), selected: false } : { before: "\u0000", selected: false };
+}
+
+/** The helper's answer to a field read: the text, a password verdict, or undefined for anything it does not recognise. */
+export function parseValue(line: string, platform: NodeJS.Platform): FieldValue | undefined {
+  const text = line.replace(/\r?\n$/, "");
+  if (text === "password") return { password: true };
+  if (!text.startsWith("value:")) return undefined;
+  const body = text.slice("value:".length);
+  const out = platform === "win32" ? Buffer.from(body, "base64").toString("utf8") : body;
+  return { text: out.slice(0, VALUE_CAP) };
 }
 
 interface Deps {
@@ -105,13 +141,13 @@ export function createLineClient(start: () => LineProcess, timeoutMs: number) {
 
   return {
     open,
-    ask(line = "read"): Promise<string> {
+    ask(line = "read", ms = timeoutMs): Promise<string> {
       const p = open();
       return new Promise<string>((resolve) => {
         const timer = setTimeout(() => {
           p.kill();
           resolve("unreadable");
-        }, timeoutMs);
+        }, ms);
         waiting.push((line) => {
           clearTimeout(timer);
           resolve(line);
@@ -126,9 +162,12 @@ export function createLineClient(start: () => LineProcess, timeoutMs: number) {
   };
 }
 
+/** A whole field is longer than one character, and a long document takes a moment. */
+const VALUE_MS = 2000;
+
 export function createCaretReader({ platform, start, once, timeoutMs = 600 }: Deps): CaretReader {
   const helper = createLineClient(start, timeoutMs);
-  const oneShot = () => Promise.race([once(MAC_SCRIPT), new Promise<string>((r) => setTimeout(() => r("unreadable"), timeoutMs))]);
+  const oneShot = (script: string, ms: number) => Promise.race([once(script), new Promise<string>((r) => setTimeout(() => r("unreadable"), ms))]);
   return {
     warm() {
       if (platform === "win32") helper.open();
@@ -136,7 +175,16 @@ export function createCaretReader({ platform, start, once, timeoutMs = 600 }: De
     async read() {
       try {
         if (platform === "win32") return parseCaret(await helper.ask());
-        if (platform === "darwin") return parseCaret(await oneShot());
+        if (platform === "darwin") return parseCaret(await oneShot(MAC_SCRIPT, timeoutMs));
+      } catch {
+        // an unreadable field is not an error
+      }
+      return undefined;
+    },
+    async readValue() {
+      try {
+        if (platform === "win32") return parseValue(await helper.ask("value", VALUE_MS), platform);
+        if (platform === "darwin") return parseValue(await oneShot(MAC_VALUE_SCRIPT, VALUE_MS), platform);
       } catch {
         // an unreadable field is not an error
       }

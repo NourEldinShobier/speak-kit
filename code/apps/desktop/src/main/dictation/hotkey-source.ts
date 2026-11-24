@@ -6,6 +6,7 @@ import { type Chord, type HotkeyEvent, type HotkeySource as OsHotkeys } from "./
 export interface HotkeyLayout {
   hotkey: string;
   pasteLast: string;
+  learn: string;
   cancelKey: string;
 }
 
@@ -22,6 +23,8 @@ export interface SwitchableHotkeys extends CoreHotkeys {
   readonly active: boolean;
   /** The Paste last chord was pressed. */
   onPasteLast(cb: () => void): void;
+  /** The Learn correction chord was pressed. */
+  onLearn(cb: () => void): void;
   dispose(): void;
 }
 
@@ -40,7 +43,7 @@ interface Deps {
   changed?(): void;
 }
 
-const EMPTY: HotkeyLayout = { hotkey: "", pasteLast: "", cancelKey: CANCEL_KEY };
+const EMPTY: HotkeyLayout = { hotkey: "", pasteLast: "", learn: "", cancelKey: CANCEL_KEY };
 const chordOf = (hotkey: string): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) });
 const defaultAfter = (ms: number, fn: () => void): (() => void) => {
   const t = setTimeout(fn, ms);
@@ -61,6 +64,7 @@ class Hotkeys implements SwitchableHotkeys {
   #paused = false;
   #lastFault = -Infinity;
   #pasteLast: (() => void) | undefined;
+  #learn: (() => void) | undefined;
   #waiting: (() => void) | undefined;
   #generation = 0;
   /** Shortcuts the session saw go down and not up yet. */
@@ -105,6 +109,10 @@ class Hotkeys implements SwitchableHotkeys {
     this.#pasteLast = cb;
   }
 
+  onLearn(cb: () => void): void {
+    this.#learn = cb;
+  }
+
   pause(on: boolean): void {
     if (on) {
       this.#generation++;
@@ -128,8 +136,8 @@ class Hotkeys implements SwitchableHotkeys {
   }
 
   readonly #onEvent = (e: HotkeyEvent): void => {
-    if (e.chord === "pasteLast") {
-      if (e.kind === "down") this.#pasteLast?.();
+    if (e.chord === "pasteLast" || e.chord === "learn") {
+      if (e.kind === "down") (e.chord === "learn" ? this.#learn : this.#pasteLast)?.();
       return;
     }
     if (e.kind === "down" || e.kind === "up") {
@@ -154,6 +162,7 @@ class Hotkeys implements SwitchableHotkeys {
     const l = this.#layout;
     const out: Record<string, Chord> = {};
     if (l.pasteLast) out.pasteLast = chordOf(l.pasteLast);
+    if (l.learn) out.learn = chordOf(l.learn);
     return out;
   }
 

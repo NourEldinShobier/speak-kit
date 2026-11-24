@@ -1,3 +1,4 @@
+import type { Correction } from "./corrections/store";
 import type { Mode as WritingMode } from "./modes/modes";
 import type { TemplateId } from "./modes/templates";
 import type { Term } from "./vocabulary/terms";
@@ -41,6 +42,8 @@ export interface Settings {
   /** Drop a single full stop at the very end of the dictation. */
   stripFinalStop: boolean;
   replacements: Replacement[];
+  /** Misheard phrases the person fixed, swapped for the right ones after the speech model, ahead of the rewrite. */
+  corrections: Correction[];
   retention: Retention;
   /** Shared words and names; every mode sees them. */
   terms: Term[];
@@ -75,6 +78,7 @@ export const defaultSettings: Readonly<Settings> = {
   trailingSpace: true,
   stripFinalStop: false,
   replacements: [],
+  corrections: [],
   retention: "7d",
   terms: [],
   prompt: true,

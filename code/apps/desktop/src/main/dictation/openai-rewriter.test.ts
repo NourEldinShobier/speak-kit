@@ -77,4 +77,12 @@ describe("OpenAI rewriter", () => {
     expect(text).toContain("as the body of an email");
     expect(text.endsWith(`Do not change any capital or small letter. Do not end the text with a full stop. ${GUARD}`)).toBe(true);
   });
+
+  it("lists the spots that may be misheard words after the template, before the guard", () => {
+    const hints = [{ heard: "clod code", correct: "Claude Code", start: 0, end: 9 }];
+    const text = instructions({ capitals: "sentence", stripFinalStop: false, template: "exact" }, hints);
+    expect(text).toContain('These words may have been misheard; fix them only where they clearly fit: heard "clod code" may be "Claude Code".');
+    expect(text.endsWith(`may be "Claude Code". ${GUARD}`)).toBe(true);
+    expect(instructions(undefined, [])).toBe(instructions());
+  });
 });

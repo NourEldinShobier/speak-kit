@@ -276,12 +276,13 @@ describe("history page", () => {
 
 describe("history rows", () => {
   const item = { id: "e1", at: 1_700_000_000_000, text: "Send the report to Dana by Friday", raw: "send the report to dana by friday", durationMs: 3000, expiresInMs: null, app: "chrome.exe" };
-  const row = (copied: boolean) => renderToStaticMarkup(<HistoryRow item={item} copied={copied} onCopy={() => undefined} onDelete={() => undefined} />);
+  const row = (copied: boolean) => renderToStaticMarkup(<HistoryRow item={item} copied={copied} onCopy={() => undefined} onFix={() => undefined} onDelete={() => undefined} />);
 
   it("names both buttons after the entry, so a screen reader can tell the rows apart", () => {
     const html = row(false);
     expect(html).toContain('aria-label="Copy: Send the report to Dana by Friday"');
     expect(html).toContain('aria-label="Delete: Send the report to Dana by Friday"');
+    expect(html).toContain('aria-label="Fix: Send the report to Dana by Friday"');
   });
 
   it("keeps both buttons after a copy and announces it in a status region", () => {
@@ -298,13 +299,18 @@ describe("history rows", () => {
 describe("history rows, details and selection", () => {
   const base = { id: "e1", at: 1_700_000_000_000, text: "Send the report", raw: "send the report", durationMs: 3000, expiresInMs: null };
   const html = (item: object, selection?: { checked: boolean; toggle: () => void }) =>
-    renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
+    renderToStaticMarkup(<HistoryRow item={{ ...base, ...item }} copied={false} onCopy={() => undefined} onFix={() => undefined} onDelete={() => undefined} {...(selection && { selection })} />);
 
   it("shows the program's own name and a note for an interrupted entry that was only copied", () => {
     const h = html({ app: "code.exe", appName: "Visual Studio Code", kind: "interrupted", outcome: "copied" });
     expect(h).toContain("Visual Studio Code");
     expect(h).toContain(">Cut short<");
     expect(h).toContain(">Copied only<");
+  });
+
+  it("says which stored corrections changed an entry", () => {
+    expect(html({ corrected: [{ heard: "cloud code", correct: "Claude Code" }] })).toContain("Corrected cloud code → Claude Code");
+    expect(html({})).not.toContain("Corrected");
   });
 
   it("says when the text could not be inserted, and tags nothing for a normal entry", () => {

@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { DEFAULT_TEMPLATE, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, MAX_CORRECTIONS, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
 export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
@@ -36,6 +36,19 @@ const Term = v.object({
   word: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
   soundsLike: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(20)),
 });
+const Correction = v.object({
+  id,
+  heard: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
+  correct: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
+  left: v.optional(v.pipe(v.string(), v.maxLength(40))),
+  right: v.optional(v.pipe(v.string(), v.maxLength(40))),
+  app: v.optional(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))),
+  count: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100_000)),
+  createdAt: v.pipe(v.number(), v.minValue(0)),
+  confirmed: v.optional(v.boolean()),
+  sources: v.optional(v.pipe(v.array(v.pipe(v.string(), v.maxLength(64))), v.maxLength(5))),
+});
+const correctionKeys = (c: { id: string }) => [`i:${c.id}`];
 const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), spoken: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)) });
 const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)), matchCase: v.optional(v.boolean()) });
 // A bad entry is dropped, the rest of the list stays.
@@ -142,6 +155,8 @@ const CORE_KEYS = {
   hotkey,
   mode: v.fallback(v.picklist(MODES), "hold"),
   pasteLastHotkey: optionalHotkey(DEFAULT_PASTE_LAST),
+  /** Reads the text of the field once, to learn what the person fixed in the last dictation; unset by default. */
+  learnHotkey: optionalHotkey(""),
   cancelKey: v.fallback(v.pipe(v.string(), v.check(validCancelKey)), "Escape"),
   /** Set when a saved shortcut was refused at load and replaced: the page says so once. */
   resetNotice: v.fallback(v.optional(v.literal("clash")), undefined),
@@ -150,6 +165,8 @@ const CORE_KEYS = {
   model: v.fallback(modelId, DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
   replacements,
+  /** Misheard phrases the person fixed. A bad or repeated entry is dropped, the rest stays; a file from before they existed loads with none. */
+  corrections: v.fallback(lenient(Correction, MAX_CORRECTIONS, correctionKeys), []),
   /** Device id of the chosen microphone; empty means the system default, never a virtual input. */
   microphone: v.fallback(v.pipe(v.string(), v.maxLength(300)), ""),
   avoidBluetooth: v.fallback(v.boolean(), true),
@@ -184,9 +201,10 @@ const CORE_KEYS = {
   /** Percent of the current volume kept while dictating when other audio is lowered; 0 is silent, 100 changes nothing. */
   duckLevel: v.fallback(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)), 30),
 };
-export const hotkeySlots = (c: { hotkey: string; pasteLastHotkey: string; cancelKey: string }): Shortcuts => ({
+export const hotkeySlots = (c: { hotkey: string; pasteLastHotkey: string; learnHotkey: string; cancelKey: string }): Shortcuts => ({
   dictation: c.hotkey,
   pasteLast: c.pasteLastHotkey,
+  learn: c.learnHotkey,
   cancel: c.cancelKey,
 });
 export const DictationConfigSchema = v.pipe(
@@ -197,12 +215,13 @@ export const DictationConfigSchema = v.pipe(
     for (let i = 0; i < 6; i++) {
       const clash = firstClash(hotkeySlots(out));
       if (!clash) break;
-      const drop = (["pasteLast", "cancel"] as const).find((slot) => clash.includes(slot));
+      const drop = (["pasteLast", "learn", "cancel"] as const).find((slot) => clash.includes(slot));
       if (!drop) break;
       out = {
         ...out,
         resetNotice: "clash" as const,
         ...(drop === "pasteLast" && { pasteLastHotkey: DEFAULT_PASTE_LAST }),
+        ...(drop === "learn" && { learnHotkey: "" }),
         ...(drop === "cancel" && { cancelKey: "Escape" }),
       };
     }
@@ -214,7 +233,7 @@ export type DictationConfig = v.InferOutput<typeof DictationConfigSchema>;
 const count = (x: unknown): number => (Array.isArray(x) ? x.length : 0);
 
 /**
- * How many entries of the stored dictation section loading leaves out: words, pronunciations, replacements and modes that are broken, repeated or over
+ * How many entries of the stored dictation section loading leaves out: words, pronunciations, replacements, corrections and modes that are broken, repeated or over
  * the limit, and the words inside a mode that are. The person is told, so nothing disappears without a word.
  */
 export function countDropped(raw: unknown): number {
@@ -223,7 +242,7 @@ export function countDropped(raw: unknown): number {
   const kept = v.parse(DictationConfigSchema, r);
   // A saved default mode is dropped on purpose, so it is not counted as lost.
   const savedModes = Array.isArray(r.modes) ? r.modes.filter((m: unknown) => (m as { id?: unknown } | null)?.id !== DEFAULT_ID) : [];
-  const lists = (["terms", "readAs", "replacements", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
+  const lists = (["terms", "readAs", "replacements", "corrections", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
   // Words inside the modes that were kept: a bad word costs the word, not the mode.
   const insideKept = kept.modes.reduce((n, m) => n + m.terms.length, 0);
   const insideRaw = (Array.isArray(r.modes) ? r.modes : []).reduce((n: number, m: unknown) => (v.safeParse(LenientMode, m).success ? n + count((m as { terms?: unknown }).terms) : n), 0);
@@ -236,11 +255,17 @@ export const DictationPatchSchema = v.partial(
     hotkey: v.pipe(v.string(), v.check(validHotkey)),
     mode: v.picklist(MODES),
     pasteLastHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
+    learnHotkey: v.union([v.literal(""), v.pipe(v.string(), v.check(validHotkey))]),
     cancelKey: v.pipe(v.string(), v.check(validCancelKey)),
     language: v.picklist(DICTATION_LANGUAGES),
     model: modelId,
     retention: v.picklist(RETENTIONS),
     replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
+    corrections: v.pipe(
+      v.array(Correction),
+      v.maxLength(MAX_CORRECTIONS),
+      v.check((items: v.InferOutput<typeof Correction>[]) => distinct(items.flatMap(correctionKeys)), "Entries must have different ids"),
+    ),
     microphone: v.pipe(v.string(), v.maxLength(300)),
     avoidBluetooth: v.boolean(),
     keepReady: v.boolean(),

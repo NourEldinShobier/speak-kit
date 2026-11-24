@@ -2,6 +2,7 @@ import type { DictationState } from "@speakkit/dictation";
 import type { DictationConfig, Indicator } from "../../shared/dictation/settings";
 import type { DictationOs, InsertResult } from "./index";
 import type { Failure } from "./service-actions";
+import type { HudAction } from "../../shared/dictation/channels";
 import type { HudView } from "../../shared/dictation/contract";
 import { hotkeyText, keyLabel } from "../../shared/dictation/keys";
 import { errorView, hudViewFor } from "./hud-view";
@@ -86,6 +87,13 @@ export class HudPresenter {
     clearTimeout(this.#ready);
     this.#show(tone === "error" ? { kind: "error", text, icon: "alert-triangle" } : { kind: "notice", text });
     this.#ready = setTimeout(() => this.#render(), READY_MS + 1000);
+  }
+
+  /** A message with one button (Remember, Undo); it stays as long as a failure with a button does. */
+  offer(text: string, action: { label: string; id: HudAction }): void {
+    const view: HudView = { kind: "notice", text, action };
+    this.#stick(view);
+    this.#show(view);
   }
 
   /** The keyboard listener was rebuilt (after the lock screen or sleep): say so when a recording is still running. */

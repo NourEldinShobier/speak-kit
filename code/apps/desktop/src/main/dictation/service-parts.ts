@@ -1,8 +1,11 @@
-import type { AudioStore, Dictation, DictationState } from "@speakkit/dictation";
+import type { AudioStore, Correction, Dictation, DictationState } from "@speakkit/dictation";
 import type { DictationConfig } from "../../shared/dictation/settings";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
 import { createActions, type Failure } from "./service-actions";
+import type { DictationOs } from "./index";
+import { CorrectionLearner } from "./learn-correction";
+import { selectionPort } from "./learn-window";
 
 export type { Failure };
 import { HistoryFacade } from "./history-facade";
@@ -24,6 +27,9 @@ export interface PartsHost {
   download(): void;
   audio(): AudioStore | undefined;
   cfg(): DictationConfig;
+  os(): DictationOs | undefined;
+  /** Replaces the list of corrections: saved, handed to the core and shown on the pages. */
+  setCorrections(list: Correction[]): void;
   stt: Stt;
   /** Every speech model, to show the name of the one that heard an entry. */
   catalog(): readonly { id: string; name: string }[];
@@ -37,7 +43,6 @@ export interface PartsHost {
 
 /** The pieces of the service that are not the dictation itself: pause and paste last, the history, and the buttons that act on the last dictation. */
 export function createParts(h: PartsHost) {
-  const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, changed: h.changed });
   const history = new HistoryFacade({ ready: h.ready, core: h.core, changed: h.changed, ...(h.cleared && { cleared: h.cleared }) });
   const records = new HistoryApi({
     ready: h.ready,
@@ -54,6 +59,14 @@ export function createParts(h: PartsHost) {
     key: h.key,
     ...(h.cleared && { cleared: h.cleared }),
   });
+  const learner = new CorrectionLearner({
+    ports: selectionPort({ os: h.os, core: h.core }),
+    presenter: h.presenter,
+    corrections: () => h.cfg().corrections,
+    save: h.setCorrections,
+    now: Date.now,
+  });
+  const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, changed: h.changed, learn: () => learner.press() });
   return {
     controls,
     history,
@@ -68,6 +81,8 @@ export function createParts(h: PartsHost) {
       undoCancel: async () => controls.undoCancel(),
       copyLast: () => history.copyLast(),
       pasteAgain: async () => void (await history.pasteLast()),
+      learnSave: () => learner.save(),
+      learnUndo: () => learner.undo(),
       changed: h.changed,
     }),
   };

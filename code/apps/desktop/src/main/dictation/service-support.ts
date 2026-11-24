@@ -43,6 +43,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   language: c.language,
   retention: c.retention,
   replacements: c.replacements,
+  corrections: c.corrections,
   keepReady: c.keepReady,
   skipPauses: c.skipPauses,
   keepOnClipboard: c.output === "keep",
@@ -61,6 +62,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
 export const hotkeyLayout = (c: DictationConfig): HotkeyLayout => ({
   hotkey: c.hotkey,
   pasteLast: c.pasteLastHotkey,
+  learn: c.learnHotkey,
   cancelKey: c.cancelKey,
 });
 
@@ -180,7 +182,7 @@ export function soundSettingsUrl(platform: string, micBlocked: boolean): string 
   return null;
 }
 
-const SLOT_OF = { hotkey: "dictation", pasteLastHotkey: "pasteLast", cancelKey: "cancel" } as const;
+const SLOT_OF = { hotkey: "dictation", pasteLastHotkey: "pasteLast", learnHotkey: "learn", cancelKey: "cancel" } as const;
 
 /** The first pair of slots that would share a key after `patch`, when the change itself causes it (a clash that was already there is not its fault). */
 export function shortcutClash(cfg: DictationConfig, patch: DictationPatch, reader: Shortcuts): DictationStatus["rejected"] {

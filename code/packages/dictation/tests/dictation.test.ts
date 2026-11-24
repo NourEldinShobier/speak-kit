@@ -22,6 +22,7 @@ describe("defaults", () => {
       autoCapitalize: true,
       trailingSpace: true,
       replacements: [],
+      corrections: [],
       retention: "7d",
       pasteLastKey: "",
       stripFinalStop: false,

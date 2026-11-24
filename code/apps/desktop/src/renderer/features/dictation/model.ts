@@ -150,9 +150,19 @@ export function rewriteTag(outcome: HistoryItem["rewrite"]): string | undefined 
       return "Pasted as said, the rewrite changed a number";
     case "changed-style":
       return "Pasted as said, the rewrite changed capital letters";
+    case "changed-words":
+      return "Pasted as said, the rewrite changed words it was not asked to";
     default:
       return undefined;
   }
+}
+
+/** The note under an entry that stored corrections changed: the first fix, and how many more. */
+export function correctedTag(fixes: readonly { heard: string; correct: string }[]): string {
+  const [first] = fixes;
+  if (!first) return "";
+  const more = fixes.length > 1 ? ` and ${fixes.length - 1} more` : "";
+  return `Corrected ${first.heard} → ${first.correct}${more}`;
 }
 
 /** "0:06" for a recording length. */

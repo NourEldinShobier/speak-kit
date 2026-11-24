@@ -6,7 +6,7 @@ import { errorView, hudViewFor } from "./hud-view";
 import { coreSettings, hotkeyLayout } from "./service-support";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
-const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", pasteLast: "", cancelKey: "Escape" };
+const LAYOUT: HotkeyLayout = { hotkey: "ControlRight", pasteLast: "", learn: "", cancelKey: "Escape" };
 
 function rig(down = new Set<number>()) {
   let handlers: HotkeyHandlers | undefined;
@@ -82,6 +82,19 @@ describe("several shortcuts through the source", () => {
     r.hk.enable(true);
     r.push({ kind: "down", chord: "pasteLast" });
     r.push({ kind: "up", chord: "pasteLast" });
+    expect(calls).toBe(1);
+    expect(r.events).toEqual([]);
+  });
+
+  it("registers the learn chord once it is set, and calls its handler on press only", () => {
+    const r = rig();
+    let calls = 0;
+    r.hk.onLearn(() => void calls++);
+    r.hk.layout({ ...LAYOUT, learn: "ControlLeft+AltLeft+KeyL" });
+    r.hk.enable(true);
+    expect(r.extras()).toEqual({ learn: { keys: [VK.leftCtrl, VK.leftAlt, 0x4c] } });
+    r.push({ kind: "down", chord: "learn" });
+    r.push({ kind: "up", chord: "learn" });
     expect(calls).toBe(1);
     expect(r.events).toEqual([]);
   });
@@ -204,7 +217,7 @@ describe("settings to the hook and the core", () => {
       pauseRules: { mode: "block", apps: ["game.exe"], fullscreen: true },
       transformHotkey: "F6",
     };
-    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", pasteLast: "ControlLeft+AltLeft+KeyV", cancelKey: "Escape" });
+    expect(hotkeyLayout(cfg(old))).toEqual({ hotkey: "F9", pasteLast: "ControlLeft+AltLeft+KeyV", learn: "", cancelKey: "Escape" });
     expect(cfg(old)).not.toHaveProperty("shareHotkey");
     expect(cfg(old)).not.toHaveProperty("secondHotkey");
     expect(cfg(old)).not.toHaveProperty("mouseButton");

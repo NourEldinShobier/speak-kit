@@ -1,4 +1,4 @@
-import { DEFAULT_TEMPLATE, GUARD, TEMPLATES, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, GUARD, hintBlock, TEMPLATES, type Hint, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
 import { OPENAI_BASE_URL } from "../voice-chat/openai";
 
 /** The writer model the rewrite pass uses; the opt-in dialog names it. */
@@ -6,11 +6,12 @@ export const REWRITE_MODEL = "gpt-4o-mini";
 
 const CASE_NOTE = { sentence: "", keep: " Do not change any capital or small letter." } as const;
 
-/** The system prompt: the template's task, then the clean-up choices about capitals and the final full stop (told to the model, not left to it), then the guard. */
-export const instructions = (style?: RewriteStyle): string => {
+/** The system prompt: the template's task, then the clean-up choices about capitals and the final full stop (told to the model, not left to it), the spots that may be misheard words, then the guard. */
+export const instructions = (style?: RewriteStyle, hints: readonly Hint[] = []): string => {
   const case_ = style ? CASE_NOTE[style.capitals] : "";
   const stop = style?.stripFinalStop ? " Do not end the text with a full stop." : "";
-  return `${TEMPLATES[style?.template ?? DEFAULT_TEMPLATE].prompt}${case_}${stop} ${GUARD}`;
+  const misheard = hints.length ? ` ${hintBlock(hints)}` : "";
+  return `${TEMPLATES[style?.template ?? DEFAULT_TEMPLATE].prompt}${case_}${stop}${misheard} ${GUARD}`;
 };
 
 interface Options {
@@ -24,7 +25,7 @@ interface Options {
 export function createOpenAiRewriter(o: Options): Rewriter {
   const doFetch = o.fetch ?? fetch;
   return {
-    async rewrite({ text, signal, style }) {
+    async rewrite({ text, signal, style, hints }) {
       const key = await o.readKey();
       if (!key) throw new Error("no key");
       signal.throwIfAborted(); // the deadline may have passed while the key was read
@@ -35,7 +36,7 @@ export function createOpenAiRewriter(o: Options): Rewriter {
           model: REWRITE_MODEL,
           temperature: 0.2,
           messages: [
-            { role: "system", content: instructions(style) },
+            { role: "system", content: instructions(style, hints) },
             { role: "user", content: text },
           ],
         }),

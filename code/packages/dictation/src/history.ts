@@ -38,6 +38,8 @@ export interface HistoryEntry {
   outcome?: "sent" | "copied" | "failed";
   /** What the rewrite pass did, when the mode asked for one. */
   rewrite?: RewriteOutcome;
+  /** The stored corrections that changed the text before it was inserted. */
+  corrected?: { heard: string; correct: string }[];
   /** The kept recording, by the name the audio store knows it under. */
   audio?: string;
   /** The recording was removed on its own (the size limit) while the text stays. */

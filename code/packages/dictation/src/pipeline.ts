@@ -1,5 +1,8 @@
 import { chunkPcm, QUIET_PEAK } from "./capture/policy";
 import { skipPauses } from "./capture/outage";
+import { applyCorrections, type Applied } from "./corrections/apply";
+import { findHints, type Hint } from "./corrections/hints";
+import { usable } from "./corrections/store";
 import type { History } from "./history";
 import { applyMode, DEFAULT_MODE_ID, resolveMode, type Mode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
@@ -139,7 +142,7 @@ function kindOf(clip: Clip, job: Job): "raw" | "interrupted" | "restored" | unde
   return job.raw ? "raw" : undefined;
 }
 
-type Said = { clip: Clip; heard: Heard; text: string; rewrite?: RewriteOutcome };
+type Said = { clip: Clip; heard: Heard; text: string; rewrite?: RewriteOutcome; corrected?: Applied[] };
 
 async function insert(ctx: Context, job: Job, said: Said & { settings: Settings; transcribeMs: number; droppedMs: number | undefined }): Promise<Outcome> {
   const { clip, heard, text, transcribeMs, droppedMs } = said;
@@ -165,6 +168,7 @@ async function insert(ctx: Context, job: Job, said: Said & { settings: Settings;
       timings: { transcribeMs, ...(droppedMs && { pausesDroppedMs: droppedMs }) },
       outcome: plan.method === "copy" ? ("copied" as const) : ("sent" as const),
       ...(said.rewrite && { rewrite: said.rewrite }),
+      ...(said.corrected?.length && { corrected: said.corrected }),
     }),
   );
   if (entryId && ctx.settings.keepRecordings && ctx.deps.audio) await keepRecording(ctx, entryId, clip);
@@ -196,6 +200,7 @@ async function printed(ctx: Context, job: Job, said: Said): Promise<undefined> {
     ...(heard.model !== undefined && { model: heard.model }),
     kind: "printed",
     ...(said.rewrite && { rewrite: said.rewrite }),
+    ...(said.corrected?.length && { corrected: said.corrected }),
   });
   job.print?.({ ok: true, text });
   return undefined;
@@ -245,14 +250,29 @@ async function transcribe(ctx: Context, clip: Clip, prompt: string): Promise<{ h
 }
 
 /** The rewrite pass, when the mode asks for one, it is switched on and a writer is there; otherwise undefined. */
-async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId }, text: string): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
+async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId }, spoken: { text: string; hints: Hint[] }): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
   if (!eff.rewrite || !ctx.settings.rewrite.enabled || !ctx.deps.rewriter) return undefined;
   const wait = ctx.rewriting();
   try {
-    return await rewritePass({ text, rewriter: ctx.deps.rewriter, skip: wait.signal, style: rewriteStyle(eff) });
+    return await rewritePass({ ...spoken, rewriter: ctx.deps.rewriter, skip: wait.signal, style: rewriteStyle(eff) });
   } finally {
     wait.end();
   }
+}
+
+interface Polished {
+  text: string;
+  /** The stored corrections that changed the text. */
+  corrected?: Applied[];
+  rewrite?: RewriteOutcome;
+}
+
+/** The stored corrections for the program, then the rewrite pass with the spots that look like a misheard phrase the corrections did not catch. */
+async function polish(ctx: Context, eff: Settings & { template: TemplateId }, said: string, exe: string | undefined): Promise<Polished> {
+  const mine = usable(eff.corrections, exe);
+  const fixed = applyCorrections(said, mine);
+  const rewritten = await rewriteStep(ctx, eff, { text: fixed.text, hints: findHints(fixed.text, mine) });
+  return { text: rewritten?.text ?? fixed.text, ...(fixed.applied.length && { corrected: fixed.applied }), ...(rewritten && { rewrite: rewritten.outcome }) };
 }
 
 /** Apps in no mode rewrite only when the person chose a style for them; every other mode has its own choice. */
@@ -282,15 +302,13 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const got = await transcribe(ctx, clip, prompt);
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
-  let text = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
+  const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
   logTake(ctx, { clip, heard: heard.text, transcribeMs });
-  if (!text) return { notice: { kind: "no-speech" } };
-  const rewritten = job.raw ? undefined : await rewriteStep(ctx, eff, text);
-  if (rewritten) text = rewritten.text;
-  const rewrite = rewritten?.outcome;
-  if (job.print) return printed(ctx, job, { clip, heard, text, ...(rewrite && { rewrite }) });
+  if (!said) return { notice: { kind: "no-speech" } };
+  const { text, corrected, rewrite }: Polished = job.raw ? { text: said } : await polish(ctx, eff, said, target?.exe);
+  if (job.print) return printed(ctx, job, { clip, heard, text, ...(rewrite && { rewrite }), ...(corrected && { corrected }) });
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs, settings: eff, ...(rewrite && { rewrite }) });
+  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs, settings: eff, ...(rewrite && { rewrite }), ...(corrected && { corrected }) });
 }
 
 /** Why a job that was meant to print produced no text. */

@@ -27,7 +27,7 @@ export const isDefault = (slot: "dictation" | "pasteLast", value: string): boole
 /** Every shortcut the recorder must keep apart, from the status. */
 export function allShortcuts(s: DictationStatus): Shortcuts {
   const c = s.settings;
-  return { dictation: c.hotkey, pasteLast: c.pasteLastHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
+  return { dictation: c.hotkey, pasteLast: c.pasteLastHotkey, learn: c.learnHotkey, cancel: c.cancelKey, ...s.readerShortcuts };
 }
 
 export const conflictText = (hotkey: string, other: Slot): string => `${hotkeyText(hotkey)} is already the ${SLOT_NAMES[other]}. Pick another shortcut.`;

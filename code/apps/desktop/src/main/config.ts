@@ -15,7 +15,7 @@ interface ConfigStore {
   recovered: string | null;
   /** Bad fields repaired or a file from a newer app, for the banner in Settings. */
   notice: SettingsNotice | null;
-  /** Dictation entries (words, modes, replacements) the file had that loading left out, and the copy of the file kept because of it. */
+  /** Dictation entries (words, modes, replacements, corrections) the file had that loading left out, and the copy of the file kept because of it. */
   dropped: { count: number; copy: string | null };
 }
 
@@ -65,9 +65,14 @@ export async function openConfig(cwd: string): Promise<ConfigStore> {
   };
 }
 
-/** The Activity line for dictation entries (words, modes, replacements) that loading left out; none when nothing was. */
+/** The Activity line for dictation entries (words, modes, replacements, corrections) that loading left out; none when nothing was. */
 export function droppedNotices({ count, copy }: { count: number; copy: string | null }): { title: string; body: string }[] {
   if (!count) return [];
   const kept = copy ? ` The old file is kept as ${path.basename(copy)}.` : "";
-  return [{ title: `${count} dictation ${count === 1 ? "entry" : "entries"} could not be read`, body: `Words, modes or replacements in Settings were broken or repeated and were left out.${kept}` }];
+  return [
+    {
+      title: `${count} dictation ${count === 1 ? "entry" : "entries"} could not be read`,
+      body: `Words, modes, replacements or corrections in Settings were broken or repeated and were left out.${kept}`,
+    },
+  ];
 }

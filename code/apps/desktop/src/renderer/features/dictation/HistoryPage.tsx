@@ -3,6 +3,7 @@ import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
 import { Advanced } from "../settings";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
 import { DEFAULT_HOTKEY, hotkeyLabels } from "../../../shared/dictation/keys";
+import { FixDialog } from "../corrections";
 import { dictation, platformName } from "./api";
 import { emptyHint, expiryText, focusAfterDelete, groupByDay, historyFooter, historyLead, toggled } from "./model";
 import { HistoryDialogs, type HistoryDialog } from "./HistoryDialogs";
@@ -50,10 +51,11 @@ type GroupsProps = {
   picked: ReadonlySet<string> | null;
   toggle: (id: string) => void;
   openSettings: () => void;
+  onFix: (item: HistoryItem) => void;
 };
 
 /** The entries, newest first, in day groups; `copied` is the entry whose text was just copied. */
-function Groups({ items, load, s, picked, toggle, openSettings }: GroupsProps) {
+function Groups({ items, load, s, picked, toggle, openSettings, onFix }: GroupsProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const groups = useMemo(() => groupByDay(items, Date.now()), [items]);
@@ -84,6 +86,7 @@ function Groups({ items, load, s, picked, toggle, openSettings }: GroupsProps) {
               open={open === item.id}
               onToggle={() => setOpen((o) => (o === item.id ? null : item.id))}
               onCopy={() => void copy(item.id)}
+              onFix={() => onFix(item)}
               onDelete={() => void remove(item.id)}
               {...(picked && { selection: { checked: picked.has(item.id), toggle: () => toggle(item.id) } })}
             />
@@ -138,12 +141,13 @@ function Entries(p: {
   total: number;
   retention: DictationStatus["settings"]["retention"];
   openSettings: () => void;
+  onFix: (item: HistoryItem) => void;
 }) {
   if (p.total === 0) return <Empty s={p.s} />;
   if (!p.s) return null;
   return (
     <>
-      <Groups items={p.items ?? []} load={p.load} s={p.s} picked={p.sel.picked} toggle={p.sel.toggle} openSettings={p.openSettings} />
+      <Groups items={p.items ?? []} load={p.load} s={p.s} picked={p.sel.picked} toggle={p.sel.toggle} openSettings={p.openSettings} onFix={p.onFix} />
       {p.items?.length === 0 && <p className="dict-hist__none">Nothing matches that search.</p>}
       <p className="dict-hist__foot">{historyFooter(p.items?.length ?? 0, p.total, p.retention)}</p>
     </>
@@ -173,6 +177,7 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
   const s = useDictation();
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<HistoryDialog>(null);
+  const [fixing, setFixing] = useState<HistoryItem | null>(null);
   const { total, rev, retention, keepRecordings, audioCapMb } = useHistoryNumbers(s);
   const { items, setItems, load } = useItems(search, total, rev);
   const sel = useSelection(items);
@@ -202,7 +207,8 @@ export function DictationHistoryPage({ back, embedded, openSettings }: { back?: 
       <Advanced page="history" subtitle="Copy one of your last five dictations" count={1}>
         <CopyRecent disabled={total === 0} />
       </Advanced>
-      <Entries s={s} items={items} load={load} sel={sel} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} />
+      <Entries s={s} items={items} load={load} sel={sel} total={total} retention={retention} openSettings={openSettings ?? back ?? (() => undefined)} onFix={setFixing} />
+      <FixDialog item={fixing} onClose={() => setFixing(null)} />
       <HistoryDialogs dialog={dialog} close={() => setDialog(null)} total={total} picked={sel.picked} keepRecordings={keepRecordings} audioCapMb={audioCapMb} onChanged={changed} />
     </div>
   );

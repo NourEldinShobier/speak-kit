@@ -10,11 +10,13 @@ interface Deps {
   presenter: HudPresenter;
   /** Anything the status shows changed. */
   changed(): void;
+  /** The Learn correction key was pressed. */
+  learn(): Promise<void>;
 }
 
 const TOAST = { pasted: "hud.pasted", copied: "hud.copiedPaste", empty: "hud.empty", failed: "hud.pasteFailed" } as const;
 
-/** Pause all shortcuts (by hand), Paste last and Undo cancel: the actions that are not a dictation themselves. */
+/** Pause all shortcuts (by hand), Paste last, Learn correction and Undo cancel: the actions that are not a dictation themselves. */
 export class ShortcutControls {
   readonly #d: Deps;
   #paused = false;
@@ -36,6 +38,12 @@ export class ShortcutControls {
     const r = (await this.#d.core()?.pasteLast()) ?? "failed";
     this.#d.presenter.toast(at(TOAST[r]), r === "failed" ? "error" : "ok");
     return r;
+  }
+
+  /** Connects the Paste last and Learn correction chords of the key hook to their actions. */
+  attach(hotkeys: SwitchableHotkeys): void {
+    hotkeys.onPasteLast(() => void this.pasteLast());
+    hotkeys.onLearn(() => void this.#d.learn());
   }
 
   undoCancel(): boolean {

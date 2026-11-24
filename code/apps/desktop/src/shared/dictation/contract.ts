@@ -108,6 +108,8 @@ export interface HistoryItem {
   model?: string;
   durationMs: number;
   rewrite?: RewriteOutcome;
+  /** The stored corrections that changed the text before it was inserted. */
+  corrected?: { heard: string; correct: string }[];
   /** Milliseconds until the entry is removed; null when it is kept for ever. */
   expiresInMs: number | null;
   /** How long the speech model took, and how much silence was cut before it ran. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Dictation } from "@speakkit/dictation";
 import * as v from "valibot";
-import { DictationConfigSchema } from "../../shared/dictation/settings";
+import { DictationConfigSchema, type DictationConfig } from "../../shared/dictation/settings";
 import { HistoryApi } from "./history-api";
 import type { Stt } from "./stt";
 
@@ -11,7 +11,7 @@ const gate = () => {
   return { wait, open };
 };
 
-function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ text: string; speech: boolean }> } = {}) {
+function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ text: string; speech: boolean }>; corrections?: DictationConfig["corrections"]; app?: string } = {}) {
   const loads: string[] = [];
   const languages: string[] = [];
   const versions: unknown[] = [];
@@ -24,12 +24,12 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
     status: () => ({ state: "ready" }),
     onStatus: () => () => {},
   } as unknown as Stt;
-  const cfg = v.parse(DictationConfigSchema, {});
+  const cfg = v.parse(DictationConfigSchema, { corrections: opts.corrections ?? [] });
   const core = {
     history: {
       preservedAs: () => undefined,
       status: () => "ok",
-      get: async () => ({ id: "a", app: undefined }),
+      get: async () => ({ id: "a", app: opts.app }),
       audio: async () => ({ pcm: new Float32Array(1600), sampleRate: 16_000, peak: 1 }),
       addVersion: async (_id: string, v: unknown) => void versions.push(v),
     },
@@ -52,6 +52,29 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
 }
 
 const other = (cfg: { model: string }) => (cfg.model === "parakeet-tdt-0.6b-v3-q4_0" ? "large-v3-turbo-q5_0" : "parakeet-tdt-0.6b-v3-q4_0") as "large-v3-turbo-q5_0";
+
+describe("Transcribe again with stored corrections", () => {
+  const fix = (extra: object = {}) => ({ id: "c", heard: "cloud code", correct: "Claude Code", count: 1, createdAt: 1, confirmed: true, ...extra });
+  const said = async () => ({ text: "i opened cloud code", speech: true });
+
+  it("puts the new version through the corrections that apply in the program of the entry", async () => {
+    const { api, versions, cfg } = rig({ transcribe: said, corrections: [fix()] });
+    await api.retranscribe("a", other(cfg));
+    expect(versions).toMatchObject([{ text: "I opened Claude Code" }]);
+  });
+
+  it("leaves out a correction that is for another program or is only a suggestion", async () => {
+    const scoped = rig({ transcribe: said, corrections: [fix({ app: "slack" })], app: "notepad.exe" });
+    await scoped.api.retranscribe("a", other(scoped.cfg));
+    expect(scoped.versions).toMatchObject([{ text: "I opened cloud code" }]);
+    const suggestion = rig({ transcribe: said, corrections: [fix({ confirmed: false })] });
+    await suggestion.api.retranscribe("a", other(suggestion.cfg));
+    expect(suggestion.versions).toMatchObject([{ text: "I opened cloud code" }]);
+    const here = rig({ transcribe: said, corrections: [fix({ app: "slack" })], app: "Slack.exe" });
+    await here.api.retranscribe("a", other(here.cfg));
+    expect(here.versions).toMatchObject([{ text: "I opened Claude Code" }]);
+  });
+});
 
 describe("Transcribe again", () => {
   it("refuses while a dictation is recording or transcribing, and does not touch the engine", async () => {

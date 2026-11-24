@@ -41,7 +41,7 @@ export const HUD_EVENT = "speakkit:dictation:hud";
 
 /** The HUD page asks for something (Sound settings, Download, Try again) or dismisses itself. */
 export const HUD_ACTION = "speakkit:dictation:hud-action";
-export const HUD_ACTIONS = ["sound-settings", "download", "retry", "undo-cancel", "cancel-recording", "skip-rewrite", "dismiss", "copy-last", "paste-again"] as const;
+export const HUD_ACTIONS = ["sound-settings", "download", "retry", "undo-cancel", "cancel-recording", "skip-rewrite", "dismiss", "copy-last", "paste-again", "learn-save", "learn-undo"] as const;
 export type HudAction = (typeof HUD_ACTIONS)[number];
 
 /** Microphone window: main sends commands, the window answers each one and reports the level while recording. */

@@ -22,7 +22,7 @@ Speak Kit is a set of speaking tools for Chrome and your desktop: have pages rea
 
 **Read aloud.** Select text in Chrome, press a key, and a natural voice reads it while the current sentence and word are highlighted. The Chrome extension reads selections and whole pages, with a floating player, a reader view and a side panel queue. 28 Kokoro voices run on the CPU of any computer.
 
-**Dictation (Windows).** Hold Right Ctrl in any app, speak, release, and the text is pasted where your cursor is. English filler words are removed, your own replacements apply, each app can have its own mode, and past dictations are kept in a history. Speech recognition runs on your computer with Whisper or Parakeet models.
+**Dictation (Windows).** Hold Right Ctrl in any app, speak, release, and the text is pasted where your cursor is. English filler words are removed, your own replacements apply, each app can have its own mode, past dictations are kept in a history, and a misheard word you fix once, in the history or with an optional shortcut, is corrected from then on. Speech recognition runs on your computer with Whisper or Parakeet models.
 
 **Library.** The desktop app opens PDF, EPUB, DOCX, Markdown and text files, reads them with word highlighting, and exports MP3 and WAV.
 
@@ -64,6 +64,8 @@ Voice chat needs an OpenAI API key. Add it in the app under Voice chat. The key 
 ## Privacy
 
 Reading aloud, dictation and transcripts run on your computer. The local server listens on `127.0.0.1` only and needs a token. Network traffic is the model downloads and the update check against GitHub Releases, which you can turn off in Settings, About. No analytics, no accounts.
+
+The optional Learn correction shortcut reads the text of the field you were typing in once, at the moment you press it; nothing leaves your computer.
 
 Voice chat is the exception, and only while a conversation is open: your microphone audio, the text of the page and its address are sent to OpenAI and billed to your key.
 

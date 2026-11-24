@@ -53,8 +53,8 @@ describe("shortcuts page", () => {
   it("shows every row of the default state, with Restore default disabled", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
     const t = text(base);
-    for (const s of ["Dictation shortcut", "Right Ctrl", "Shortcut mode", "Hold or double-tap", "Paste last dictation"]) expect(t).toContain(s);
-    for (const s of ["Hold time", "Dictate without processing", "How Hold or double-tap works", "Add shortcut"]) expect(t).not.toContain(s);
+    for (const s of ["Dictation shortcut", "Right Ctrl", "Shortcut mode", "Hold or double-tap", "Paste last dictation", "Learn correction"]) expect(t).toContain(s);
+    for (const s of ["Hold time", "Dictate without processing", "How Hold or double-tap works"]) expect(t).not.toContain(s);
     expect(buttonOf(html, "Restore the default Dictation shortcut")).toContain("disabled");
     expect(t).toContain("Hold the key to talk. Let go to insert the text.");
     expect(t).not.toContain("Second shortcut");
@@ -63,7 +63,22 @@ describe("shortcuts page", () => {
 
   it("gives every control an accessible name", () => {
     const html = renderToStaticMarkup(<ShortcutsSections s={base} />);
-    for (const name of ["Change Dictation shortcut", "Change Paste last dictation"]) expect(html).toContain(`aria-label="${name}"`);
+    for (const name of ["Change Dictation shortcut", "Change Paste last dictation", "Add shortcut: Learn correction"]) expect(html).toContain(`aria-label="${name}"`);
+  });
+
+  it("offers the Learn correction shortcut as not set, with the one-read promise, and shows it once set", () => {
+    const t = text(base);
+    expect(t).toContain("Learn correction");
+    expect(t).toContain("Not set");
+    expect(t).toContain("reads that text once, when you press the key");
+    expect(text(withSettings({ learnHotkey: "ControlLeft+AltLeft+KeyL" }))).not.toContain("Not set");
+  });
+
+  it("lets the Learn correction shortcut be cleared again with Restore default", () => {
+    const unset = renderToStaticMarkup(<ShortcutsSections s={base} />);
+    expect(unset).not.toContain("Restore the default Learn correction");
+    const set = renderToStaticMarkup(<ShortcutsSections s={withSettings({ learnHotkey: "ControlLeft+AltLeft+KeyL" })} />);
+    expect(buttonOf(set, "Restore the default Learn correction")).not.toContain("disabled");
   });
 
   it("enables Restore default once Paste last is changed", () => {
@@ -98,6 +113,7 @@ describe("shortcut model", () => {
   });
 
   it("collects every shortcut, including the reader ones, and words a conflict", () => {
+    expect(allShortcuts({ ...base, settings: { ...base.settings, learnHotkey: "F8" } })).toMatchObject({ learn: "F8" });
     expect(allShortcuts(base)).toMatchObject({ dictation: "ControlRight", pasteLast: "ControlLeft+AltLeft+KeyV", cancel: "Escape", "read-selection": "Ctrl+Alt+S" });
     expect(conflictText("ControlRight", "dictation")).toBe("Right Ctrl is already the Dictation shortcut. Pick another shortcut.");
     expect(isDefault("dictation", "ControlRight")).toBe(true);

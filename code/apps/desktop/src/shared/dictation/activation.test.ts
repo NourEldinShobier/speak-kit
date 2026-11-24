@@ -88,11 +88,12 @@ describe("conflict names and accelerators", () => {
     expect(SLOT_NAMES).toEqual({
       dictation: "Dictation shortcut",
       pasteLast: "Paste last dictation",
+      learn: "Learn correction",
       cancel: "Cancel key",
       "read-selection": "Read selection",
       "play-pause": "Play or pause",
     });
-    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(5);
+    expect([...HOOK_SLOTS, ...ACCELERATOR_SLOTS]).toHaveLength(6);
   });
 
   it("reads accelerator spellings: Ctrl, Control, Option, Shift, Super, Meta, Win, letters, digits and named keys", () => {
@@ -221,6 +222,38 @@ describe("activation config", () => {
     const c = parseConfig({ dictation: { pasteLastHotkey: "F9", hotkey: "F9" } }).dictation;
     expect(c.hotkey).toBe("F9");
     expect(c.pasteLastHotkey).toBe("ControlLeft+AltLeft+KeyV");
+  });
+
+  it("has no learn-correction shortcut until one is set, and clears it when it shares a key", () => {
+    expect(parseConfig({ dictation: {} }).dictation.learnHotkey).toBe("");
+    expect(parseConfig({ dictation: { learnHotkey: "ControlLeft+AltLeft+KeyL" } }).dictation.learnHotkey).toBe("ControlLeft+AltLeft+KeyL");
+    const c = parseConfig({ dictation: { hotkey: "F9", learnHotkey: "F9" } }).dictation;
+    expect(c).toMatchObject({ hotkey: "F9", learnHotkey: "", resetNotice: "clash" });
+    expect(v.safeParse(DictationPatchSchema, { learnHotkey: "" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { learnHotkey: "ControlLeft+AltLeft+KeyL" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { learnHotkey: "KeyA" }).success).toBe(false);
+  });
+
+  it("loads corrections, drops a broken or repeated one, and loads a file from before they existed with none", () => {
+    const ok = { id: "a", heard: "cloud code", correct: "Claude Code", count: 1, createdAt: 5, confirmed: true };
+    expect(parseConfig({ dictation: {} }).dictation.corrections).toEqual([]);
+    expect(parseConfig({ dictation: { corrections: "nope" } }).dictation.corrections).toEqual([]);
+    expect(
+      parseConfig({ dictation: { corrections: [ok, { ...ok, heard: "x y" }, { id: "b", heard: "", correct: "Z", count: 1, createdAt: 1 }, { ...ok, id: "c", left: "opened", app: " Slack " }] } })
+        .dictation.corrections,
+    ).toEqual([ok, { ...ok, id: "c", left: "opened", app: "slack" }]);
+  });
+
+  it("keeps the dictations a correction was seen in, at most five", () => {
+    const ok = { id: "a", heard: "cloud code", correct: "Claude Code", count: 2, createdAt: 5, sources: ["e1", "e2"] };
+    expect(parseConfig({ dictation: { corrections: [ok, { ...ok, id: "b", sources: ["1", "2", "3", "4", "5", "6"] }] } }).dictation.corrections).toEqual([ok]);
+  });
+
+  it("the patch takes corrections and refuses repeated ids and more than the cap", () => {
+    const row = (id: string) => ({ id, heard: "a b", correct: "ab", count: 1, createdAt: 1 });
+    expect(v.safeParse(DictationPatchSchema, { corrections: [row("a"), row("b")] }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { corrections: [row("a"), row("a")] }).success).toBe(false);
+    expect(v.safeParse(DictationPatchSchema, { corrections: Array.from({ length: 501 }, (_, i) => row(String(i))) }).success).toBe(false);
   });
 
   it("loads a file that still has the removed sharing, pause and clean-up settings, and drops them", () => {

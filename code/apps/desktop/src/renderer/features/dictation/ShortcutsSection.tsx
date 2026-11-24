@@ -90,6 +90,12 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
           />
         }
       />
+      <SettingRow
+        className="lm-row--control"
+        label="Learn correction"
+        description="After you fix a misheard word in the app you dictated into, press this to teach Speak Kit the fix. It reads that text once, when you press the key, and nothing leaves this computer."
+        control={<HotkeyRecorder slot="learn" label="Learn correction" value={c.learnHotkey} restore="" status={s} save={(learnHotkey) => patch({ learnHotkey })} confirmAdvanced={confirm} />}
+      />
     </SettingsSection>
   );
 }
