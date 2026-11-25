@@ -2,7 +2,6 @@ import { chunkPcm, QUIET_PEAK } from "./capture/policy";
 import { skipPauses } from "./capture/outage";
 import { applyCorrections, type Applied } from "./corrections/apply";
 import { findHints, type Hint } from "./corrections/hints";
-import { usable } from "./corrections/store";
 import type { History } from "./history";
 import { applyMode, DEFAULT_MODE_ID, resolveMode, type Mode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
@@ -11,7 +10,7 @@ import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
 import { spaceBefore } from "./spacing";
 import { stripTailCredit } from "./tail-filter";
-import { buildPrompt, soundsLikeRules } from "./vocabulary";
+import { activeFixes, buildPrompt, hintFixes, swapRules, usableTerms } from "./vocabulary";
 import type { Settings } from "./settings";
 import type { CaptureResult, Clip, DictationDeps, DictationErrorCode, Notice, TranscribeResult } from "./types";
 
@@ -232,9 +231,9 @@ function checkClip(ctx: Context, clip: Clip): Outcome | undefined {
   return undefined;
 }
 
-/** The text rules of the mode in use, with the sounds-like spellings of the vocabulary. */
-function cleanUp(heard: Heard, eff: Settings, language: string): string {
-  return applyRules(heard.text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: heard.language ?? language });
+/** The text rules of the mode in use, with the swaps of the words that apply in the program in front. */
+function cleanUp(heard: Heard, eff: Settings, language: string, exe: string | undefined): string {
+  return applyRules(heard.text, { ...eff, replacements: swapRules(eff.terms, exe), language: heard.language ?? language });
 }
 
 /** The speech engine's text for the take, with a made-up credit at the end removed; or why there is none. The take is kept when the engine fails. */
@@ -267,16 +266,15 @@ async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId 
 
 interface Polished {
   text: string;
-  /** The stored corrections that changed the text. */
+  /** The learned fixes that changed the text. */
   corrected?: Applied[];
   rewrite?: RewriteOutcome;
 }
 
-/** The stored corrections for the program, then the rewrite pass with the spots that look like a misheard phrase the corrections did not catch. */
+/** The learned fixes for the program, then the rewrite pass with the spots that look like a misheard phrase of a word that was not caught. */
 async function polish(ctx: Context, eff: Settings & { template: TemplateId }, said: string, exe: string | undefined): Promise<Polished> {
-  const mine = usable(eff.corrections, exe);
-  const fixed = applyCorrections(said, mine);
-  const rewritten = await rewriteStep(ctx, eff, { text: fixed.text, hints: findHints(fixed.text, mine) });
+  const fixed = applyCorrections(said, activeFixes(eff.terms, exe));
+  const rewritten = await rewriteStep(ctx, eff, { text: fixed.text, hints: findHints(fixed.text, hintFixes(eff.terms, exe)) });
   return { text: rewritten?.text ?? fixed.text, ...(fixed.applied.length && { corrected: fixed.applied }), ...(rewritten && { rewrite: rewritten.outcome }) };
 }
 
@@ -303,11 +301,11 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   if (silent) return silent;
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
   const eff = applyMode(ctx.settings, withDefaultStyle(resolveMode(ctx.settings.modes, target?.exe, target?.site), ctx.settings));
-  const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
+  const prompt = ctx.settings.prompt ? buildPrompt(usableTerms(eff.terms, target?.exe)).text : "";
   const got = await transcribe(ctx, clip, prompt, target?.layout);
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
-  const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);
+  const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language, target?.exe);
   logTake(ctx, { clip, heard: heard.text, transcribeMs });
   if (!said) return { notice: { kind: "no-speech" } };
   const { text, corrected, rewrite }: Polished = job.raw ? { text: said } : await polish(ctx, eff, said, target?.exe);

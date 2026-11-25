@@ -1,29 +1,42 @@
 import { describe, expect, it } from "vite-plus/test";
 import { rig, target } from "./fakes";
 import {
+  acceptSuggestions,
+  activeFixes,
   applyCorrections,
-  confirmCorrections,
   defaultMode,
   editedRegion,
   learnFromField,
   learnFromSelection,
   findHints,
   hintBlock,
-  isActive,
+  hintFixes,
   keepsOtherWords,
   learnCorrections,
-  MAX_CORRECTIONS,
+  MAX_SOUNDS,
+  MAX_TERMS,
   remember,
-  removeCorrection,
+  removeTerm,
   rewritePass,
-  usable,
-  type Correction,
+  type Fix,
   type Rewriter,
   type Settings,
+  type Term,
 } from "../src";
 
-const fix = (heard: string, correct: string, extra: Partial<Correction> = {}): Correction => ({ id: heard, heard, correct, count: 1, createdAt: 1, confirmed: true, ...extra });
+const fix = (heard: string, correct: string, extra: Partial<Fix> = {}): Fix => ({ heard, correct, ...extra });
 const MEMORY = [fix("cloud code", "Claude Code", { left: "opened", right: "and" }), fix("VS Good", "VS Code", { left: "in" }), fix("get hub", "GitHub", { left: "to" })];
+
+/** A word learned from a fix: saved, or a suggestion seen `count` times; `app` limits it to a program. */
+const learned = (heard: string, correct: string, extra: { left?: string; right?: string; app?: string; suggested?: boolean; count?: number } = {}): Term => ({
+  id: heard,
+  word: correct,
+  soundsLike: [heard],
+  ...(extra.app && { app: extra.app }),
+  ...(extra.suggested && { suggested: true }),
+  learned: { heard, count: extra.count ?? 1, createdAt: 1, ...(extra.left && { left: extra.left }), ...(extra.right && { right: extra.right }) },
+});
+const MEMORY_TERMS = MEMORY.map((m) => learned(m.heard, m.correct, { ...(m.left && { left: m.left }), ...(m.right && { right: m.right }) }));
 
 describe("learning a correction from an edit", () => {
   it("takes a phrase the person retyped, with the words around it", () => {
@@ -76,51 +89,136 @@ describe("learning a correction from an edit", () => {
   });
 });
 
-describe("remembering corrections", () => {
+describe("remembering fixes as words", () => {
   const now = 100;
+  const heardAs = (list: Term[]) => list.map((t) => [t.word, t.soundsLike]);
 
-  it("a fix seen once and not saved on purpose does not apply yet; seen twice it does", () => {
+  it("a fix seen once and not saved on purpose is a suggestion that does not apply yet; seen twice it does", () => {
     const once = remember([], { heard: "cloud code", correct: "Claude Code" }, { now });
-    expect(once.map(isActive)).toEqual([false]);
-    expect(usable(once, "any.exe")).toEqual([]);
+    expect(once).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], suggested: true, learned: { heard: "cloud code", count: 1 } }]);
+    expect(activeFixes(once, "any.exe")).toEqual([]);
     const twice = remember(once, { heard: "Cloud Code", correct: "Claude Code" }, { now });
     expect(twice).toHaveLength(1);
-    expect(twice[0]).toMatchObject({ count: 2 });
-    expect(usable(twice, "any.exe")).toHaveLength(1);
+    expect(twice[0]?.learned?.count).toBe(2);
+    expect(activeFixes(twice, "any.exe")).toEqual([{ heard: "cloud code", correct: "Claude Code" }]);
   });
 
-  it("a fix saved on purpose applies at once", () => {
+  it("a fix saved on purpose is a saved word that applies at once", () => {
     const list = remember([], { heard: "cloud code", correct: "Claude Code", left: "opened" }, { now, confirmed: true });
-    expect(list).toMatchObject([{ heard: "cloud code", correct: "Claude Code", left: "opened", count: 1, createdAt: 100, confirmed: true }]);
+    expect(list).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], learned: { heard: "cloud code", left: "opened", count: 1, createdAt: 100 } }]);
+    expect(list[0]?.suggested).toBeUndefined();
   });
 
-  it("a new fix for the same words in the same place replaces the old one", () => {
+  it("a fix saved on purpose for a word that is in the list adds its spelling to that word", () => {
+    const base: Term[] = [{ id: "w", word: "Claude Code", soundsLike: ["clawd code"] }];
+    expect(heardAs(remember(base, { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true }))).toEqual([["Claude Code", ["clawd code", "cloud code"]]]);
+    expect(remember(base, { heard: "Clawd Code", correct: "Claude Code" }, { now, confirmed: true })).toEqual(base);
+  });
+
+  it("a new fix for the same words in the same place takes the spelling from the old one", () => {
     const list = remember(remember([], { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true }), { heard: "cloud code", correct: "Claude Code CLI" }, { now, confirmed: true });
-    expect(list.map((c) => c.correct)).toEqual(["Claude Code CLI"]);
+    expect(heardAs(list)).toEqual([
+      ["Claude Code", []],
+      ["Claude Code CLI", ["cloud code"]],
+    ]);
+  });
+
+  it("a suggestion is replaced by a fix saved on purpose for the same words", () => {
+    const list = remember(remember([], { heard: "cloud code", correct: "Claude" }, { now }), { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true });
+    expect(heardAs(list)).toEqual([["Claude Code", ["cloud code"]]]);
   });
 
   it("scopes a fix to one program, and the program's name is normalised", () => {
     const list = remember([], { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true, app: "Slack.exe" });
-    expect(usable(list, "slack.exe")).toHaveLength(1);
-    expect(usable(list, "Slack.EXE")).toHaveLength(1);
-    expect(usable(list, "notepad.exe")).toEqual([]);
-    expect(usable(list, undefined)).toEqual([]);
+    expect(activeFixes(list, "slack.exe")).toHaveLength(1);
+    expect(activeFixes(list, "Slack.EXE")).toHaveLength(1);
+    expect(activeFixes(list, "notepad.exe")).toEqual([]);
+    expect(activeFixes(list, undefined)).toEqual([]);
   });
 
-  it("keeps the list at its cap, dropping a fix that is not active first", () => {
-    let list: Correction[] = [];
-    for (let i = 0; i < MAX_CORRECTIONS; i++) list = remember(list, { heard: `phrase${i}`, correct: `Phrase ${i}` }, { now, confirmed: i > 0 });
+  it("keeps the list at its cap, dropping a suggestion first, and adds nothing when there is none to drop", () => {
+    let list: Term[] = [];
+    for (let i = 0; i < MAX_TERMS; i++) list = remember(list, { heard: `phrase${i}`, correct: `Phrase ${i}` }, { now, confirmed: i > 0 });
     const next = remember(list, { heard: "extra one", correct: "Extra Two" }, { now, confirmed: true });
-    expect(next).toHaveLength(MAX_CORRECTIONS);
-    expect(next.some((c) => c.heard === "phrase0")).toBe(false);
-    expect(next.some((c) => c.heard === "extra one")).toBe(true);
+    expect(next).toHaveLength(MAX_TERMS);
+    expect(next.some((t) => t.soundsLike.includes("phrase0"))).toBe(false);
+    expect(next.some((t) => t.soundsLike.includes("extra one"))).toBe(true);
+    expect(remember(next, { heard: "one more", correct: "One More" }, { now, confirmed: true })).toEqual(next);
   });
 
   it("ignores a fix that changes nothing, and deleting a row twice is harmless", () => {
     expect(remember([], { heard: "same", correct: "Same" }, { now })).toEqual([]);
     const list = remember([], { heard: "a b", correct: "ab" }, { now, confirmed: true });
     const id = list[0]!.id;
-    expect(removeCorrection(removeCorrection(list, id), id)).toEqual([]);
+    expect(removeTerm(removeTerm(list, id), id)).toEqual([]);
+  });
+
+  it("counts one dictation once, and a single word only next to the same neighbour", () => {
+    const once = remember([], { heard: "cloud code", correct: "Claude Code" }, { now, source: "h1" });
+    expect(remember(once, { heard: "cloud code", correct: "Claude Code" }, { now, source: "h1" })[0]?.learned?.count).toBe(1);
+    expect(remember(once, { heard: "cloud code", correct: "Claude Code" }, { now, source: "h2" })[0]?.learned).toMatchObject({ count: 2, sources: ["h1", "h2"] });
+    const word = remember([], { heard: "kubernetis", correct: "Kubernetes", left: "with" }, { now });
+    expect(remember(word, { heard: "kubernetis", correct: "Kubernetes", left: "on" }, { now })[0]?.learned?.count).toBe(1);
+    expect(remember(word, { heard: "kubernetis", correct: "Kubernetes", left: "with" }, { now })[0]?.learned?.count).toBe(2);
+  });
+
+  it("uses a suggestion: it becomes a saved word, or joins the word it is for", () => {
+    const suggestion = remember([], { heard: "cloud code", correct: "Claude Code" }, { now });
+    const used = acceptSuggestions(suggestion, [suggestion[0]!.id]);
+    expect(used).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"] }]);
+    expect(used[0]?.suggested).toBeUndefined();
+    const own: Term = { id: "w", word: "Claude Code", soundsLike: [] };
+    expect(heardAs(acceptSuggestions([own, ...suggestion], [suggestion[0]!.id]))).toEqual([["Claude Code", ["cloud code"]]]);
+    expect(acceptSuggestions(suggestion, ["other"])).toEqual(suggestion);
+  });
+
+  it("a fix saved on purpose joins the saved word instead of making a second saved entry, and takes the spelling from the other word", () => {
+    const own: Term = { id: "w", word: "Claude Code", soundsLike: [] };
+    const other: Term = { id: "o", word: "Cloud", soundsLike: ["cloud code"] };
+    const suggestion = remember([own, other], { heard: "cloud code", correct: "Claude Code" }, { now });
+    expect(suggestion.filter((t) => t.suggested)).toHaveLength(1);
+    expect(heardAs(remember(suggestion, { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true }))).toEqual([
+      ["Claude Code", ["cloud code"]],
+      ["Cloud", []],
+    ]);
+  });
+
+  it("a suggestion alone becomes a saved word and takes its spelling from another word", () => {
+    const other: Term = { id: "o", word: "Cloud", soundsLike: ["cloud code"] };
+    const suggestion = remember([other], { heard: "cloud code", correct: "Claude Code" }, { now });
+    expect(heardAs(remember(suggestion, { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true }))).toEqual([
+      ["Cloud", []],
+      ["Claude Code", ["cloud code"]],
+    ]);
+  });
+
+  it("a fix whose spelling was removed from its word puts the spelling back", () => {
+    const saved = remember([], { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true });
+    const trimmed = saved.map((t) => ({ ...t, soundsLike: [] }));
+    expect(heardAs(remember(trimmed, { heard: "cloud code", correct: "Claude Code" }, { now, confirmed: true }))).toEqual([["Claude Code", ["cloud code"]]]);
+  });
+
+  it("keeps a suggestion when the word it is for has the most spellings", () => {
+    const own: Term = { id: "w", word: "Claude Code", soundsLike: Array.from({ length: MAX_SOUNDS }, (_, i) => `spelling ${i}`) };
+    const suggestion = remember([own], { heard: "cloud code", correct: "Claude Code" }, { now });
+    expect(acceptSuggestions(suggestion, [suggestion[1]!.id])).toEqual(suggestion);
+  });
+});
+
+describe("the fixes a list of words gives the apply stage and the writer", () => {
+  it("gives the spelling that was learned to the apply stage, and every spelling to the writer with the neighbours it was learned with", () => {
+    const word: Term = { ...learned("cloud code", "Claude Code", { left: "opened" }), soundsLike: ["cloud code", "clawd code"] };
+    expect(activeFixes([word], undefined)).toEqual([{ heard: "cloud code", correct: "Claude Code", confirmed: true }]);
+    expect(hintFixes([word], undefined)).toEqual([
+      { heard: "cloud code", correct: "Claude Code", left: "opened" },
+      { heard: "clawd code", correct: "Claude Code" },
+    ]);
+  });
+
+  it("leaves out entries that remove text, suggestions seen once, and entries for another program", () => {
+    const list = [{ id: "r", word: "um", soundsLike: ["er"], remove: true }, learned("cloud code", "Claude Code", { suggested: true }), learned("get hub", "GitHub", { app: "slack" })];
+    expect(hintFixes(list, "notepad.exe")).toEqual([]);
+    expect(hintFixes(list, "Slack.exe")).toEqual([{ heard: "get hub", correct: "GitHub" }]);
   });
 });
 
@@ -261,7 +359,7 @@ describe("the rewrite pass with misheard spots", () => {
   });
 });
 
-describe("corrections in a dictation", () => {
+describe("learned fixes in a dictation", () => {
   const said =
     (text: string) =>
     async (settings: Partial<Settings>, exe = "notepad.exe", extra?: { rewriter?: Rewriter }) => {
@@ -275,7 +373,7 @@ describe("corrections in a dictation", () => {
   const heard = said("i opened cloud code and ran it");
 
   it("swaps the misheard phrase before inserting and writes the change in the history", async () => {
-    const r = await heard({ corrections: MEMORY });
+    const r = await heard({ terms: MEMORY_TERMS });
     expect(r.ins.inserted[0]?.text).toBe("I opened Claude Code and ran it ");
     expect(await r.dictation.history.list()).toMatchObject([
       { text: "I opened Claude Code and ran it ", raw: "i opened cloud code and ran it", corrected: [{ heard: "cloud code", correct: "Claude Code" }] },
@@ -283,16 +381,17 @@ describe("corrections in a dictation", () => {
   });
 
   it("leaves the text alone when the fix is not active, is for another program, or the dictation is raw", async () => {
-    expect((await heard({ corrections: [fix("cloud code", "Claude Code", { confirmed: false })] })).ins.inserted[0]?.text).toBe("I opened cloud code and ran it ");
-    expect((await heard({ corrections: [fix("cloud code", "Claude Code", { app: "slack" })] })).ins.inserted[0]?.text).toBe("I opened cloud code and ran it ");
-    expect((await heard({ corrections: [fix("cloud code", "Claude Code", { app: "slack" })] }, "Slack.exe")).ins.inserted[0]?.text).toBe("I opened Claude Code and ran it ");
+    expect((await heard({ terms: [learned("cloud code", "Claude Code", { suggested: true })] })).ins.inserted[0]?.text).toBe("I opened cloud code and ran it ");
+    expect((await heard({ terms: [learned("cloud code", "Claude Code", { app: "slack" })] })).ins.inserted[0]?.text).toBe("I opened cloud code and ran it ");
+    expect((await heard({ terms: [learned("cloud code", "Claude Code", { app: "slack" })] }, "Slack.exe")).ins.inserted[0]?.text).toBe("I opened Claude Code and ran it ");
+    expect((await heard({ terms: [learned("cloud code", "Claude Code", { suggested: true, count: 2 })] })).ins.inserted[0]?.text).toBe("I opened Claude Code and ran it ");
   });
 
   it("is done before the writer sees the text, and the writer is told about spellings it did not fix", async () => {
     const seen: { text: string; hints: unknown }[] = [];
     const rewriter: Rewriter = { rewrite: async (req) => (seen.push({ text: req.text, hints: req.hints }), req.text) };
     const chat = { ...defaultMode(), id: "chat", name: "Chat", apps: ["slack"], rewrite: true };
-    await said("i opened cloud code then opened clod code")({ modes: [chat], rewrite: { enabled: true }, corrections: MEMORY }, "slack.exe", { rewriter });
+    await said("i opened cloud code then opened clod code")({ modes: [chat], rewrite: { enabled: true }, terms: MEMORY_TERMS }, "slack.exe", { rewriter });
     expect(seen).toEqual([{ text: "I opened Claude Code then opened clod code", hints: [{ heard: "clod code", correct: "Claude Code", start: 33, end: 42 }] }]);
   });
 });
@@ -323,11 +422,5 @@ describe("learning from the text around a dictation", () => {
     const two = "we met at noon. i opened cloud code and ran the tests. then we left";
     expect(learnFromSelection(two, "I opened Claude Code and ran the tests.")).toEqual([{ heard: "cloud code", correct: "Claude Code", left: "opened", right: "and" }]);
     expect(learnFromSelection(pasted, "unrelated words")).toEqual([]);
-  });
-
-  it("confirms stored fixes by id", () => {
-    const list = remember([], { heard: "cloud code", correct: "Claude Code" }, { now: 1 });
-    expect(usable(confirmCorrections(list, [list[0]!.id]), undefined)).toHaveLength(1);
-    expect(usable(confirmCorrections(list, ["other"]), undefined)).toEqual([]);
   });
 });

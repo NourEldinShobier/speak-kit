@@ -58,7 +58,7 @@ function Transfer({ s, onImport, onError }: { s: DictationStatus; onImport(): vo
   const c = s.settings;
   const save = async (format: ExportFormat) => {
     try {
-      await dictation.vocabExport(format, exportVocabulary({ terms: c.terms, replacements: c.replacements }, format));
+      await dictation.vocabExport(format, exportVocabulary({ terms: c.terms }, format));
     } catch {
       onError("The file could not be saved.");
     }
@@ -77,7 +77,7 @@ function Transfer({ s, onImport, onError }: { s: DictationStatus; onImport(): vo
       >
         <DropdownMenuItem onSelect={() => void save("json")}>Everything (.json)</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void save("txt")}>Words only (.txt)</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void save("csv")}>Replacements (.csv)</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void save("csv")}>Heard as pairs (.csv)</DropdownMenuItem>
       </DropdownMenu>
     </div>
   );
@@ -101,8 +101,8 @@ export function VocabularyPage({ voice, initialTab = "heard" }: { voice: string;
       const file = await dictation.vocabImport();
       if (!file) return;
       const c = s.settings;
-      const res = importVocabulary({ terms: c.terms, replacements: c.replacements }, file.text, file.format);
-      if (!res.error && (res.addedWords || res.addedReplacements)) await patchDictation({ terms: res.vocabulary.terms, replacements: res.vocabulary.replacements });
+      const res = importVocabulary({ terms: c.terms }, file.text, file.format);
+      if (!res.error && res.added) await patchDictation({ terms: res.vocabulary.terms });
       setResult(importView(res, file.name));
     } catch {
       setError("The file could not be read. Nothing was added.");
@@ -124,7 +124,7 @@ export function VocabularyPage({ voice, initialTab = "heard" }: { voice: string;
           { id: "read", label: "Read as" },
         ]}
       />
-      {tab === "heard" ? <HeardAs s={s} onImport={() => void importFile()} onShowWords={() => window.scrollTo?.({ top: 0 })} /> : <ReadAs s={s} voice={voice} />}
+      {tab === "heard" ? <HeardAs s={s} onImport={() => void importFile()} /> : <ReadAs s={s} voice={voice} />}
       <ResultDialog view={result} onClose={() => setResult(null)} />
     </Page>
   );

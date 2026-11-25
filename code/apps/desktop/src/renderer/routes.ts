@@ -31,7 +31,7 @@ export const MENU: { group: string; items: MenuItemDef[] }[] = [
     items: [
       { page: "dictation", label: "Dictation", icon: "keyboard", lead: "Speak and the text appears where you type.", keywords: "hotkey speech to text" },
       { page: "modes", label: "Modes", icon: "adjustments-horizontal", lead: "How dictated text is cleaned up for each app.", keywords: "style rewrite writer local offline gemma openai" },
-      { page: "vocabulary", label: "Vocabulary", icon: "book-2", lead: "Words Speak Kit should spell your way.", keywords: "words replacements pronunciation" },
+      { page: "vocabulary", label: "Vocabulary", icon: "book-2", lead: "Words Speak Kit should spell your way.", keywords: "words heard as suggested pronunciation" },
       { page: "history", label: "History", icon: "history", lead: "What you dictated recently.", keywords: "transcripts past" },
     ],
   },

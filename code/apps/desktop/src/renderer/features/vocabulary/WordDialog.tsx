@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { addTerm, updateTerm, type Term } from "@speakkit/dictation";
-import { Button, Modal, TextInput } from "@speakkit/ui";
+import { addTerm, swapOnlyByDefault, updateTerm, type Term } from "@speakkit/dictation";
+import { Button, Checkbox, Modal, TextInput } from "@speakkit/ui";
 import { checkDraft, parseSounds, type DraftCheck } from "./model";
 
 export interface WordDialogProps {
@@ -20,21 +20,48 @@ export interface WordDialogProps {
   onShow?: ((term: Term) => void) | undefined;
 }
 
-interface FieldsProps {
+/** What the person types: the words, and the options of the entry. `swapOnly` is undefined while the word decides. */
+interface Draft {
   word: string;
   sounds: string;
+  app: string;
+  matchCase: boolean;
+  remove: boolean;
+  swapOnly: boolean | undefined;
+}
+
+const draftOf = (t: Term | undefined): Draft => ({
+  word: t?.word ?? "",
+  sounds: t?.soundsLike.join(", ") ?? "",
+  app: t?.app ?? "",
+  matchCase: t?.matchCase === true,
+  remove: t?.remove === true,
+  swapOnly: t?.swapOnly,
+});
+
+interface FieldsProps {
+  draft: Draft;
   check: DraftCheck;
   overrides: boolean;
-  onWord(v: string): void;
-  onSounds(v: string): void;
+  change(patch: Partial<Draft>): void;
   onShow?: (() => void) | undefined;
 }
 
-function Fields({ word, sounds, check, overrides, onWord, onSounds, onShow }: FieldsProps) {
+function WordFields({ draft, check, overrides, change, onShow }: FieldsProps) {
   const over = check.counter?.over === true;
   return (
     <>
-      <TextInput label="Word or name" placeholder="Kubernetes" value={word} onChange={(e) => onWord(e.target.value)} error={check.message} data-autofocus="" autoComplete="off" spellCheck={false} />
+      <TextInput
+        label="Word or name"
+        hint="The text to write."
+        placeholder="Claude Code"
+        value={draft.word}
+        onChange={(e) => change({ word: e.target.value })}
+        error={check.message}
+        data-autofocus=""
+        autoComplete="off"
+        spellCheck={false}
+      />
       <div className="vocab-form__meta">
         {check.existing && onShow ? (
           <Button size="sm" onClick={onShow}>
@@ -43,18 +70,27 @@ function Fields({ word, sounds, check, overrides, onWord, onSounds, onShow }: Fi
         ) : (
           <span />
         )}
-        {check.counter && (word.trim() || over) ? (
+        {check.counter && (draft.word.trim() || over) ? (
           <span className={`vocab-count${over ? " is-over" : ""}`} aria-live="polite">
             {check.counter.length} of {check.counter.max}
           </span>
         ) : null}
       </div>
       <TextInput
-        label="Sounds like"
+        label="Heard as"
         hint="How the speech model tends to write it, separated by commas. Optional."
-        placeholder="cooper netties, kuber nettys"
-        value={sounds}
-        onChange={(e) => onSounds(e.target.value)}
+        placeholder="cloud code, clawd code"
+        value={draft.sounds}
+        onChange={(e) => change({ sounds: e.target.value })}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <TextInput
+        label="Only in this app"
+        hint="The program file name, such as code.exe. Leave empty for every app."
+        placeholder="code.exe"
+        value={draft.app}
+        onChange={(e) => change({ app: e.target.value })}
         autoComplete="off"
         spellCheck={false}
       />
@@ -67,20 +103,32 @@ function Fields({ word, sounds, check, overrides, onWord, onSounds, onShow }: Fi
   );
 }
 
-/** Add or edit a word: the word or name, and how the speech model tends to hear it. Add stays disabled until a word is typed and the checks pass. */
+function MoreOptions({ draft, change }: Pick<FieldsProps, "draft" | "change">) {
+  const swapOnly = draft.swapOnly ?? swapOnlyByDefault(draft.word);
+  return (
+    <details className="vocab-more">
+      <summary>More options</summary>
+      <div className="vocab-more__body">
+        <Checkbox label="Match capital letters" checked={draft.matchCase} onChange={(e) => change({ matchCase: e.target.checked })} />
+        <Checkbox label="Remove this phrase instead of writing the word" checked={draft.remove} onChange={(e) => change({ remove: e.target.checked })} />
+        <Checkbox label="Only swap, do not tell the speech model" checked={swapOnly || draft.remove} disabled={draft.remove} onChange={(e) => change({ swapOnly: e.target.checked })} />
+      </div>
+    </details>
+  );
+}
+
+/** Add or edit a word: the word or name, how the speech model tends to hear it, where it applies and how it is swapped. Add stays disabled until a word is typed and the checks pass. */
 export function WordDialog({ open, onClose, terms, editing, title, onSave, shared, onShow }: WordDialogProps) {
-  const [word, setWord] = useState("");
-  const [sounds, setSounds] = useState("");
+  const [draft, setDraft] = useState<Draft>(draftOf(undefined));
   useEffect(() => {
-    if (!open) return;
-    setWord(editing?.word ?? "");
-    setSounds(editing?.soundsLike.join(", ") ?? "");
+    if (open) setDraft(draftOf(editing));
   }, [open, editing]);
-  const check = checkDraft(terms, { word, soundsLike: sounds }, editing?.id);
-  const overrides = !check.blocked && !!shared?.some((t) => t.word.toLowerCase() === word.trim().toLowerCase());
+  const check = checkDraft(terms, { word: draft.word, soundsLike: draft.sounds, app: draft.app }, editing?.id);
+  const overrides = !check.blocked && !!shared?.some((t) => t.word.toLowerCase() === draft.word.trim().toLowerCase());
   const submit = () => {
     if (check.blocked) return;
-    const input = { word, soundsLike: parseSounds(sounds) };
+    const { sounds, swapOnly, ...rest } = draft;
+    const input = { ...rest, soundsLike: parseSounds(sounds), swapOnly: swapOnly === swapOnlyByDefault(draft.word) ? undefined : swapOnly };
     const r = editing ? updateTerm(terms, editing.id, input) : addTerm(terms, input);
     if (!r.ok) return;
     onSave(r.list);
@@ -109,7 +157,8 @@ export function WordDialog({ open, onClose, terms, editing, title, onSave, share
           submit();
         }}
       >
-        <Fields word={word} sounds={sounds} check={check} overrides={overrides} onWord={setWord} onSounds={setSounds} onShow={show} />
+        <WordFields draft={draft} check={check} overrides={overrides} change={(patch) => setDraft((d) => ({ ...d, ...patch }))} onShow={show} />
+        <MoreOptions draft={draft} change={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
         <button type="submit" hidden />
       </form>
     </Modal>

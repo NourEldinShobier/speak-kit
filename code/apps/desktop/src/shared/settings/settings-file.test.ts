@@ -79,7 +79,7 @@ describe("the migration that keeps the models loaded", () => {
   it.each([15, 5])("moves the old default of %i minutes to never, remembers it and asks for a backup", (minutes) => {
     const l = loadSettings({ engines: { idleMinutes: minutes, device: "gpu" } });
     expect(l.config.engines).toMatchObject({ idleMinutes: 0, device: "gpu" });
-    expect(l.config.appliedMigrations).toEqual(["engines-models-stay-loaded"]);
+    expect(l.config.appliedMigrations).toEqual(["engines-models-stay-loaded", "vocabulary-one-list"]);
     expect(l.needsBackup).toBe(true);
   });
 

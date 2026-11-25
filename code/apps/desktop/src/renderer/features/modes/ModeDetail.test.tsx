@@ -24,7 +24,6 @@ vi.mock("@speakkit/ui", async (original) => ({
   ),
 }));
 vi.mock("../../ui", () => ({ Page: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
-vi.mock("./ModeReplacements", () => ({ ModeReplacements: () => null }));
 vi.mock("../vocabulary", () => ({ WordDialog: () => null }));
 const { ModeDetail } = await import("./ModeDetail");
 const { createRoot } = await import("react-dom/client");

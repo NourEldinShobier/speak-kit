@@ -1,4 +1,4 @@
-import type { AudioStore, Correction, Dictation, DictationState } from "@speakkit/dictation";
+import type { AudioStore, Dictation, DictationState, Term } from "@speakkit/dictation";
 import type { DictationConfig } from "../../shared/dictation/settings";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
@@ -28,8 +28,8 @@ export interface PartsHost {
   audio(): AudioStore | undefined;
   cfg(): DictationConfig;
   os(): DictationOs | undefined;
-  /** Replaces the list of corrections: saved, handed to the core and shown on the pages. */
-  setCorrections(list: Correction[]): void;
+  /** Replaces the list of words: saved, handed to the core and shown on the pages. */
+  setTerms(list: Term[]): void;
   stt: Stt;
   /** Every speech model, to show the name of the one that heard an entry. */
   catalog(): readonly { id: string; name: string }[];
@@ -62,8 +62,8 @@ export function createParts(h: PartsHost) {
   const learner = new CorrectionLearner({
     ports: selectionPort({ os: h.os, core: h.core }),
     presenter: h.presenter,
-    corrections: () => h.cfg().corrections,
-    save: h.setCorrections,
+    terms: () => h.cfg().terms,
+    save: h.setTerms,
     now: Date.now,
   });
   const controls = new ShortcutControls({ hotkeys: h.hotkeys, core: h.core, presenter: h.presenter, changed: h.changed, learn: () => learner.press() });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { applyRules, soundsLikeRules, type RulesOptions } from "../src";
+import { applyRules, swapRules, type RulesOptions, type Term } from "../src";
 import { traceRules } from "../src/rules";
 
 const off: RulesOptions = { fillers: false, spokenSymbols: false, spokenFormatting: false, autoCapitalize: false, trailingSpace: false, replacements: [], language: "en" };
@@ -46,10 +46,46 @@ describe("replacement edge rules", () => {
   });
 
   it("replaces a sounds-like spelling exactly, ignoring case (Wasu becomes Wazuh)", () => {
-    const rules = soundsLikeRules([{ id: "1", word: "Wazuh", soundsLike: ["wasu", "wa zoo"] }]);
+    const rules = swapRules([{ id: "1", word: "Wazuh", soundsLike: ["wasu", "wa zoo"] }], undefined);
     expect(run("Install Wasu on the server", { replacements: rules })).toBe("Install Wazuh on the server");
     expect(run("install wa zoo", { replacements: rules })).toBe("install Wazuh");
     expect(run("wasun is not it", { replacements: rules })).toBe("wasun is not it");
+  });
+});
+
+describe("the swaps of the one list of words", () => {
+  const word = (w: string, soundsLike: string[], more: Partial<Term> = {}): Term => ({ id: `${w}${more.app ?? ""}`, word: w, soundsLike, ...more });
+  const swap = (text: string, terms: Term[], exe?: string) => run(text, { replacements: swapRules(terms, exe) });
+
+  it("swaps every heard-as spelling for the word, and leaves a word without spellings alone", () => {
+    const list = [word("Claude Code", ["cloud code", "clawed code"]), word("Kubernetes", [])];
+    expect(swap("open cloud code and clawed code with kubernetes", list)).toBe("open Claude Code and Claude Code with kubernetes");
+  });
+
+  it("applies an entry for one program only there, and before an entry for everywhere", () => {
+    const list = [word("Claude Code", ["cloud code"]), word("Claude Code CLI", ["cloud code"], { app: "slack" })];
+    expect(swap("open cloud code", list, "Slack.exe")).toBe("open Claude Code CLI");
+    expect(swap("open cloud code", list, "notepad.exe")).toBe("open Claude Code");
+    expect(swap("open cloud code", list)).toBe("open Claude Code");
+    expect(swap("open cloud code", [list[1]!], "notepad.exe")).toBe("open cloud code");
+  });
+
+  it("removes the phrase of an entry that removes text, together with its spellings", () => {
+    const list = [word("you know", ["i mean"], { remove: true })];
+    expect(swap("so you know it works, i mean it", list)).toBe("so it works, it");
+  });
+
+  it("matches capitals only for an entry that asks for it", () => {
+    expect(swap("Gonna go", [word("going to", ["gonna"], { matchCase: true })])).toBe("Gonna go");
+    expect(swap("gonna go", [word("going to", ["gonna"], { matchCase: true })])).toBe("going to go");
+    expect(swap("Gonna go", [word("going to", ["gonna"])])).toBe("going to go");
+  });
+
+  it("leaves out a suggestion that was seen once, and applies the swaps of one learned from a fix as a fix, not as a swap", () => {
+    const learned = { heard: "cloud code", count: 1, createdAt: 1 };
+    expect(swap("open cloud code", [word("Claude Code", ["cloud code"], { suggested: true, learned })])).toBe("open cloud code");
+    expect(swap("open cloud code", [word("Claude Code", ["cloud code"], { learned })])).toBe("open cloud code");
+    expect(swap("open cloud code", [word("Claude Code", ["cloud code"], { learned, matchCase: true })])).toBe("open Claude Code");
   });
 });
 

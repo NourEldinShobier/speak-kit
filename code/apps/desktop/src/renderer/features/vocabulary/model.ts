@@ -2,6 +2,7 @@ import {
   buildPrompt,
   FILLER_LANGUAGES,
   FORMATTING_LANGUAGES,
+  isSwapOnly,
   MAX_TERMS,
   MAX_WORD,
   SYMBOL_LANGUAGES,
@@ -22,6 +23,8 @@ export const pronunciationCount = (n: number, max = 200) => `${n} of ${max} entr
 export interface Draft {
   word: string;
   soundsLike: string;
+  /** The program file name the entry is limited to; empty for every program. */
+  app?: string;
 }
 
 export interface DraftCheck {
@@ -48,20 +51,34 @@ export function checkDraft(terms: readonly Term[], draft: Draft, editingId?: str
   const length = [...word].length;
   const counter = { length, max: MAX_WORD, over: length > MAX_WORD };
   if (!word) return { blocked: true };
-  const error = validateWord(terms, word, editingId);
+  const app = draft.app?.trim() ?? "";
+  if (/[\s\\/]/.test(app)) return { blocked: true, counter, message: "Use the program file name, such as code.exe." };
+  const error = validateWord(terms, word, editingId, app);
   if (error === "too-long") return { blocked: true, counter, message: `Words and names can be up to ${MAX_WORD} characters. This one is ${length}.` };
   if (error === "duplicate") {
-    const existing = terms.find((t) => t.id !== editingId && t.word.toLowerCase() === word.toLowerCase());
+    const existing = savedTerms(terms).find((t) => t.id !== editingId && t.word.toLowerCase() === word.toLowerCase() && (t.app ?? "") === app.toLowerCase().replace(/\.exe$/, ""));
     return { blocked: true, ...(existing && { existing }), message: `"${existing?.word ?? word}" is already in the list.` };
   }
   if (!editingId && terms.length >= MAX_TERMS) return { blocked: true, message: `The list is full: ${MAX_TERMS} words. Remove one to add another.` };
   return { blocked: false, counter };
 }
 
+/** The entries the person keeps; a suggestion is not one yet. */
+export const savedTerms = (terms: readonly Term[]): Term[] => terms.filter((t) => !t.suggested);
+
+/** Fixes that were learned and wait for "Use" or "Dismiss". */
+export const suggestedTerms = (terms: readonly Term[]): Term[] => terms.filter((t) => t.suggested);
+
+export const seenText = (t: Pick<Term, "learned">): string => ((t.learned?.count ?? 1) === 1 ? "Seen once" : `Seen ${t.learned?.count} times`);
+
 export const filterTerms = (terms: readonly Term[], query: string): Term[] => {
   const q = query.trim().toLowerCase();
   return q ? terms.filter((t) => t.word.toLowerCase().includes(q) || t.soundsLike.some((s) => s.toLowerCase().includes(q))) : [...terms];
 };
+
+/** The short notes shown under a word: where it applies and the options that are set. */
+export const termNotes = (t: Term): string[] =>
+  [t.app && `Only in ${t.app}.exe`, t.matchCase && "Matches capitals", t.remove && "Removes the phrase", !t.remove && isSwapOnly(t) && "Not sent to the speech model"].filter((x): x is string => !!x);
 
 export interface PromptSummary {
   state: "off" | "empty" | "unsupported" | "on";
@@ -74,10 +91,16 @@ export interface PromptSummary {
 export function promptSummary(terms: readonly Term[], o: { model: string; on: boolean; modelName: string }): PromptSummary {
   const { model, on, modelName } = o;
   const plan = buildPrompt(terms);
+  const total = plan.included + plan.dropped;
   if (!supportsPrompt(model))
-    return { state: "unsupported", plan, line: "Not used with this speech model.", note: `${modelName} cannot read a word list. Your words still work through replacements, and nothing is blocked.` };
-  if (!terms.length) return { state: "empty", plan, line: "Nothing to send yet." };
-  const line = `${plan.included} of ${terms.length} ${terms.length === 1 ? "word" : "words"} read by the model, ${plan.used} of ${plan.budget} characters.`;
+    return {
+      state: "unsupported",
+      plan,
+      line: "Not used with this speech model.",
+      note: `${modelName} cannot read a word list. Words you gave a "Heard as" spelling still work, and nothing is blocked.`,
+    };
+  if (!total) return { state: "empty", plan, line: "Nothing to send yet." };
+  const line = `${plan.included} of ${total} ${total === 1 ? "word" : "words"} read by the model, ${plan.used} of ${plan.budget} characters.`;
   const note = plan.dropped ? `The other ${plan.dropped} still work: they are fixed after the model has heard you.` : undefined;
   return { state: on ? "on" : "off", plan, line, ...(note && { note }) };
 }
@@ -126,7 +149,7 @@ export function importView(r: ImportResult, name: string): ImportView {
   if (r.error === "unreadable") return { title: "Could not import", body: [`${name} is not a file Speak Kit can read. Nothing was added.`], skipped: [], failed: true };
   if (r.error === "newer") return { title: "Could not import", body: [`${name} was made by a newer Speak Kit. Update Speak Kit to read it. Nothing was added.`], skipped: [], failed: true };
   const skips = [r.duplicates && plural(r.duplicates, "duplicate"), r.tooLong && `${plural(r.tooLong, "entry", "entries")} that ${r.tooLong === 1 ? "is" : "are"} too long`].filter(Boolean);
-  const body = [`${plural(r.addedWords, "word")} and ${plural(r.addedReplacements, "replacement")} were added.`];
+  const body = [`${plural(r.added, "entry", "entries")} ${r.added === 1 ? "was" : "were"} added.`];
   if (skips.length) body.push(`${skips.join(" and ")} ${skips.length === 1 && r.duplicates === 1 && !r.tooLong ? "was" : "were"} skipped.`);
   return { title: "Import finished", body, skipped: r.skipped.map((s) => ({ line: s.line, why: WHY[s.reason] })), failed: false };
 }

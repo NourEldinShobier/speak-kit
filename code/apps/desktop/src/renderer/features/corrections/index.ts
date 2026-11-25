@@ -1,3 +1,2 @@
-/** Corrections: the card on Vocabulary and the dialog on History that turn a fixed dictation into corrections. */
-export { CorrectionsCard } from "./CorrectionsCard";
+/** The dialog on History that turns a fixed dictation into words of the vocabulary. */
 export { FixDialog } from "./FixDialog";

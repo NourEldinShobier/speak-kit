@@ -110,43 +110,6 @@
   font-size: 12px;
 }
 
-/* Replacements. */
-.dict-repl {
-  gap: 12px;
-  min-block-size: 43px;
-}
-.dict-repl__from {
-  inline-size: 122px;
-  box-sizing: border-box;
-  padding: 4px 8px;
-  border: 1px solid var(--stroke-hairline);
-  border-radius: 6px;
-  background: var(--surface-well);
-  font-size: 12px;
-}
-.dict-repl__arrow {
-  color: var(--icon-quiet);
-  flex: none;
-}
-.dict-repl__to {
-  flex: 1;
-  font-size: 13px;
-}
-.dict-repl__del {
-  margin-inline-start: auto;
-  flex: none;
-}
-.dict-repl--add {
-  background: var(--surface-well);
-  padding-block: 10px;
-}
-.dict-repl__field {
-  inline-size: 162px;
-}
-.dict-repl__field--wide {
-  inline-size: 236px;
-}
-
 /* Test field. */
 .dict-test {
   inline-size: 100%;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isActive, usable, type Correction } from "@speakkit/dictation";
+import { activeFixes, isActive, type Term } from "@speakkit/dictation";
 import { CorrectionLearner, learnFromWindow, RECENT_MS, type WindowPorts } from "./learn-correction";
 import { isTerminal, TERMINALS } from "./terminals";
 
@@ -90,7 +90,7 @@ describe("terminals", () => {
   });
 });
 
-function rig(start: Correction[] = [], over: Partial<WindowPorts> = {}) {
+function rig(start: Term[] = [], over: Partial<WindowPorts> = {}) {
   const shown: string[] = [];
   const state = { list: start };
   const learner = new CorrectionLearner({
@@ -99,7 +99,7 @@ function rig(start: Correction[] = [], over: Partial<WindowPorts> = {}) {
       toast: (text, tone) => void shown.push(`${tone ?? "ok"}: ${text}`),
       offer: (text, action) => void shown.push(`${text} [${action.label}:${action.id}]`),
     },
-    corrections: () => state.list,
+    terms: () => state.list,
     save: (list) => void (state.list = list),
     now: () => NOW,
   });
@@ -107,21 +107,22 @@ function rig(start: Correction[] = [], over: Partial<WindowPorts> = {}) {
 }
 
 describe("the Learn correction key", () => {
-  it("keeps a first sighting as a suggestion and offers a button that makes it apply", async () => {
+  it("keeps a first sighting as a suggestion and offers a button that makes it a word that applies", async () => {
     const r = rig();
     await r.learner.press();
     expect(r.shown).toEqual(['Remember "cloud code" as "Claude Code"? [Remember:learn-save]']);
-    expect(r.state.list).toMatchObject([{ heard: "cloud code", correct: "Claude Code", count: 1, sources: ["e1"] }]);
-    expect(usable(r.state.list, undefined)).toEqual([]);
+    expect(r.state.list).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], suggested: true, learned: { heard: "cloud code", count: 1, sources: ["e1"] } }]);
+    expect(activeFixes(r.state.list, undefined)).toEqual([]);
     r.learner.save();
-    expect(usable(r.state.list, undefined)).toHaveLength(1);
+    expect(activeFixes(r.state.list, undefined)).toHaveLength(1);
+    expect(r.state.list[0]?.suggested).toBeUndefined();
   });
 
   it("pressing it twice for the same dictation is one sighting, not an activation", async () => {
     const r = rig();
     await r.learner.press();
     await r.learner.press();
-    expect(r.state.list).toMatchObject([{ count: 1 }]);
+    expect(r.state.list).toMatchObject([{ learned: { count: 1 } }]);
     expect(r.state.list.some(isActive)).toBe(false);
     expect(r.shown[1]).toBe('Remember "cloud code" as "Claude Code"? [Remember:learn-save]');
   });
@@ -132,13 +133,13 @@ describe("the Learn correction key", () => {
     const again = new CorrectionLearner({
       ports: ports({ last: async () => ({ id: "e2", text: SAID, at: NOW - 1000 }) }).p,
       presenter: { toast: () => undefined, offer: (text, action) => void r.shown.push(`${text} [${action.label}:${action.id}]`) },
-      corrections: () => r.state.list,
+      terms: () => r.state.list,
       save: (list) => void (r.state.list = list),
       now: () => NOW,
     });
     await again.press();
     expect(r.shown[1]).toBe('Learned "cloud code" as "Claude Code" [Undo:learn-undo]');
-    expect(r.state.list).toMatchObject([{ count: 2, sources: ["e1", "e2"] }]);
+    expect(r.state.list).toMatchObject([{ learned: { count: 2, sources: ["e1", "e2"] } }]);
     expect(r.state.list.every(isActive)).toBe(true);
     again.undo();
     expect(r.state.list).toEqual([]);
@@ -151,7 +152,14 @@ describe("the Learn correction key", () => {
     expect(r.state.list).toHaveLength(1);
     r.learner.save();
     r.learner.save();
-    expect(r.state.list).toMatchObject([{ confirmed: true, count: 1 }]);
+    expect(r.state.list).toMatchObject([{ word: "Claude Code", learned: { count: 1 } }]);
+    expect(r.state.list[0]?.suggested).toBeUndefined();
+  });
+
+  it("offers nothing to remember when the fix is already a saved word", async () => {
+    const r = rig([{ id: "w", word: "Claude Code", soundsLike: ["cloud code"] }]);
+    await r.learner.press();
+    expect(r.state.list).toEqual([{ id: "w", word: "Claude Code", soundsLike: ["cloud code"] }]);
   });
 
   it("says why when there is nothing to learn", async () => {

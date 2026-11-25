@@ -1,4 +1,4 @@
-import { applyMode, applyRules, defaultSettings, resolveMode, soundsLikeRules, type Settings } from "@speakkit/dictation";
+import { applyMode, applyRules, defaultSettings, resolveMode, swapRules, type Settings } from "@speakkit/dictation";
 import type { Heard, StreamsHost } from "@speakkit/server";
 import type { Ctx } from "../context";
 import { coreSettings } from "../dictation/service-support";
@@ -25,7 +25,7 @@ export function desktopStreams(ctx: Ctx, p: { stt: Stt; dictation(): DictationSe
     process(text, language) {
       const base: Settings = { ...defaultSettings, ...coreSettings(ctx.config.dictation) };
       const eff = applyMode(base, resolveMode(base.modes, undefined));
-      return applyRules(text, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: language === "auto" ? ctx.config.dictation.language : language }).trimEnd();
+      return applyRules(text, { ...eff, replacements: swapRules(eff.terms, undefined), language: language === "auto" ? ctx.config.dictation.language : language }).trimEnd();
     },
   };
 }

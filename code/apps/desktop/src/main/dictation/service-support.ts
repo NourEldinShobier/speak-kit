@@ -42,8 +42,6 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   cancelKey: c.cancelKey,
   language: c.language,
   retention: c.retention,
-  replacements: c.replacements,
-  corrections: c.corrections,
   keepReady: c.keepReady,
   skipPauses: c.skipPauses,
   keepOnClipboard: c.output === "keep",

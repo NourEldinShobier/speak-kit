@@ -131,12 +131,12 @@ describe("settings repair and backup", () => {
 });
 
 describe("the Activity line for entries that were left out", () => {
-  it("names corrections among the lists, and says how many entries and where the old file is", () => {
+  it("names the old lists among the entries, and says how many entries and where the old file is", () => {
     expect(droppedNotices({ count: 0, copy: null })).toEqual([]);
     expect(droppedNotices({ count: 2, copy: "config.copy.json" })).toEqual([
       {
         title: "2 dictation entries could not be read",
-        body: "Words, modes, replacements or corrections in Settings were broken or repeated and were left out. The old file is kept as config.copy.json.",
+        body: "Words, modes, replacements or corrections in Settings were broken, repeated or past the 500 words the list holds, and were left out. The old file is kept as config.copy.json.",
       },
     ]);
     expect(droppedNotices({ count: 1, copy: null })[0]?.title).toBe("1 dictation entry could not be read");

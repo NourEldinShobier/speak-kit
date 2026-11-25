@@ -22,7 +22,7 @@ function pattern(from: string, matchCase: boolean): RegExp {
   return new RegExp(`${before}${escape(from)}${after}`, matchCase ? "gu" : "giu");
 }
 
-function hits(text: string, rules: Replacement[]): Hit[] {
+function hits(text: string, rules: readonly Replacement[]): Hit[] {
   const all: Hit[] = [];
   rules.forEach((rule, order) => {
     if (!rule.from.trim()) return;
@@ -44,7 +44,7 @@ const skipSpaces = (text: string, from: number): number => {
 const atSentenceStart = (out: string): boolean => /(^|[.!?]\s+|\n[ \t]*)$/.test(out);
 
 /** One pass over the original text, so a replacement is never replaced again. An empty replacement deletes the phrase and closes the gap. */
-export function applyReplacements(text: string, rules: Replacement[]): string {
+export function applyReplacements(text: string, rules: readonly Replacement[]): string {
   let out = "";
   let cursor = 0;
   let capitalNext = false;

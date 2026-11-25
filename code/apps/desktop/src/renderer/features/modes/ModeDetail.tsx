@@ -5,7 +5,6 @@ import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { WordDialog } from "../vocabulary";
 import { AddSiteDialog, SitesCard } from "./SitesCard";
-import { ModeReplacements } from "./ModeReplacements";
 import { appLabel, heardAs, STYLE_OPTIONS, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
@@ -92,8 +91,7 @@ function DeleteDialog({ open, mode, onClose, onConfirm }: { open: boolean; mode:
   return (
     <Modal open={open} onClose={onClose} title={`Delete ${mode.name}?`} width={420} footer={footer}>
       <p className="sk-modal-text" style={{ margin: 0 }}>
-        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to your Dictation and Vocabulary settings, and its words and replacements are removed.
-        You cannot undo it.
+        Its {mode.apps.length + mode.sites.length === 1 ? "app or website goes" : "apps and websites go"} back to your Dictation and Vocabulary settings, and its words are removed. You cannot undo it.
       </p>
     </Modal>
   );
@@ -241,7 +239,7 @@ export interface ModeDetailProps {
   onDelete(): void;
 }
 
-/** One mode: its apps and websites, the rewrite choice and its own words and replacements. */
+/** One mode: its apps and websites, the rewrite choice and its own words. */
 export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites, onDelete }: ModeDetailProps) {
   const [addApp, setAddApp] = useState(false);
   const [addSite, setAddSite] = useState(false);
@@ -266,7 +264,6 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
         <TemplateRow mode={mode} active={mode.rewrite && s.settings.rewrite.enabled} onChange={onChange} />
       </div>
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
-      <ModeReplacements mode={mode} onChange={onChange} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />
       <AddSiteDialog open={addSite} mode={mode} others={others} onClose={() => setAddSite(false)} onSave={onSites} />
       <DeleteDialog open={asking} mode={mode} onClose={() => setAsking(false)} onConfirm={onDelete} />

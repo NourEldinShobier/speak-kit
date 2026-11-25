@@ -81,7 +81,7 @@ export function HistoryRow({
   item: HistoryItem;
   copied: boolean;
   onCopy: () => void;
-  /** Opens the editor that turns the person's fixes into corrections. */
+  /** Opens the editor that turns the person's fixes into words. */
   onFix: () => void;
   onDelete: () => void;
   open?: boolean;

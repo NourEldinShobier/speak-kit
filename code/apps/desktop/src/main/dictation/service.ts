@@ -107,7 +107,7 @@ export class DictationService {
       audio: () => this.#audio,
       cfg: () => this.#cfg,
       os: () => this.os,
-      setCorrections: (list) => void this.patchSettings({ corrections: list }),
+      setTerms: (list) => void this.patchSettings({ terms: list }),
       stt: this.stt,
       catalog: () => this.speech.catalog(),
       files: o.files ?? filePickers(o.parent, __TEST_CODE__ && o.test ? this.scriptedFiles : undefined),

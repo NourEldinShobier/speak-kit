@@ -42,7 +42,7 @@ const status = (over: Partial<DictationStatus> = {}): DictationStatus => ({
   enabled: true,
   hotkeyReady: true,
   phase: "idle",
-  settings: { ...DEFAULT_DICTATION, enabled: true, hotkey: "ControlLeft+AltLeft+Space", language: "en", replacements: [{ from: "gonna", to: "going to" }] },
+  settings: { ...DEFAULT_DICTATION, enabled: true, hotkey: "ControlLeft+AltLeft+Space", language: "en" },
   models: [turbo, parakeet],
   modelInstalled: true,
   modelReady: true,

@@ -1,10 +1,12 @@
 import * as v from "valibot";
-import { DEFAULT_TEMPLATE, MAX_CORRECTIONS, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
 export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
 import { DEFAULT_HOTKEY, DEFAULT_PASTE_LAST, validCancelKey, validHotkey } from "./keys";
+import { unifyVocabulary, VOCABULARY_MIGRATION_ID } from "./legacy-vocabulary";
 import { DICTATION_MODELS } from "./models";
+import { idSchema as id, TermSchema as Term, termKeys, type TermOut } from "./terms-schema";
 import { SPOKEN_LANGUAGE_CODES } from "../speech-models/config";
 
 /** A catalog model, or one the person added from a file ("custom-" and twelve hex digits of its fingerprint). */
@@ -21,7 +23,6 @@ export const modelId = v.union([
 export const DICTATION_LANGUAGES = ["auto", "keyboard", ...SPOKEN_LANGUAGE_CODES] as const;
 export const DUCK_MODES = ["nothing", "mute", "lower", "pause"] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
-export const MAX_REPLACEMENTS = 100;
 /** Who tidies the text in the rewrite pass: OpenAI (the text leaves the computer) or the model on this computer. */
 export const REWRITE_WRITERS = ["openai", "local"] as const;
 /** How dictated text leaves the app: put back the old clipboard after pasting, leave the text on it, or only copy. */
@@ -30,46 +31,9 @@ export const OUTPUTS = ["restore", "keep", "copy"] as const;
 export const MAX_TERMS = 500;
 export const MAX_MODES = 24;
 
-export type Replacement = { from: string; to: string; matchCase?: boolean | undefined };
-const id = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
-const Term = v.object({
-  id,
-  word: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)),
-  soundsLike: v.pipe(v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))), v.maxLength(20)),
-});
-const Correction = v.object({
-  id,
-  heard: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
-  correct: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)),
-  left: v.optional(v.pipe(v.string(), v.maxLength(40))),
-  right: v.optional(v.pipe(v.string(), v.maxLength(40))),
-  app: v.optional(v.pipe(v.string(), v.trim(), v.toLowerCase(), v.minLength(1), v.maxLength(80))),
-  count: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100_000)),
-  createdAt: v.pipe(v.number(), v.minValue(0)),
-  confirmed: v.optional(v.boolean()),
-  sources: v.optional(v.pipe(v.array(v.pipe(v.string(), v.maxLength(64))), v.maxLength(5))),
-});
-const correctionKeys = (c: { id: string }) => [`i:${c.id}`];
 const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60)), spoken: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)) });
-const Replacement = v.object({ from: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)), to: v.pipe(v.string(), v.maxLength(200)), matchCase: v.optional(v.boolean()) });
-// A bad entry is dropped, the rest of the list stays.
-const replacements = v.fallback(
-  v.pipe(
-    v.array(v.unknown()),
-    v.transform((items) =>
-      items
-        .flatMap((i) => {
-          const r = v.safeParse(Replacement, i);
-          return r.success ? [r.output] : [];
-        })
-        .slice(0, MAX_REPLACEMENTS),
-    ),
-  ),
-  [],
-);
 const DEFAULT_ID = "default";
 const lower = (x: string) => x.toLowerCase();
-const termKeys = (t: { id: string; word: string }) => [`i:${t.id}`, `w:${lower(t.word)}`];
 const distinct = (keys: string[]): boolean => new Set(keys).size === keys.length;
 // A bad or repeated entry is dropped, the rest of the list stays.
 const lenient = <T extends v.GenericSchema>(item: T, max: number, keys: (x: v.InferOutput<T>) => string[] = () => []) =>
@@ -92,7 +56,6 @@ const lenient = <T extends v.GenericSchema>(item: T, max: number, keys: (x: v.In
     ),
     [] as v.InferOutput<T>[],
   );
-type TermOut = v.InferOutput<typeof Term>;
 const termList = v.pipe(
   v.array(Term),
   v.maxLength(MAX_TERMS),
@@ -113,8 +76,6 @@ const modeEntries = {
   rewrite: v.boolean(),
   /** How the rewrite pass words the text; modes saved before templates existed, or with an unknown one, use Tidy. */
   template: v.fallback(v.picklist(TEMPLATE_IDS), DEFAULT_TEMPLATE),
-  /** Replacements only for this mode; a file from before they existed loads with none. */
-  replacements,
 };
 type ModeOut = v.InferOutput<ReturnType<typeof v.object<typeof modeEntries & { terms: typeof termList }>>>;
 // The built-in default mode is not stored: a saved one (from before it was fixed) is dropped, and no mode may take its id or name.
@@ -165,9 +126,6 @@ const CORE_KEYS = {
   language: v.fallback(v.picklist(DICTATION_LANGUAGES), "en"),
   model: v.fallback(modelId, DICTATION_MODELS[0]),
   retention: v.fallback(v.picklist(RETENTIONS), "7d"),
-  replacements,
-  /** Misheard phrases the person fixed. A bad or repeated entry is dropped, the rest stays; a file from before they existed loads with none. */
-  corrections: v.fallback(lenient(Correction, MAX_CORRECTIONS, correctionKeys), []),
   /** Device id of the chosen microphone; empty means the system default, never a virtual input. */
   microphone: v.fallback(v.pipe(v.string(), v.maxLength(300)), ""),
   avoidBluetooth: v.fallback(v.boolean(), true),
@@ -234,20 +192,22 @@ export type DictationConfig = v.InferOutput<typeof DictationConfigSchema>;
 const count = (x: unknown): number => (Array.isArray(x) ? x.length : 0);
 
 /**
- * How many entries of the stored dictation section loading leaves out: words, pronunciations, replacements, corrections and modes that are broken, repeated or over
- * the limit, and the words inside a mode that are. The person is told, so nothing disappears without a word.
+ * How many entries of the stored dictation section loading leaves out: words, pronunciations and modes that are broken, repeated or over the limit, the words inside a
+ * mode that are, and the old replacements and corrections that did not fit the one list of words. The person is told, so nothing disappears without a word.
+ * `applied` are the migrations already run: once the old lists were turned into words they are not looked for again.
  */
-export function countDropped(raw: unknown): number {
+export function countDropped(raw: unknown, applied: readonly string[] = []): number {
   if (typeof raw !== "object" || raw === null) return 0;
   const r = raw as Record<string, unknown>;
   const kept = v.parse(DictationConfigSchema, r);
   // A saved default mode is dropped on purpose, so it is not counted as lost.
   const savedModes = Array.isArray(r.modes) ? r.modes.filter((m: unknown) => (m as { id?: unknown } | null)?.id !== DEFAULT_ID) : [];
-  const lists = (["terms", "readAs", "replacements", "corrections", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
+  const lists = (["terms", "readAs", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
   // Words inside the modes that were kept: a bad word costs the word, not the mode.
   const insideKept = kept.modes.reduce((n, m) => n + m.terms.length, 0);
   const insideRaw = (Array.isArray(r.modes) ? r.modes : []).reduce((n: number, m: unknown) => (v.safeParse(LenientMode, m).success ? n + count((m as { terms?: unknown }).terms) : n), 0);
-  return lists + Math.max(0, insideRaw - insideKept);
+  const old = applied.includes(VOCABULARY_MIGRATION_ID) ? 0 : unifyVocabulary(r).dropped;
+  return lists + Math.max(0, insideRaw - insideKept) + old;
 }
 
 /** What the renderer may change; `enabled` has its own call because turning dictation on starts the hook and the microphone window. */
@@ -261,12 +221,6 @@ export const DictationPatchSchema = v.partial(
     language: v.picklist(DICTATION_LANGUAGES),
     model: modelId,
     retention: v.picklist(RETENTIONS),
-    replacements: v.pipe(v.array(Replacement), v.maxLength(MAX_REPLACEMENTS)),
-    corrections: v.pipe(
-      v.array(Correction),
-      v.maxLength(MAX_CORRECTIONS),
-      v.check((items: v.InferOutput<typeof Correction>[]) => distinct(items.flatMap(correctionKeys)), "Entries must have different ids"),
-    ),
     microphone: v.pipe(v.string(), v.maxLength(300)),
     avoidBluetooth: v.boolean(),
     keepReady: v.boolean(),

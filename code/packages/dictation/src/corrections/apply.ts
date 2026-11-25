@@ -1,4 +1,4 @@
-import type { Correction } from "./store";
+import type { Fix } from "../vocabulary/terms";
 import { wordsOf, type Word } from "./words";
 
 /** What a correction changed in a dictation, for the history and the undo. */
@@ -14,7 +14,7 @@ interface Hit {
   from: number;
   to: number;
   text: string;
-  by: Correction;
+  by: Fix;
 }
 
 const keysOf = (phrase: string): string[] => wordsOf(phrase).map((w) => w.key);
@@ -46,13 +46,13 @@ function inCase(text: string, at: { start: number; end: number }, correct: strin
 }
 
 /** Fixes for one program come before fixes for everywhere, and fixes saved on purpose before those only seen twice. */
-const rank = (c: Correction): number => (c.app ? 0 : 2) + (c.confirmed ? 0 : 1);
+const rank = (c: Fix): number => (c.app ? 0 : 2) + (c.confirmed ? 0 : 1);
 
 /**
  * Swaps the misheard phrase of each correction for the right one: whole words, any capitals, the longest phrase first, each place once.
  * Text that already says the right words stays as it is (a fix that adds to a word never adds twice), and a dictation changes in at most `MAX_APPLIED` places.
  */
-export function applyCorrections(text: string, corrections: readonly Correction[]): { text: string; applied: Applied[] } {
+export function applyCorrections(text: string, corrections: readonly Fix[]): { text: string; applied: Applied[] } {
   const words = wordsOf(text);
   const hits: Hit[] = [];
   const ordered = corrections.map((c) => ({ c, phrase: keysOf(c.heard) })).sort((x, y) => y.phrase.length - x.phrase.length || rank(x.c) - rank(y.c));

@@ -14,8 +14,6 @@ const DEFAULTS = {
   language: "en",
   model: "large-v3-turbo-q5_0",
   retention: "7d",
-  replacements: [],
-  corrections: [],
   microphone: "",
   avoidBluetooth: true,
   keepReady: false,
@@ -60,14 +58,42 @@ describe("dictation config", () => {
     expect(parseConfig({ dictation: null }).dictation).toEqual(DEFAULTS);
   });
 
-  it("drops replacements with no text to match or the wrong shape, trims what it keeps, and stops at 100", () => {
-    const list = [{ from: "  gonna ", to: "going to" }, { from: "", to: "x" }, { from: "a" }, "nope", null, { from: "tmrw", to: "tomorrow" }];
-    expect(v.parse(DictationConfigSchema, { replacements: list }).replacements).toEqual([
-      { from: "gonna", to: "going to" },
-      { from: "tmrw", to: "tomorrow" },
+  it("keeps the options of a word, and drops a word whose options have the wrong shape", () => {
+    const word = { id: "a", word: " Claude Code ", soundsLike: [" cloud code "], app: " Code ", matchCase: true, remove: false, swapOnly: true };
+    const learned = { heard: "cloud code", count: 2, createdAt: 5, left: "opened", sources: ["e1", "e2"] };
+    const list = [
+      word,
+      { id: "b", word: "x", soundsLike: [], matchCase: "yes" },
+      { id: "c", word: "Tauri", soundsLike: ["tory"], learned, suggested: true },
+      { id: "d", word: "y", soundsLike: [], learned: { heard: "" } },
+    ];
+    expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([
+      { id: "a", word: "Claude Code", soundsLike: ["cloud code"], app: "code", matchCase: true, remove: false, swapOnly: true },
+      { id: "c", word: "Tauri", soundsLike: ["tory"], learned, suggested: true },
     ]);
-    const many = Array.from({ length: 150 }, (_, i) => ({ from: `w${i}`, to: "x" }));
-    expect(v.parse(DictationConfigSchema, { replacements: many }).replacements).toHaveLength(100);
+  });
+
+  it("keeps a word of 200 characters and a heard-as spelling of 80, and refuses more", () => {
+    const long = { id: "a", word: "w".repeat(200), soundsLike: ["s".repeat(80)] };
+    expect(v.parse(DictationConfigSchema, { terms: [long] }).terms).toEqual([long]);
+    expect(
+      v.parse(DictationConfigSchema, {
+        terms: [
+          { ...long, word: "w".repeat(201) },
+          { ...long, id: "b", soundsLike: ["s".repeat(81)] },
+        ],
+      }).terms,
+    ).toEqual([]);
+  });
+
+  it("allows the same word for two programs and a suggestion beside a saved word, but not the same word twice for one", () => {
+    const a = { id: "a", word: "Claude Code", soundsLike: [] };
+    const suggestion = { id: "s", word: "Claude Code", soundsLike: ["cloud code"], suggested: true, learned: { heard: "cloud code", count: 1, createdAt: 1 } };
+    const ok = (terms: unknown[]) => v.safeParse(DictationPatchSchema, { terms }).success;
+    expect(ok([a, { ...a, id: "b", app: "code" }, suggestion])).toBe(true);
+    expect(ok([a, { ...a, id: "b" }])).toBe(false);
+    expect(ok([suggestion, { ...suggestion, id: "t" }])).toBe(false);
+    expect(v.parse(DictationConfigSchema, { terms: [a, { ...a, id: "b", app: "code" }, suggestion] }).terms).toHaveLength(3);
   });
 });
 
@@ -104,17 +130,11 @@ describe("settings added after the first release", () => {
     expect(ok({ duckLevel: 2.5 })).toBe(false);
   });
 
-  it("a mode saved before per-mode replacements loads with none, keeps good ones and drops bad ones", () => {
+  it("a mode saved with replacements loads without them, and keeps its sites as host names", () => {
     const m = { id: "chat", name: "Chat", apps: ["slack"], rewrite: false, terms: [] };
-    expect(parseConfig({ dictation: { modes: [m] } }).dictation.modes[0]).toMatchObject({ id: "chat", replacements: [], sites: [] });
+    expect(parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }] }] } }).dictation.modes[0]).toEqual({ ...m, sites: [], template: "tidy" });
     expect(parseConfig({ dictation: { modes: [{ ...m, sites: ["GitHub.com ", "x.org"] }] } }).dictation.modes[0]!.sites).toEqual(["github.com", "x.org"]);
     expect(parseConfig({ dictation: { modes: [{ ...m, sites: [3] }] } }).dictation.modes[0]!.sites).toEqual([]);
-    const got = parseConfig({ dictation: { modes: [{ ...m, replacements: [{ from: "ship it", to: "deploy" }, { from: "", to: "x" }, 5, { from: "a", to: "b", matchCase: true }] }] } }).dictation
-      .modes[0]!.replacements;
-    expect(got).toEqual([
-      { from: "ship it", to: "deploy" },
-      { from: "a", to: "b", matchCase: true },
-    ]);
   });
 
   it("the renderer may change each of them and nothing else inside sounds", () => {
@@ -139,8 +159,8 @@ describe("what the renderer may change", () => {
     ["a hotkey that is not allowed", { hotkey: "KeyA" }],
     ["an unknown language", { language: "tlh" }],
     ["an unknown model", { model: "other" }],
-    ["a replacement without text", { replacements: [{ from: "", to: "x" }] }],
-    ["more than 100 replacements", { replacements: Array.from({ length: 101 }, () => ({ from: "a", to: "b" })) }],
+    ["the old list of replacements", { replacements: [{ from: "a", to: "x" }] }],
+    ["the old list of corrections", { corrections: [] }],
   ])("refuses %s", (_why, patch) => {
     expect(v.safeParse(DictationPatchSchema, patch).success).toBe(false);
   });
@@ -175,7 +195,7 @@ describe("audio and output settings", () => {
 
   it("loads a mode saved with the removed insert, capitals and end choices and drops them", () => {
     const saved = { id: "m1", name: "Code", apps: ["code"], insertMode: "type", capitals: "keep", end: "no-full-stop", rewrite: true, terms: [] };
-    expect(v.parse(DictationConfigSchema, { modes: [saved] }).modes).toEqual([{ id: "m1", name: "Code", apps: ["code"], sites: [], rewrite: true, template: "tidy", terms: [], replacements: [] }]);
+    expect(v.parse(DictationConfigSchema, { modes: [saved] }).modes).toEqual([{ id: "m1", name: "Code", apps: ["code"], sites: [], rewrite: true, template: "tidy", terms: [] }]);
   });
 
   it("ignores the removed micExclusions and appRules keys of an older config", () => {
@@ -200,15 +220,15 @@ describe("audio and output settings", () => {
 });
 
 describe("vocabulary, modes and rewrite in the config", () => {
-  it("loads a dictation section from before they existed with every new field at its default", () => {
+  it("loads a dictation section from before they existed with every new field at its default, and leaves the old replacements to the migration", () => {
     const old = parseConfig({
       dictation: { enabled: true, hotkey: "ControlRight", mode: "hold", language: "de", model: "large-v3-turbo-q5_0", retention: "30d", replacements: [{ from: "a", to: "b" }] },
     }).dictation;
-    expect(old).toEqual({ ...DEFAULTS, enabled: true, hotkey: "ControlRight", language: "de", retention: "30d", replacements: [{ from: "a", to: "b" }] });
+    expect(old).toEqual({ ...DEFAULTS, enabled: true, hotkey: "ControlRight", language: "de", retention: "30d" });
   });
 
   it("keeps good words and drops each bad one, trimming and capping at 500", () => {
-    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "", soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(61), soundsLike: [] }];
+    const list = [{ id: "a", word: " Kubernetes ", soundsLike: ["cooper netties"] }, { id: "b", word: "", soundsLike: [] }, { id: "c" }, "x", { id: "d", word: "y".repeat(201), soundsLike: [] }];
     expect(v.parse(DictationConfigSchema, { terms: list }).terms).toEqual([{ id: "a", word: "Kubernetes", soundsLike: ["cooper netties"] }]);
     const many = Array.from({ length: 600 }, (_, i) => ({ id: `i${i}`, word: `w${i}`, soundsLike: [] }));
     expect(v.parse(DictationConfigSchema, { terms: many }).terms).toHaveLength(500);
@@ -218,7 +238,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
   it("keeps good modes, lower-cases their apps and drops a mode with a wrong choice", () => {
     const mode = { id: "m1", name: "Code", apps: ["Code", "cursor"], rewrite: false, terms: [] };
     const got = v.parse(DictationConfigSchema, { modes: [mode, { ...mode, id: "m2", rewrite: "yes" }, { ...mode, id: "m3", name: "" }] }).modes;
-    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], template: "tidy", replacements: [] }]);
+    expect(got).toEqual([{ ...mode, apps: ["code", "cursor"], sites: [], template: "tidy" }]);
   });
 
   it("loads a mode saved before templates as Tidy, keeps a known template and falls back to Tidy for an unknown one", () => {
@@ -228,7 +248,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(template("email")).toBe("email");
     expect(template("poem")).toBe("tidy");
     expect(template(3)).toBe("tidy");
-    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...old, template: "notes", sites: [], replacements: [] }] }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { modes: [{ ...old, template: "notes", sites: [] }] }).success).toBe(true);
   });
 
   it("gives a mode saved before websites existed an empty list, and keeps sites as host names, once each", () => {
@@ -283,7 +303,7 @@ describe("vocabulary, modes and rewrite in the config", () => {
     const mode = { id: "m1", name: "Code", apps: ["code"], rewrite: false };
     const good = { id: "t1", word: "pnpm", soundsLike: [] };
     const got = v.parse(DictationConfigSchema, { modes: [{ ...mode, terms: [good, { id: "t2", word: "" }, "x"] }] }).modes;
-    expect(got).toEqual([{ ...mode, sites: [], replacements: [], template: "tidy", terms: [good] }]);
+    expect(got).toEqual([{ ...mode, sites: [], template: "tidy", terms: [good] }]);
   });
 
   it("drops a repeated word, id or mode name on load and refuses them in a change from the renderer", () => {
@@ -331,6 +351,7 @@ describe("entries that loading leaves out", () => {
     expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }] })).toBe(0);
     expect(countDropped({ terms: [{ id: "a", word: "x", soundsLike: [] }, { id: "b" }, "junk", { id: "c", word: "X", soundsLike: [] }] })).toBe(3);
     expect(countDropped({ readAs: [{ id: "r" }], replacements: [{ from: "", to: "b" }] })).toBe(2);
+    expect(countDropped({ readAs: [{ id: "r" }], replacements: [{ from: "", to: "b" }] }, ["vocabulary-one-list"])).toBe(1);
     expect(
       countDropped({
         modes: [

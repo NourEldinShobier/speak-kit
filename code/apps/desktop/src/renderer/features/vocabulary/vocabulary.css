@@ -122,37 +122,21 @@
   background: var(--chip-orange);
   color: var(--tag-orange);
 }
-.vocab-link {
-  all: unset;
-  color: var(--text-primary);
-  text-decoration: underline;
-  cursor: pointer;
-}
-.vocab-link:focus-visible {
-  outline: 2px solid var(--stroke-focus-field);
-  outline-offset: 2px;
-}
 
-/* Replacements. */
-.vocab-rules {
+/* Suggested fixes. */
+.vocab-suggests {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.vocab-rule {
+.vocab-suggest {
   display: grid;
-  grid-template-columns: minmax(80px, 160px) 16px 1fr auto auto;
+  grid-template-columns: minmax(80px, 160px) 16px minmax(80px, 1fr) minmax(100px, auto) auto auto;
   align-items: center;
   gap: 12px;
-  min-block-size: 43px;
+  min-block-size: 47px;
 }
-.vocab-rule--head {
-  padding: 8px 16px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  border-block-end: 1px solid var(--stroke-hairline);
-}
-.vocab-rule__from {
+.vocab-suggest__from {
   box-sizing: border-box;
   padding: 4px 8px;
   border: 1px solid var(--stroke-hairline);
@@ -161,28 +145,34 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-.vocab-rule--head .vocab-rule__from {
-  border: 0;
-  background: none;
-  padding: 0;
-}
-.vocab-rule__to {
+.vocab-suggest__to {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
-.vocab-rule__to em {
+.vocab-suggest__meta {
   color: var(--text-secondary);
-  font-style: normal;
+  font-size: 12px;
 }
 .vocab-arrow {
   color: var(--icon-quiet);
 }
-.vocab-rule--add {
-  background: var(--surface-well);
-  padding-block: 10px;
+.vocab-row__notes {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
-.vocab-rule__field {
-  inline-size: 100%;
+
+/* More options of a word. */
+.vocab-more {
+  font-size: 13px;
+}
+.vocab-more summary {
+  cursor: pointer;
+}
+.vocab-more__body {
+  display: grid;
+  gap: 8px;
+  margin-block-start: 8px;
 }
 
 /* Pronunciations. */
@@ -305,7 +295,10 @@
     grid-template-columns: minmax(80px, 130px) 1fr auto;
     gap: 12px;
   }
-  .vocab-rule {
+  .vocab-suggest {
     grid-template-columns: minmax(60px, 110px) 16px 1fr auto auto;
+  }
+  .vocab-suggest__meta {
+    display: none;
   }
 }

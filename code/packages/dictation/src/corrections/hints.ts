@@ -1,6 +1,6 @@
 import { DEFAULT_TEMPLATE, TEMPLATES, type TemplateId } from "../modes/templates";
 import { compact, likeness } from "./similarity";
-import type { Correction } from "./store";
+import type { Fix } from "../vocabulary/terms";
 import { MAX_PHRASE } from "./learn";
 import { wordsOf, type Word } from "./words";
 
@@ -36,7 +36,7 @@ interface Spot {
 }
 
 /** How alike a window must be to the stored phrase: less when a neighbour is the one from the time of learning, more when it is a window of plain short words. */
-function needed(c: Correction, spot: Spot): number {
+function needed(c: Fix, spot: Spot): number {
   const { words, at, size } = spot;
   if ((!!c.left && words[at - 1]?.key === c.left) || (!!c.right && words[at + size]?.key === c.right)) return NEAR_MATCH;
   if (!words.slice(at, at + size).every((w) => w.key.length <= PLAIN_WORD)) return CLOSE_MATCH;
@@ -44,7 +44,7 @@ function needed(c: Correction, spot: Spot): number {
 }
 
 /** How alike the window is to the stored phrase, 0 when it is too different in length, the phrase itself, or already the right words, or does not clear the bar. */
-function score(c: Correction, spot: Spot): number {
+function score(c: Fix, spot: Spot): number {
   const { text, words, at, size } = spot;
   const spoken = text.slice(words[at]!.start, words[at + size - 1]!.end);
   const [a, b] = [compact(spoken), compact(c.heard)];
@@ -59,7 +59,7 @@ function score(c: Correction, spot: Spot): number {
  * (or, for a phrase with no neighbours on record, when they look all but the same).
  * The best matches come first, none overlap, and there are at most `MAX_HINTS`.
  */
-export function findHints(text: string, corrections: readonly Correction[]): Hint[] {
+export function findHints(text: string, corrections: readonly Fix[]): Hint[] {
   const words = wordsOf(text);
   const found: { hint: Hint; score: number }[] = [];
   for (const c of corrections.filter((x) => compact(x.heard).length >= MIN_LETTERS)) {

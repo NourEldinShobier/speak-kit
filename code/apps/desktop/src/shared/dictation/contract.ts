@@ -76,7 +76,7 @@ export interface DictationStatus {
   keptRecordings: number;
   /** An OpenAI key is saved, so the rewrite pass can run. */
   rewriteKey: boolean;
-  /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words still work through replacements. */
+  /** The speech model in use cannot read the word list, so it was left out of the last dictation; the words with a Heard as spelling still work. */
   promptDropped?: boolean;
   /** The newest failure, kept until a dictation works again or the person dismisses it: what it was in plain words, when, and whether Try again can run the take again. */
   lastFailure?: { code: string; text: string; at: number; retry: boolean };
@@ -108,7 +108,7 @@ export interface HistoryItem {
   model?: string;
   durationMs: number;
   rewrite?: RewriteOutcome;
-  /** The stored corrections that changed the text before it was inserted. */
+  /** The learned fixes that changed the text before it was inserted. */
   corrected?: { heard: string; correct: string }[];
   /** Milliseconds until the entry is removed; null when it is kept for ever. */
   expiresInMs: number | null;

@@ -11,7 +11,7 @@ const gate = () => {
   return { wait, open };
 };
 
-function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ text: string; speech: boolean }>; corrections?: DictationConfig["corrections"]; app?: string } = {}) {
+function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ text: string; speech: boolean }>; terms?: DictationConfig["terms"]; app?: string } = {}) {
   const loads: string[] = [];
   const languages: string[] = [];
   const versions: unknown[] = [];
@@ -24,7 +24,7 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
     status: () => ({ state: "ready" }),
     onStatus: () => () => {},
   } as unknown as Stt;
-  const cfg = v.parse(DictationConfigSchema, { corrections: opts.corrections ?? [] });
+  const cfg = v.parse(DictationConfigSchema, { terms: opts.terms ?? [] });
   const core = {
     history: {
       preservedAs: () => undefined,
@@ -53,24 +53,31 @@ function rig(opts: { dictating?: () => boolean; transcribe?: () => Promise<{ tex
 
 const other = (cfg: { model: string }) => (cfg.model === "parakeet-tdt-0.6b-v3-q4_0" ? "large-v3-turbo-q5_0" : "parakeet-tdt-0.6b-v3-q4_0") as "large-v3-turbo-q5_0";
 
-describe("Transcribe again with stored corrections", () => {
-  const fix = (extra: object = {}) => ({ id: "c", heard: "cloud code", correct: "Claude Code", count: 1, createdAt: 1, confirmed: true, ...extra });
+describe("Transcribe again with the words of the list", () => {
+  const word = (extra: object = {}) => ({ id: "c", word: "Claude Code", soundsLike: ["cloud code"], ...extra });
+  const learned = { heard: "cloud code", count: 1, createdAt: 1 };
   const said = async () => ({ text: "i opened cloud code", speech: true });
 
-  it("puts the new version through the corrections that apply in the program of the entry", async () => {
-    const { api, versions, cfg } = rig({ transcribe: said, corrections: [fix()] });
+  it("puts the new version through the words that apply in the program of the entry", async () => {
+    const { api, versions, cfg } = rig({ transcribe: said, terms: [word()] });
     await api.retranscribe("a", other(cfg));
     expect(versions).toMatchObject([{ text: "I opened Claude Code" }]);
   });
 
-  it("leaves out a correction that is for another program or is only a suggestion", async () => {
-    const scoped = rig({ transcribe: said, corrections: [fix({ app: "slack" })], app: "notepad.exe" });
+  it("applies a word learned from a fix after the rules, like a live dictation", async () => {
+    const { api, versions, cfg } = rig({ transcribe: said, terms: [word({ learned })] });
+    await api.retranscribe("a", other(cfg));
+    expect(versions).toMatchObject([{ text: "I opened Claude Code" }]);
+  });
+
+  it("leaves out a word that is for another program or is only a suggestion", async () => {
+    const scoped = rig({ transcribe: said, terms: [word({ app: "slack" })], app: "notepad.exe" });
     await scoped.api.retranscribe("a", other(scoped.cfg));
     expect(scoped.versions).toMatchObject([{ text: "I opened cloud code" }]);
-    const suggestion = rig({ transcribe: said, corrections: [fix({ confirmed: false })] });
+    const suggestion = rig({ transcribe: said, terms: [word({ learned, suggested: true })] });
     await suggestion.api.retranscribe("a", other(suggestion.cfg));
     expect(suggestion.versions).toMatchObject([{ text: "I opened cloud code" }]);
-    const here = rig({ transcribe: said, corrections: [fix({ app: "slack" })], app: "Slack.exe" });
+    const here = rig({ transcribe: said, terms: [word({ app: "slack" })], app: "Slack.exe" });
     await here.api.retranscribe("a", other(here.cfg));
     expect(here.versions).toMatchObject([{ text: "I opened Claude Code" }]);
   });

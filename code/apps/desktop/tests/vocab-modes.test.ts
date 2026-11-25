@@ -48,7 +48,7 @@ describe("Vocabulary page", () => {
     const dialog = l.page.getByRole("dialog", { name: "Add a word" });
     expect(await dialog.getByRole("button", { name: "Add word" }).isDisabled()).toBe(true);
     await dialog.getByLabel("Word or name").fill("Kubernetes");
-    await dialog.getByLabel("Sounds like").fill("cooper netties, kuber nettys");
+    await dialog.getByLabel("Heard as").fill("cooper netties, kuber nettys");
     await dialog.getByRole("button", { name: "Add word" }).click();
     const row = l.page.locator("[data-term]").filter({ hasText: "Kubernetes" });
     await row.waitFor();
@@ -60,9 +60,9 @@ describe("Vocabulary page", () => {
     await dialog.getByLabel("Word or name").fill("kubernetes");
     await dialog.getByText('"Kubernetes" is already in the list.').waitFor();
     expect(await dialog.getByRole("button", { name: "Add word" }).isDisabled()).toBe(true);
-    await dialog.getByLabel("Word or name").fill("x".repeat(74));
-    await dialog.getByText("74 of 60").waitFor();
-    await dialog.getByText("Words and names can be up to 60 characters. This one is 74.").waitFor();
+    await dialog.getByLabel("Word or name").fill("x".repeat(214));
+    await dialog.getByText("214 of 200").waitFor();
+    await dialog.getByText("Words and names can be up to 200 characters. This one is 214.").waitFor();
     expect(await dialog.getByRole("button", { name: "Add word" }).isDisabled()).toBe(true);
     await dialog.getByLabel("Word or name").fill("kubernetes");
     await dialog.getByRole("button", { name: "Show entry" }).click();
@@ -96,12 +96,12 @@ describe("Vocabulary page", () => {
     const l = await start();
     const dir = tmp();
     const file = path.join(dir, "words.txt");
-    writeFileSync(file, `Grafana | gruh fan ah\nKubernetes | cooper netties\n${"y".repeat(61)}\nGrafana\n`);
+    writeFileSync(file, `Grafana | gruh fan ah\nKubernetes | cooper netties\n${"y".repeat(201)}\nGrafana\n`);
     await open(l, "Vocabulary");
     await hook(l, "files", { open: file });
     await l.page.getByRole("button", { name: "Import", exact: true }).click();
     const result = l.page.getByRole("dialog", { name: "Import finished" });
-    await result.getByText("2 words and 0 replacements were added.").waitFor();
+    await result.getByText("2 entries were added.").waitFor();
     await result.getByText("1 duplicate and 1 entry that is too long were skipped.").waitFor();
     expect(await result.getByRole("list", { name: "Skipped entries" }).locator("li").allTextContents()).toEqual([`${"y".repeat(59)}…too long`, "Grafanaalready in the list"]);
     await result.getByRole("button", { name: "Done" }).click();
@@ -219,7 +219,7 @@ describe("Modes page", () => {
     expect((await settings(l)).modes).toEqual([]);
   });
 
-  it("adds a replacement that applies only in the mode, and removes it again", async () => {
+  it("adds a word heard as a phrase that applies only in the mode, and removes it again", async () => {
     const l = await start();
     await open(l, "Modes");
     await l.page.getByRole("button", { name: "Add mode" }).click();
@@ -227,14 +227,16 @@ describe("Modes page", () => {
     await add.getByLabel("Name").fill("Chat");
     await add.getByRole("button", { name: "Add mode" }).click();
     await l.page.getByRole("heading", { name: "Chat", exact: true, level: 1 }).waitFor();
-    await l.page.getByLabel("When I say").fill("ship it");
-    await l.page.getByLabel("Replace with").fill("deploy");
-    await l.page.getByRole("button", { name: "Add", exact: true }).click();
-    await l.page.getByRole("list", { name: "Replacements for Chat" }).getByText("deploy").waitFor();
-    await until(async () => JSON.stringify((await settings(l)).modes[0]!.replacements) === JSON.stringify([{ from: "ship it", to: "deploy" }]));
-    expect((await settings(l)).replacements).toEqual([]);
-    await l.page.getByRole("button", { name: "Delete replacement ship it" }).click();
-    await until(async () => (await settings(l)).modes[0]!.replacements.length === 0);
+    await l.page.getByRole("button", { name: "Add word" }).click();
+    const word = l.page.getByRole("dialog", { name: "Add a word to Chat" });
+    await word.getByLabel("Word or name").fill("deploy");
+    await word.getByLabel("Heard as").fill("ship it");
+    await word.getByRole("button", { name: "Add word" }).click();
+    await l.page.getByRole("button", { name: "Delete deploy" }).waitFor();
+    await until(async () => JSON.stringify((await settings(l)).modes[0]!.terms.map((t) => [t.word, t.soundsLike])) === JSON.stringify([["deploy", ["ship it"]]]));
+    expect((await settings(l)).terms).toEqual([]);
+    await l.page.getByRole("button", { name: "Delete deploy" }).click();
+    await until(async () => (await settings(l)).modes[0]!.terms.length === 0);
   });
 
   it("refuses a repeated or empty mode name and moves an app from one mode to another", async () => {

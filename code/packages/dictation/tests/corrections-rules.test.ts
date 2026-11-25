@@ -1,16 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { applyCorrections, editedRegion, isActive, keepsOtherWords, learnCorrections, remember, usable, type Correction } from "../src";
+import { activeFixes, applyCorrections, editedRegion, isActive, keepsOtherWords, learnCorrections, remember, type Fix, type Term } from "../src";
 import { wordsOf } from "../src/corrections/words";
 
-const fix = (heard: string, correct: string, extra: Partial<Correction> = {}): Correction => ({
-  id: `${heard}>${correct}${extra.app ?? ""}`,
-  heard,
-  correct,
-  count: 1,
-  createdAt: 1,
-  confirmed: true,
-  ...extra,
-});
+const fix = (heard: string, correct: string, extra: Partial<Fix> = {}): Fix => ({ heard, correct, confirmed: true, ...extra });
 
 describe("a fix counts once per dictation", () => {
   const cloud = { heard: "cloud code", correct: "Claude Code" };
@@ -18,14 +10,14 @@ describe("a fix counts once per dictation", () => {
   it("seeing the same dictation again does not make a suggestion active", () => {
     const once = remember([], cloud, { now: 1, source: "e1" });
     const twice = remember(once, cloud, { now: 2, source: "e1" });
-    expect(twice).toMatchObject([{ count: 1, sources: ["e1"] }]);
+    expect(twice).toMatchObject([{ learned: { count: 1, sources: ["e1"] } }]);
     expect(twice.some(isActive)).toBe(false);
   });
 
   it("a different dictation counts, and the sources are kept to the last five", () => {
     let list = remember([], cloud, { now: 1, source: "e1" });
     for (const id of ["e2", "e3", "e4", "e5", "e6"]) list = remember(list, cloud, { now: 2, source: id });
-    expect(list).toMatchObject([{ count: 6, sources: ["e2", "e3", "e4", "e5", "e6"] }]);
+    expect(list).toMatchObject([{ learned: { count: 6, sources: ["e2", "e3", "e4", "e5", "e6"] } }]);
     expect(isActive(list[0]!)).toBe(true);
   });
 
@@ -33,37 +25,44 @@ describe("a fix counts once per dictation", () => {
     const tory = { heard: "tory", correct: "Tauri", left: "use", right: "app" };
     const first = remember([], tory, { now: 1, source: "e1" });
     const elsewhere = remember(first, { ...tory, left: "the", right: "party" }, { now: 2, source: "e2" });
-    expect(elsewhere).toMatchObject([{ count: 1, sources: ["e1"] }]);
+    expect(elsewhere).toMatchObject([{ learned: { count: 1, sources: ["e1"] } }]);
     expect(elsewhere.some(isActive)).toBe(false);
     const same = remember(first, { ...tory, left: "use", right: "tool" }, { now: 2, source: "e3" });
-    expect(same).toMatchObject([{ count: 2 }]);
+    expect(same).toMatchObject([{ learned: { count: 2 } }]);
     expect(same.every(isActive)).toBe(true);
   });
 
   it("a fix saved on purpose is confirmed by a repeat without being counted twice", () => {
     const first = remember([], cloud, { now: 1, source: "e1" });
-    expect(remember(first, cloud, { now: 2, source: "e1", confirmed: true })).toMatchObject([{ count: 1, confirmed: true }]);
+    const saved = remember(first, cloud, { now: 2, source: "e1", confirmed: true });
+    expect(saved).toMatchObject([{ learned: { count: 1 } }]);
+    expect(saved[0]?.suggested).toBeUndefined();
   });
 });
 
 describe("a new fix for words that already have one", () => {
-  const old = fix("cloud code", "Claude Code");
+  const old: Term = { id: "old", word: "Claude Code", soundsLike: ["cloud code"], learned: { heard: "cloud code", count: 1, createdAt: 1 } };
+  const words = (list: Term[]) => list.map((t) => t.word);
 
   it("is kept beside an active one when it was only seen, and the active one still applies", () => {
     const list = remember([old], { heard: "cloud code", correct: "Cloud Code Inc" }, { now: 5 });
-    expect(list.map((c) => c.correct)).toEqual(["Claude Code", "Cloud Code Inc"]);
-    expect(usable(list, undefined).map((c) => c.correct)).toEqual(["Claude Code"]);
+    expect(words(list)).toEqual(["Claude Code", "Cloud Code Inc"]);
+    expect(activeFixes(list, undefined).map((f) => f.correct)).toEqual(["Claude Code"]);
   });
 
-  it("replaces an older suggestion, and replaces an active one when it is saved on purpose", () => {
+  it("replaces an older suggestion, and takes the spelling from an active one when it is saved on purpose", () => {
     const suggestion = remember([], { heard: "cloud code", correct: "Cloud Code Inc" }, { now: 1 });
-    expect(remember(suggestion, { heard: "cloud code", correct: "Claude Code" }, { now: 2 }).map((c) => c.correct)).toEqual(["Claude Code"]);
-    expect(remember([old], { heard: "cloud code", correct: "Cloud Code Inc" }, { now: 2, confirmed: true }).map((c) => c.correct)).toEqual(["Cloud Code Inc"]);
+    expect(words(remember(suggestion, { heard: "cloud code", correct: "Claude Code" }, { now: 2 }))).toEqual(["Claude Code"]);
+    const saved = remember([old], { heard: "cloud code", correct: "Cloud Code Inc" }, { now: 2, confirmed: true });
+    expect(saved.map((t) => [t.word, t.soundsLike])).toEqual([
+      ["Claude Code", []],
+      ["Cloud Code Inc", ["cloud code"]],
+    ]);
   });
 
   it("when two apply, the one saved on purpose wins over one that was only seen twice", () => {
-    const seenTwice = fix("cloud code", "Cloud Code Inc", { confirmed: false, count: 2 });
-    expect(applyCorrections("open cloud code", [seenTwice, old]).text).toBe("open Claude Code");
+    const seenTwice = fix("cloud code", "Cloud Code Inc", { confirmed: false });
+    expect(applyCorrections("open cloud code", [seenTwice, fix("cloud code", "Claude Code")]).text).toBe("open Claude Code");
   });
 });
 

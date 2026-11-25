@@ -1,48 +1,22 @@
-import { confirmCorrections, isActive, learnCorrections, MAX_CORRECTIONS, MAX_PHRASE, remember, type Candidate, type Correction } from "@speakkit/dictation";
-
-/** "Everywhere", or the program the fix is limited to. */
-export const scopeText = (c: Pick<Correction, "app">): string => (c.app ? `Only in ${c.app}` : "Everywhere");
-
-export const seenText = (c: Pick<Correction, "count">): string => (c.count === 1 ? "Seen once" : `Seen ${c.count} times`);
-
-/** A suggestion waits for one click; an active fix applies to every dictation. */
-export const statusText = (c: Correction): "Active" | "Suggested" => (isActive(c) ? "Active" : "Suggested");
-
-export const countText = (n: number): string => `${n} of ${MAX_CORRECTIONS} fixes`;
+import { isCommonPhrase, learnCorrections, remember, sameText, type Candidate, type Term } from "@speakkit/dictation";
 
 /** The fixes found when `edited` is `original` after the person fixed it. */
 export const suggestionsFor = (original: string, edited: string): Candidate[] => learnCorrections(original, edited);
 
 export const fixLabel = (f: Pick<Candidate, "heard" | "correct">): string => `${f.heard} → ${f.correct}`;
 
-/** The chosen fixes saved as active ones, for every program or for `app`; `source` is the history entry they were fixed in, which counts once. */
-export function saveFixes(list: readonly Correction[], fixes: readonly Candidate[], opts: { now: number; app?: string | undefined; source?: string }): Correction[] {
-  return fixes.reduce<Correction[]>((acc, fix) => remember(acc, fix, { now: opts.now, confirmed: true, ...(opts.app && { app: opts.app }), ...(opts.source && { source: opts.source }) }), [...list]);
+/** The chosen fixes saved as words, for every program or for `app`; `source` is the history entry they were fixed in, which counts once. */
+export function saveFixes(list: readonly Term[], fixes: readonly Candidate[], opts: { now: number; app?: string | undefined; source?: string }): Term[] {
+  return fixes.reduce<Term[]>((acc, fix) => remember(acc, fix, { now: opts.now, confirmed: true, ...(opts.app && { app: opts.app }), ...(opts.source && { source: opts.source }) }), [...list]);
 }
 
-export type HandCheck = "empty" | "too-long" | "same" | "app" | "full" | undefined;
+/** Every fix is in the list as a heard-as spelling of its word; false when a full list, or a word with the most spellings, could not take one. */
+export const keepsAll = (list: readonly Term[], fixes: readonly Candidate[]): boolean =>
+  fixes.every((f) => list.some((t) => sameText(t.word, f.correct) && t.soundsLike.some((s) => sameText(s, f.heard))));
 
-/** Why a fix typed by hand cannot be added yet, if it cannot. */
-export function checkByHand(list: readonly Correction[], heard: string, correct: string, app = ""): HandCheck {
-  const [h, c] = [heard.trim(), correct.trim()];
-  if (!h || !c) return "empty";
-  if (h.split(" ").filter(Boolean).length > MAX_PHRASE) return "too-long";
-  if (h.toLowerCase() === c.toLowerCase()) return "same";
-  if (/[\s\\/]/.test(app.trim())) return "app";
-  return list.length >= MAX_CORRECTIONS ? "full" : undefined;
-}
+/** Heard words that are all everyday words would also change sentences that were right elsewhere, so the fix starts out limited to the program. */
+export const limitByDefault = (fixes: readonly Pick<Candidate, "heard">[]): boolean => fixes.length > 0 && fixes.every((f) => isCommonPhrase(f.heard));
 
-export const HAND_TEXT: Record<Exclude<HandCheck, undefined>, string> = {
-  empty: "",
-  "too-long": "Heard needs one to three words.",
-  same: "Heard and Should be differ only in capital letters. Add a replacement instead.",
-  app: "Use the program file name, such as code.exe.",
-  full: "The list is full. Delete a fix first.",
-};
-
-/** A fix typed by hand, active at once. */
-export const addByHand = (list: readonly Correction[], input: { heard: string; correct: string; app?: string }, now: number): Correction[] =>
-  saveFixes(list, [{ heard: input.heard, correct: input.correct }], { now, ...(input.app?.trim() && { app: input.app.trim() }) });
-
-/** One click on a suggestion makes it a fix. */
-export const acceptSuggestion = (list: readonly Correction[], id: string): Correction[] => confirmCorrections(list, [id]);
+/** The scope box of the Fix dialog: the program the dictation went into, by its name and file name. */
+export const scopeLabel = (item: { app: string; appName?: string | undefined }): string =>
+  `Only when dictating into ${item.appName && item.appName !== item.app ? `${item.appName} (${item.app})` : item.app}`;

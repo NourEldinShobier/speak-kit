@@ -9,7 +9,6 @@ import {
   reportsPages,
   setSites,
   siteMatches,
-  mergeReplacements,
   removeMode,
   resolveMode,
   rewritePass,
@@ -121,8 +120,8 @@ describe("modes by website", () => {
     expect(resolveMode(list, "notepad.exe", "mail.google.com").id).toBe("default");
     expect(resolveMode(list, undefined, "mail.google.com").id).toBe("default");
   });
-  it("dictates with the replacements of the page's mode", async () => {
-    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], replacements: [{ from: "there", to: "team" }] });
+  it("dictates with the words of the page's mode", async () => {
+    const mail = mode({ id: "mail", name: "Mail", sites: ["mail.google.com"], terms: [{ id: "t", word: "team", soundsLike: ["there"] }] });
     const r = await rig({ modes: [mail] });
     r.ins.state.current = target({ exe: "chrome.exe", site: "mail.google.com" });
     r.stt.state.result = { ok: true, text: "Hello There." };
@@ -387,36 +386,30 @@ describe("dictation with modes, words and rewrite", () => {
   });
 });
 
-describe("replacements per mode", () => {
+describe("heard-as swaps per mode", () => {
   const shared = [
-    { from: "gonna", to: "going to" },
-    { from: "Foo", to: "shared foo" },
+    { id: "a", word: "going to", soundsLike: ["gonna"] },
+    { id: "b", word: "shared foo", soundsLike: ["foo"] },
   ];
 
-  it("adds the mode's replacements after the shared ones, and the mode wins for the same phrase whatever the capitals", () => {
-    expect(
-      mergeReplacements(shared, [
-        { from: "foo", to: "mode foo", matchCase: true },
-        { from: "bar", to: "baz" },
-      ]),
-    ).toEqual([
-      { from: "gonna", to: "going to" },
-      { from: "foo", to: "mode foo", matchCase: true },
-      { from: "bar", to: "baz" },
+  it("adds the mode's words after the shared ones, and the mode wins for the same heard-as spelling", () => {
+    const own = [{ id: "c", word: "mode foo", soundsLike: ["Foo"] }];
+    expect(applyMode({ ...defaultSettings, terms: shared }, mode({ terms: own })).terms).toEqual([
+      { id: "a", word: "going to", soundsLike: ["gonna"] },
+      { id: "b", word: "shared foo", soundsLike: [] },
+      ...own,
     ]);
-    expect(mergeReplacements(shared, [])).toEqual(shared);
-    expect(mergeReplacements([], shared)).toEqual(shared);
   });
 
   it("applies in a mode but never changes the default mode", () => {
-    const base = { ...defaultSettings, replacements: shared };
-    const own = [{ from: "ship it", to: "deploy" }];
-    expect(applyMode(base, mode({ replacements: own })).replacements).toEqual([...shared, ...own]);
-    expect(applyMode(base, { ...defaultMode(), replacements: own }).replacements).toEqual(shared);
+    const base = { ...defaultSettings, terms: shared };
+    const own = [{ id: "c", word: "deploy", soundsLike: ["ship it"] }];
+    expect(applyMode(base, mode({ terms: own })).terms).toEqual([...shared, ...own]);
+    expect(applyMode(base, { ...defaultMode(), terms: own }).terms).toEqual(shared);
   });
 
   it("swaps the phrase in the mode's app and not in another", async () => {
-    const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], replacements: [{ from: "world", to: "team" }] });
+    const chat = mode({ id: "chat", name: "Chat", apps: ["slack"], terms: [{ id: "t", word: "team", soundsLike: ["world"] }] });
     const r = await rig({ modes: [chat] });
     r.ins.state.current = target({ exe: "slack.exe" });
     await r.hold(1000);

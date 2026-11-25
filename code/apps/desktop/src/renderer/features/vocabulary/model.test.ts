@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { importVocabulary, type Term } from "@speakkit/dictation";
-import { checkDraft, cleanupRows, filterTerms, importView, promptSummary, wordCount } from "./model";
+import { checkDraft, cleanupRows, filterTerms, importView, promptSummary, savedTerms, seenText, suggestedTerms, termNotes, wordCount } from "./model";
 
 const t = (id: string, word: string, soundsLike: string[] = []): Term => ({ id, word, soundsLike });
 
@@ -22,10 +22,24 @@ describe("add word dialog", () => {
   });
 
   it("counts characters and says how far over it is", () => {
-    const c = checkDraft(terms, { word: "x".repeat(74), soundsLike: "" });
-    expect(c).toMatchObject({ blocked: true, counter: { length: 74, max: 60, over: true } });
-    expect(c.message).toContain("74");
-    expect(checkDraft(terms, { word: "x".repeat(60), soundsLike: "" }).blocked).toBe(false);
+    const c = checkDraft(terms, { word: "x".repeat(214), soundsLike: "" });
+    expect(c).toMatchObject({ blocked: true, counter: { length: 214, max: 200, over: true } });
+    expect(c.message).toContain("214");
+    expect(checkDraft(terms, { word: "x".repeat(200), soundsLike: "" }).blocked).toBe(false);
+  });
+
+  it("takes a program file name for the scope and refuses a name with spaces or a path", () => {
+    expect(checkDraft(terms, { word: "Grafana", soundsLike: "", app: "code.exe" }).blocked).toBe(false);
+    expect(checkDraft(terms, { word: "Grafana", soundsLike: "", app: " Code.EXE " }).blocked).toBe(false);
+    expect(checkDraft(terms, { word: "Grafana", soundsLike: "", app: "Visual Studio Code" })).toMatchObject({ blocked: true, message: "Use the program file name, such as code.exe." });
+    expect(checkDraft(terms, { word: "Grafana", soundsLike: "", app: "C:/Apps/code.exe" }).blocked).toBe(true);
+  });
+
+  it("allows the word of the list for one program, and ignores a suggestion with the same word", () => {
+    expect(checkDraft(terms, { word: "Kubernetes", soundsLike: "", app: "code.exe" }).blocked).toBe(false);
+    const withApp = [{ ...t("a", "Kubernetes"), app: "code" }];
+    expect(checkDraft(withApp, { word: "kubernetes", soundsLike: "", app: "Code.exe" })).toMatchObject({ blocked: true, existing: withApp[0] });
+    expect(checkDraft([{ ...t("s", "Kubernetes", ["kuber"]), suggested: true }], { word: "Kubernetes", soundsLike: "" }).blocked).toBe(false);
   });
 
   it("says the list is full at 500", () => {
@@ -44,6 +58,21 @@ describe("list", () => {
     expect(filterTerms(terms, "zzz")).toEqual([]);
   });
   it("shows the count against 500", () => expect(wordCount(42)).toBe("42 of 500 words"));
+
+  it("keeps suggestions out of the words and says how often one was seen", () => {
+    const suggestion = { ...t("s", "Claude Code", ["cloud code"]), suggested: true, learned: { heard: "cloud code", count: 1, createdAt: 1 } };
+    expect(savedTerms([...terms, suggestion]).map((x) => x.id)).toEqual(["a", "b"]);
+    expect(suggestedTerms([...terms, suggestion]).map((x) => x.id)).toEqual(["s"]);
+    expect(seenText(suggestion)).toBe("Seen once");
+    expect(seenText({ learned: { heard: "x", count: 3, createdAt: 1 } })).toBe("Seen 3 times");
+  });
+
+  it("notes where a word applies and the options that are set", () => {
+    expect(termNotes(t("a", "Kubernetes"))).toEqual([]);
+    expect(termNotes({ ...t("a", "Kubernetes"), app: "code", matchCase: true })).toEqual(["Only in code.exe", "Matches capitals"]);
+    expect(termNotes({ ...t("a", "me@example.com", ["me at example dot com"]) })).toEqual(["Not sent to the speech model"]);
+    expect(termNotes({ ...t("a", "um", ["er"]), remove: true })).toEqual(["Removes the phrase"]);
+  });
 });
 
 describe("speech model prompt card", () => {
@@ -66,7 +95,12 @@ describe("speech model prompt card", () => {
 
   it("is not used by a model that cannot read it, and says nothing is blocked", () => {
     const s = promptSummary(terms, { model: "parakeet-tdt-0.6b-v3-q4_0", on: true, modelName: "Parakeet v3" });
-    expect(s).toMatchObject({ state: "unsupported", note: "Parakeet v3 cannot read a word list. Your words still work through replacements, and nothing is blocked." });
+    expect(s).toMatchObject({ state: "unsupported", note: 'Parakeet v3 cannot read a word list. Words you gave a "Heard as" spelling still work, and nothing is blocked.' });
+  });
+
+  it("counts only the words the model is told, not entries that are only swapped", () => {
+    const list = [t("a", "Grafana"), t("b", "me@example.com", ["me at example dot com"]), { ...t("c", "um"), remove: true }];
+    expect(promptSummary(list, { model: "large-v3-turbo-q5_0", on: true, modelName: "W" }).line).toBe("1 of 1 word read by the model, 7 of 500 characters.");
   });
 });
 
@@ -94,22 +128,33 @@ describe("clean-up rows by language", () => {
 });
 
 describe("import result wording", () => {
-  const base = { terms: [t("a", "Grafana")], replacements: [] };
+  const base = { terms: [t("a", "Grafana")] };
 
   it("counts what was added and what was skipped, listing the lines", () => {
-    const r = importVocabulary(base, `New\nGrafana\n${"y".repeat(61)}\n`, "txt");
+    const r = importVocabulary(base, `New\nGrafana\n${"y".repeat(201)}\n`, "txt");
     const v = importView(r, "words.txt");
     expect(v).toMatchObject({ title: "Import finished", failed: false });
-    expect(v.body).toEqual(["1 word and 0 replacements were added.", "1 duplicate and 1 entry that is too long were skipped."]);
+    expect(v.body).toEqual(["1 entry was added.", "1 duplicate and 1 entry that is too long were skipped."]);
     expect(v.skipped).toEqual([
       { line: "Grafana", why: "already in the list" },
-      { line: "y".repeat(61), why: "too long" },
+      { line: "y".repeat(201), why: "too long" },
     ]);
   });
 
   it("uses the singular for one duplicate and nothing extra when nothing was skipped", () => {
     expect(importView(importVocabulary(base, "Grafana", "txt"), "f").body[1]).toBe("1 duplicate was skipped.");
-    expect(importView(importVocabulary(base, "Other", "txt"), "f").body).toEqual(["1 word and 0 replacements were added."]);
+    expect(importView(importVocabulary(base, "Other", "txt"), "f").body).toEqual(["1 entry was added."]);
+    expect(importView(importVocabulary(base, "Other\nMore", "txt"), "f").body).toEqual(["2 entries were added."]);
+  });
+
+  it("imports an old export with replacements as words heard as the replaced phrase", () => {
+    const old = JSON.stringify({ version: 1, terms: [], replacements: [{ from: "cloud code", to: "Claude Code" }] });
+    const r = importVocabulary(base, old, "json");
+    expect(importView(r, "old.json").body).toEqual(["1 entry was added."]);
+    expect(r.vocabulary.terms.map((x) => [x.word, x.soundsLike])).toEqual([
+      ["Grafana", []],
+      ["Claude Code", ["cloud code"]],
+    ]);
   });
 
   it("explains a file that cannot be read or comes from a newer version", () => {

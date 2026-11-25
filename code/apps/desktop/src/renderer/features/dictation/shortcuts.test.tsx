@@ -25,7 +25,6 @@ const base: DictationStatus = {
     language: "auto",
     model: "large-v3-turbo-q5_0",
     retention: "7d",
-    replacements: [],
   },
   models: [],
   modelInstalled: true,

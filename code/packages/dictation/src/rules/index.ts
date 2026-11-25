@@ -1,4 +1,4 @@
-import type { Settings } from "../settings";
+import type { Replacement, Settings } from "../settings";
 import { capitalize } from "./capitalize";
 import { stripFillers, FILLER_LANGUAGES } from "./fillers";
 import { applyReplacements } from "./replacements";
@@ -7,10 +7,12 @@ import { spokenFormatting, spokenSymbols, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES
 export { applyReplacements } from "./replacements";
 export { FILLER_LANGUAGES, FORMATTING_LANGUAGES, SYMBOL_LANGUAGES };
 
-export type RulesOptions = Pick<Settings, "fillers" | "spokenSymbols" | "spokenFormatting" | "autoCapitalize" | "trailingSpace" | "replacements"> &
+export type RulesOptions = Pick<Settings, "fillers" | "spokenSymbols" | "spokenFormatting" | "autoCapitalize" | "trailingSpace"> &
   Partial<Pick<Settings, "stripFinalStop">> & {
     /** Language of the text: a code such as "en", or "auto" when the engine did not say. */
     language: string;
+    /** Phrases swapped before the other rules; `swapRules` makes them from the words. */
+    replacements: readonly Replacement[];
   };
 
 // Models print these for silence and music; they are not speech.

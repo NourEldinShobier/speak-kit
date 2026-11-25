@@ -1,9 +1,9 @@
 import { exeKey } from "../paste-plan";
-import type { Replacement, Settings } from "../settings";
+import type { Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
 import { DEFAULT_TEMPLATE, type TemplateId } from "./templates";
 
-/** How dictation behaves in some apps: its own words and replacements and an optional rewrite. */
+/** How dictation behaves in some apps: its own words and an optional rewrite. */
 export interface Mode {
   id: string;
   name: string;
@@ -15,8 +15,6 @@ export interface Mode {
   /** How the rewrite pass words the text. The default mode uses the app default. */
   template: TemplateId;
   terms: Term[];
-  /** Phrases swapped after speaking, only in this mode; they win over a shared replacement of the same phrase. */
-  replacements: Replacement[];
 }
 
 export const DEFAULT_MODE_ID = "default";
@@ -31,7 +29,6 @@ export const defaultMode = (): Mode => ({
   rewrite: false,
   template: DEFAULT_TEMPLATE,
   terms: [],
-  replacements: [],
 });
 
 export type ModeError = "empty" | "too-long" | "duplicate" | "full";
@@ -112,24 +109,12 @@ export function resolveMode(modes: readonly Mode[], exe: string | undefined, sit
   return bySite || (key && modes.find((m) => m.apps.includes(key))) || defaultMode();
 }
 
-export type ModeSettings = Pick<Settings, "terms" | "replacements">;
+export type ModeSettings = Pick<Settings, "terms">;
 
-/** Shared replacements plus a mode's own: for the same phrase (ignoring capitals) the mode's wins. */
-export function mergeReplacements(shared: readonly Replacement[], own: readonly Replacement[]): Replacement[] {
-  const taken = new Set(own.map((r) => r.from.toLowerCase()));
-  return [...shared.filter((r) => !taken.has(r.from.toLowerCase())), ...own];
-}
-
-/** The words and replacements for one dictation: the person's settings, with the mode's own on top. The default mode changes nothing. */
+/** The words for one dictation: the person's settings, with the mode's own on top. The default mode changes nothing. */
 export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean; template: TemplateId } {
   if (mode.id === DEFAULT_MODE_ID) return { ...base, rewrite: mode.rewrite, template: mode.template };
-  return {
-    ...base,
-    terms: mergeTerms(base.terms, mode.terms),
-    replacements: mergeReplacements(base.replacements, mode.replacements),
-    rewrite: mode.rewrite,
-    template: mode.template,
-  };
+  return { ...base, terms: mergeTerms(base.terms, mode.terms), rewrite: mode.rewrite, template: mode.template };
 }
 
 /** Words that tell a row how many apps and words a mode has, for the list. */

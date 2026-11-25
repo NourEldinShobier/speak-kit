@@ -2,14 +2,14 @@ import { dialog, type BrowserWindow } from "electron";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  activeFixes,
   applyCorrections,
   applyMode,
   applyRules,
   defaultSettings,
   resolveMode,
-  soundsLikeRules,
+  swapRules,
   timeLeft,
-  usable,
   type AudioStore,
   type Dictation,
   type HistoryHit,
@@ -267,12 +267,12 @@ export class HistoryApi {
     return Promise.race([running, cancelled]);
   }
 
-  /** The text of a new version: what the model heard, put through the same rules, words and stored corrections as a live dictation into the same program. */
+  /** The text of a new version: what the model heard, put through the same rules and words as a live dictation into the same program. */
   #versionText(heardText: string, language: string | undefined, app: string | undefined): string {
     const base: Settings = { ...defaultSettings, ...coreSettings(this.d.cfg()) };
     const eff = applyMode(base, resolveMode(base.modes, app));
-    const said = applyRules(heardText, { ...eff, replacements: [...eff.replacements, ...soundsLikeRules(eff.terms)], language: language ?? this.d.cfg().language }).trimEnd();
-    return applyCorrections(said, usable(eff.corrections, app)).text;
+    const said = applyRules(heardText, { ...eff, replacements: swapRules(eff.terms, app), language: language ?? this.d.cfg().language }).trimEnd();
+    return applyCorrections(said, activeFixes(eff.terms, app)).text;
   }
 
   /**

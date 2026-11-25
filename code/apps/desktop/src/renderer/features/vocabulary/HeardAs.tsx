@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { MAX_TERMS, removeTerm, soundsLikeRules, type Correction, type Term } from "@speakkit/dictation";
+import { acceptSuggestions, MAX_TERMS, removeTerm, type Term } from "@speakkit/dictation";
 import { Banner, Button, Chip, EmptyState, Icon, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { MAX_REPLACEMENTS, type Replacement } from "../../../shared/dictation/settings";
 import { patchDictation } from "../dictation-bridge";
-import { CorrectionsCard } from "../corrections";
-import { filterTerms, promptSummary, wordCount } from "./model";
-import { ReplacementRules } from "./ReplacementRules";
+import { filterTerms, promptSummary, savedTerms, seenText, suggestedTerms, termNotes, wordCount } from "./model";
 import { useLive } from "./useLive";
 import { WordDialog } from "./WordDialog";
 
@@ -21,9 +18,13 @@ interface RowProps {
 const iconBtn = "lm-btn lm-btn--icon lm-btn--secondary";
 
 function WordRow({ term, onEdit, onDelete }: RowProps) {
+  const notes = termNotes(term);
   return (
     <li className="lm-row vocab-row" data-term={term.id}>
-      <span className="vocab-row__word">{term.word}</span>
+      <span className="vocab-row__word">
+        {term.word}
+        {notes.length ? <span className="vocab-row__notes">{notes.join(". ")}</span> : null}
+      </span>
       <span className="vocab-row__chips">
         {term.soundsLike.map((s) => (
           <Chip key={s}>{s}</Chip>
@@ -112,10 +113,57 @@ function WordsBody({ terms, update, onAdd, onEdit, query, setQuery }: CardProps)
   );
 }
 
+/** A fix the person made that waits for one click. A fix seen a second time already applies, and the row says so. */
+function SuggestionRow({ term, update }: { term: Term; update(change: (t: Term[]) => Term[]): void }) {
+  const heard = term.learned?.heard ?? term.soundsLike[0] ?? "";
+  const applying = (term.learned?.count ?? 0) >= 2;
+  return (
+    <li className="lm-row vocab-suggest" data-term={term.id}>
+      <span className="vocab-suggest__from">{heard}</span>
+      <Icon name="arrow-right" size={14} className="vocab-arrow" />
+      <span className="vocab-suggest__to">{term.word}</span>
+      <span className="vocab-suggest__meta">{[term.app && `only in ${term.app}.exe`, seenText(term).toLowerCase(), applying && "already applied"].filter(Boolean).join(", ")}</span>
+      <Button size="sm" aria-label={`Use the suggestion ${heard}`} onClick={() => update((list) => acceptSuggestions(list, [term.id]))}>
+        Use
+      </Button>
+      <Button size="sm" aria-label={`Dismiss the suggestion ${heard}`} onClick={() => update((list) => removeTerm(list, term.id))}>
+        Dismiss
+      </Button>
+    </li>
+  );
+}
+
+/**
+ * Suggested: fixes learned from History or the Learn correction shortcut. Use makes one a normal entry; a fix seen a second time applies by itself until it is dismissed.
+ * Nothing is shown when there are none.
+ */
+export function SuggestedCard({ terms, update }: { terms: readonly Term[]; update(change: (t: Term[]) => Term[]): void }) {
+  const found = suggestedTerms(terms);
+  if (!found.length) return null;
+  return (
+    <section className="lm-section" aria-labelledby="vocab-suggested">
+      <header className="lm-section__head">
+        <h3 className="lm-section__title" id="vocab-suggested">
+          Suggested
+        </h3>
+        <p className="lm-section__desc">Fixes you made to dictated text. Use one to keep it as a word, or dismiss it.</p>
+      </header>
+      <div className="lm-card">
+        <ul className="vocab-suggests" aria-label="Suggested fixes">
+          {found.map((t) => (
+            <SuggestionRow key={t.id} term={t} update={update} />
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 /** Words and names, with how the model tends to hear them. The list is edited by row id. */
 export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(change: (t: Term[]) => Term[]): void; onImport(): void }) {
   const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<{ editing?: Term } | null>(null);
+  const saved = savedTerms(terms);
   return (
     <section className="lm-section" aria-labelledby="vocab-words">
       <header className="lm-section__head vocab-head">
@@ -123,14 +171,17 @@ export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(c
           Words and names
         </h3>
         <span className="vocab-count" data-testid="word-count">
-          {wordCount(terms.length)}
+          {wordCount(saved.length)}
         </span>
-        <p className="lm-section__desc">When dictation gets a word wrong, add it here, with how it sounds if you know.</p>
+        <p className="lm-section__desc">
+          When dictation gets a word wrong, add it here, with how it is heard if you know. Heard as spellings are swapped for the word after you speak. Fix a dictation in History, or press the Learn
+          correction shortcut after you fix text in another app, to add one from there.
+        </p>
       </header>
-      {terms.length === 0 ? (
+      {saved.length === 0 ? (
         <EmptyWords onAdd={() => setDialog({})} onImport={onImport} />
       ) : (
-        <WordsBody terms={terms} update={update} onAdd={() => setDialog({})} onEdit={(t) => setDialog({ editing: t })} query={query} setQuery={setQuery} />
+        <WordsBody terms={saved} update={update} onAdd={() => setDialog({})} onEdit={(t) => setDialog({ editing: t })} query={query} setQuery={setQuery} />
       )}
       <WordDialog
         open={dialog !== null}
@@ -175,48 +226,14 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
   );
 }
 
-/** Replacements: a phrase and what it becomes. An empty "Replace with" deletes the phrase. */
-export function ReplacementsCard({ s, onShowWords }: { s: DictationStatus; onShowWords(): void }) {
-  const [list, update] = useLive<Replacement>(s.settings.replacements, (next) => patchDictation({ replacements: next }));
-  const derived = soundsLikeRules(s.settings.terms).length;
-  return (
-    <section className="lm-section" aria-labelledby="vocab-repl">
-      <header className="lm-section__head vocab-head">
-        <h3 className="lm-section__title" id="vocab-repl">
-          Replacements
-        </h3>
-        <span className="vocab-count">
-          {list.length} of {MAX_REPLACEMENTS} rules
-        </span>
-        <p className="lm-section__desc">
-          Swap a phrase for other text after you speak it. Leave Replace with empty to delete the phrase. The longest phrase wins, and a replacement is never replaced again.
-        </p>
-      </header>
-      <div className="lm-card">
-        <ReplacementRules rules={list} update={update} label="Replacement rules" />
-        {derived ? (
-          <p className="vocab-note">
-            {derived} more {derived === 1 ? "rule comes" : "rules come"} from the sounds-like spellings of your words.{" "}
-            <button type="button" className="vocab-link" onClick={onShowWords}>
-              See your words
-            </button>
-          </p>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-/** The Heard as tab: words, the model prompt, replacements and corrections. */
-export function HeardAs({ s, onImport, onShowWords }: { s: DictationStatus; onImport(): void; onShowWords(): void }) {
+/** The Heard as tab: suggested fixes, the one list of words and the model prompt. */
+export function HeardAs({ s, onImport }: { s: DictationStatus; onImport(): void }) {
   const [terms, update] = useLive<Term>(s.settings.terms, (next) => patchDictation({ terms: next }));
-  const [fixes, updateFixes] = useLive<Correction>(s.settings.corrections, (next) => patchDictation({ corrections: next }));
   return (
     <>
+      <SuggestedCard terms={terms} update={update} />
       <WordsCard terms={terms} update={update} onImport={onImport} />
       <PromptCard s={s} terms={terms} />
-      <ReplacementsCard s={s} onShowWords={onShowWords} />
-      <CorrectionsCard list={fixes} update={updateFixes} />
     </>
   );
 }

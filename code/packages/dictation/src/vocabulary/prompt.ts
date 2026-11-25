@@ -1,4 +1,4 @@
-import type { Term } from "./terms";
+import { sendsToModel, type Term } from "./terms";
 
 export const PROMPT_BUDGET = 500;
 
@@ -9,21 +9,22 @@ export interface PromptPlan {
   used: number;
   budget: number;
   included: number;
-  /** Terms that did not fit; they still work through the replacement pass. */
+  /** Words that did not fit; they still work through the swap pass. */
   dropped: number;
 }
 
-/** Words in list order, joined by ", ", until the character budget is full. A word is never cut in half. */
+/** The words of entries that are sent to the model, in list order, joined by ", ", until the character budget is full. A word is never cut in half. */
 export function buildPrompt(terms: readonly Term[], budget = PROMPT_BUDGET): PromptPlan {
+  const words = terms.filter(sendsToModel).map((t) => t.word);
   let text = "";
   let included = 0;
-  for (const t of terms) {
-    const next = text ? `${text}, ${t.word}` : t.word;
+  for (const word of words) {
+    const next = text ? `${text}, ${word}` : word;
     if ([...next].length > budget) break;
     text = next;
     included++;
   }
-  return { text, used: [...text].length, budget, included, dropped: terms.length - included };
+  return { text, used: [...text].length, budget, included, dropped: words.length - included };
 }
 
 /** The models that read a prompt. Others drop it and say so; dictation and settings go on. */

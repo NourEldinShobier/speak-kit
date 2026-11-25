@@ -10,7 +10,7 @@ import { modeRow } from "./model";
 import { RewriteCard } from "./RewriteCard";
 import "./modes.css";
 
-const LEAD = "A mode sets how dictation behaves in the apps you put in it: its own words, its own replacements and an optional rewrite. Apps in no mode use your Dictation and Vocabulary settings.";
+const LEAD = "A mode sets how dictation behaves in the apps you put in it: its own words and an optional rewrite. Apps in no mode use your Dictation and Vocabulary settings.";
 
 const NAME_ERRORS: Record<ModeError, string> = {
   empty: "",

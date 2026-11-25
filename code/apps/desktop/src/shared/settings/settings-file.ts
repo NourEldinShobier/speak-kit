@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import { ConfigSchema, parseConfig, unwrappedField, type Config } from "../schemas";
+import { unifyVocabulary, VOCABULARY_MIGRATION_ID } from "../dictation/legacy-vocabulary";
 import { at } from "../i18n";
 import "../i18n/packs/shell";
 
@@ -19,6 +20,16 @@ export const MIGRATIONS: readonly Migration[] = [
     run: (raw) => {
       const engines = raw.engines as Record<string, unknown> | undefined;
       return engines && (engines.idleMinutes === 15 || engines.idleMinutes === 5) ? { ...raw, engines: { ...engines, idleMinutes: 0 } } : raw;
+    },
+  },
+  {
+    // Replacements, corrections and per-mode replacements were three lists beside the words; they are entries of the one list of words now.
+    id: VOCABULARY_MIGRATION_ID,
+    run: (raw) => {
+      const d = raw.dictation;
+      if (typeof d !== "object" || d === null || Array.isArray(d)) return raw;
+      const unified = unifyVocabulary(d as Record<string, unknown>).dictation;
+      return unified === d ? raw : { ...raw, dictation: unified };
     },
   },
 ];

@@ -1,4 +1,4 @@
-import { isActive, learnFromField, learnFromSelection, remember, removeCorrection, confirmCorrections, type Candidate, type Correction } from "@speakkit/dictation";
+import { acceptSuggestions, isActive, learnFromField, learnFromSelection, remember, removeTerm, sameText, type Candidate, type Term } from "@speakkit/dictation";
 import { at } from "../../shared/i18n";
 import "../../shared/i18n/packs/main";
 import type { FieldValue } from "./caret-reader";
@@ -44,12 +44,13 @@ export async function learnFromWindow(p: WindowPorts, now: number): Promise<Lear
 interface Deps {
   ports: WindowPorts;
   presenter: Pick<HudPresenter, "toast" | "offer">;
-  corrections(): Correction[];
-  save(list: Correction[]): void;
+  terms(): Term[];
+  save(list: Term[]): void;
   now(): number;
 }
 
-const sameWords = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+/** The entries a fix is kept in: a suggestion, or a saved entry the fix was added to. */
+const holding = (t: Term, f: Candidate): boolean => !!t.learned && sameText(f.heard, t.learned.heard) && sameText(f.correct, t.word);
 
 /**
  * The Learn correction key: reads the fixes, keeps them as suggestions, and offers a button in the pill. A fix seen a second time starts to apply
@@ -77,11 +78,11 @@ export class CorrectionLearner {
   }
 
   #keep({ fixes, source }: { fixes: Candidate[]; source: string }): void {
-    const before = this.#d.corrections();
+    const before = this.#d.terms();
     let list = before;
     for (const fix of fixes) list = remember(list, fix, { now: this.#d.now(), source });
-    const mine = list.filter((c) => fixes.some((f) => sameWords(f.heard, c.heard) && f.correct === c.correct));
-    const started = mine.filter((c) => isActive(c) && !before.some((b) => b.id === c.id && isActive(b)));
+    const mine = list.filter((t) => t.suggested && fixes.some((f) => holding(t, f)));
+    const started = mine.filter((t) => isActive(t) && !before.some((b) => b.id === t.id && isActive(b)));
     this.#d.save(list);
     this.#offer = { ids: (started.length ? started : mine).map((c) => c.id), kind: started.length ? "undo" : "save" };
     const [first] = mine;
@@ -90,25 +91,25 @@ export class CorrectionLearner {
     this.#d.presenter.offer(text, this.#offer.kind === "undo" ? { label: at("hud.undo"), id: "learn-undo" } : { label: at("hud.learn.remember"), id: "learn-save" });
   }
 
-  #ask(c: Correction, n: number): string {
-    return n === 1 ? at("hud.learn.ask", { heard: c.heard, correct: c.correct }) : at("hud.learn.askMany", { count: n });
+  #ask(t: Term, n: number): string {
+    return n === 1 ? at("hud.learn.ask", { heard: t.learned?.heard ?? "", correct: t.word }) : at("hud.learn.askMany", { count: n });
   }
 
-  #learned(c: Correction, n: number): string {
-    return n === 1 ? at("hud.learn.done", { heard: c.heard, correct: c.correct }) : at("hud.learn.doneMany", { count: n });
+  #learned(t: Term, n: number): string {
+    return n === 1 ? at("hud.learn.done", { heard: t.learned?.heard ?? "", correct: t.word }) : at("hud.learn.doneMany", { count: n });
   }
 
   /** The button on a first sighting: the fixes are kept for good. */
   save(): void {
     if (this.#offer?.kind !== "save") return;
-    this.#d.save(confirmCorrections(this.#d.corrections(), this.#offer.ids));
+    this.#d.save(acceptSuggestions(this.#d.terms(), this.#offer.ids));
     this.#offer = undefined;
   }
 
   /** The button on a fix that began to apply by itself: it goes. */
   undo(): void {
     if (this.#offer?.kind !== "undo") return;
-    this.#d.save(this.#offer.ids.reduce(removeCorrection, this.#d.corrections()));
+    this.#d.save(this.#offer.ids.reduce(removeTerm, this.#d.terms()));
     this.#offer = undefined;
   }
 }
