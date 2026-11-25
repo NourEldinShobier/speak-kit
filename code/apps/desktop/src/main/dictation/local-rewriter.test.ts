@@ -26,7 +26,7 @@ describe("rewriting on this computer", () => {
     const signal = live();
     const style = { capitals: "keep", stripFinalStop: true } as const;
     expect(await createLocalRewriter(port).rewrite({ text: "hello there", signal, style })).toBe("Hello there");
-    expect(asked).toEqual([{ system: instructions(style), text: "hello there", signal }]);
+    expect(asked).toEqual([{ system: instructions(style), text: "<dictation>\nhello there\n</dictation>\nRewrite the text above. Output the result only, without tags.", signal }]);
     expect(asked[0]!.system).toContain("Do not end the text with a full stop");
   });
 

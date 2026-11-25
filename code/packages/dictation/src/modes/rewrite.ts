@@ -1,5 +1,6 @@
 import { keepsOtherWords, type Hint } from "../corrections/hints";
 import { dropFinalStop, isNumbersOnly } from "../rules";
+import { cleanAnswer, isMetaReply } from "./answer";
 import { DEFAULT_TEMPLATE, resolveStyle, type CustomStyle } from "./templates";
 
 /** The clean-up choices about capitals and the final full stop, which the rewrite must not undo. */
@@ -18,7 +19,7 @@ export interface Rewriter {
   rewrite(req: { text: string; signal: AbortSignal; style?: RewriteStyle; hints?: Hint[] }): Promise<string>;
 }
 
-export type RewriteOutcome = "rewritten" | "skipped" | "writer-loading" | "failed" | "numbers-only" | "changed-facts" | "changed-style" | "changed-words";
+export type RewriteOutcome = "rewritten" | "skipped" | "writer-loading" | "failed" | "numbers-only" | "changed-facts" | "changed-style" | "changed-words" | "writer-replied";
 
 /** A writer throws this when its model is not ready (still loading, or released): the pass does not wait for the load, it pastes the text as said. */
 export class WriterLoadingError extends Error {
@@ -58,8 +59,9 @@ export async function rewritePass(req: { text: string; rewriter: Rewriter; skip:
   const asked = await Promise.race([ask(rewriter, { text: text.trimEnd(), signal: skip, style, ...(hints.length && { hints }) }), skipped]);
   if (asked === "skipped") return { text, outcome: "skipped" };
   if ("outcome" in asked) return { text, outcome: asked.outcome };
-  if (!asked.answer.trim()) return { text, outcome: "failed" };
-  let next = asked.answer.trim();
+  let next = cleanAnswer(asked.answer);
+  if (!next) return { text, outcome: "failed" };
+  if (isMetaReply(next, text)) return { text, outcome: "writer-replied" };
   // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
   if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
   if (style.stripFinalStop) next = dropFinalStop(next);

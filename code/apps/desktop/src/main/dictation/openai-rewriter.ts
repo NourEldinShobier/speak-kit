@@ -1,4 +1,4 @@
-import { DEFAULT_TEMPLATE, GUARD, hintBlock, resolveStyle, type Hint, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, dictationMessage, GUARD, hintBlock, resolveStyle, type Hint, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
 import { OPENAI_BASE_URL } from "../voice-chat/openai";
 
 /** The writer model the rewrite pass uses; the opt-in dialog names it. */
@@ -37,7 +37,7 @@ export function createOpenAiRewriter(o: Options): Rewriter {
           temperature: 0.2,
           messages: [
             { role: "system", content: instructions(style, hints) },
-            { role: "user", content: text },
+            { role: "user", content: dictationMessage(text) },
           ],
         }),
         signal,

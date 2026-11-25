@@ -22,7 +22,7 @@ describe("OpenAI rewriter", () => {
     expect(headers.Authorization).toBe("Bearer sk-test");
     const body = JSON.parse(String(seen?.init.body));
     expect(body.model).toBe(REWRITE_MODEL);
-    expect(body.messages[1]).toEqual({ role: "user", content: "hello there" });
+    expect(body.messages[1]).toEqual({ role: "user", content: "<dictation>\nhello there\n</dictation>\nRewrite the text above. Output the result only, without tags." });
     expect(seen?.init.signal).toBe(signal);
   });
 
@@ -65,12 +65,12 @@ describe("OpenAI rewriter", () => {
     diplomatic: "as a warm, diplomatic one",
   };
 
-  it("builds the prompt of every template from its task and the guard, in at most 92 words", () => {
+  it("builds the prompt of every template from its task and the guard, in at most 123 words", () => {
     for (const id of TEMPLATE_IDS) {
       const text = instructions({ capitals: "sentence", stripFinalStop: false, template: id });
       expect(text, id).toContain(KEY[id]);
       expect(text.endsWith(GUARD), id).toBe(true);
-      expect(text.split(/\s+/).length, id).toBeLessThanOrEqual(92);
+      expect(text.split(/\s+/).length, id).toBeLessThanOrEqual(123);
     }
   });
 

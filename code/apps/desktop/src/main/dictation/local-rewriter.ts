@@ -1,4 +1,4 @@
-import { WriterLoadingError, type Rewriter } from "@speakkit/dictation";
+import { dictationMessage, WriterLoadingError, type Rewriter } from "@speakkit/dictation";
 import { instructions } from "./openai-rewriter";
 
 /** What the local writer needs from the model host: whether the file is on disk, whether the model is loaded, a load in the background, and one tidy-up job that stops with its signal. */
@@ -24,7 +24,7 @@ export function createLocalRewriter(writer: LocalWriterPort): Rewriter {
         void writer.warm();
         throw state === "error" ? new Error("the writer failed to load") : new WriterLoadingError();
       }
-      const out = (await writer.complete({ system: instructions(style, hints), text, signal })).trim();
+      const out = (await writer.complete({ system: instructions(style, hints), text: dictationMessage(text), signal })).trim();
       if (!out) throw new Error("no answer");
       return out;
     },
