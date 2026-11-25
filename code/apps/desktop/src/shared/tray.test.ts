@@ -156,7 +156,7 @@ describe("Speech model submenu", () => {
     expect(speechModelRows({ models, recording: false })).toEqual([
       { type: "model", id: "large-v3-turbo-q5_0", label: "Whisper Large v3 Turbo", checked: true, enabled: true },
       { type: "model", id: "parakeet-tdt-0.6b-v3-q4_0", label: "Parakeet v3", checked: false, enabled: true },
-      { type: "action", action: "get-models", label: "Get more models in Engines" },
+      { type: "action", action: "get-models", label: "Get more models in Dictation" },
     ]);
   });
 

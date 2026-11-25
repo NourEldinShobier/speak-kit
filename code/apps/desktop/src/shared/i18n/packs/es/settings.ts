@@ -90,6 +90,8 @@ export const ES_SETTINGS: Record<keyof typeof SETTINGS, string> = {
   "s.store.other": "Ajustes y token",
   "s.store.deleteModels": "Eliminar modelos descargados",
   "s.store.deleteHint": "Libera el espacio. Tu biblioteca y tus ajustes permanecen.",
+  "s.store.speechModels": "Modelos de voz a texto",
+  "s.store.speechModelsHint": "Los modelos del dictado se gestionan en Dictado, Modelos.",
   "s.store.delete": "Eliminar",
   "s.store.confirmTitle": "¿Eliminar los modelos descargados?",
   "s.store.doneTitle": "Descargas eliminadas",

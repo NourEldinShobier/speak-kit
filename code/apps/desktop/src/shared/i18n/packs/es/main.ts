@@ -31,7 +31,7 @@ export const ES_MAIN: Record<keyof typeof MAIN, string> = {
   "tray.finishFirst": "Termina la grabación y después cambia",
   "tray.switching": "{name} se está comprobando antes del cambio. El modelo actual sigue en uso.",
   "tray.cancelSwitch": "Cancelar el cambio",
-  "tray.getModels": "Obtener más modelos en Motores",
+  "tray.getModels": "Obtener más modelos en Dictado",
   "tray.pause": "Pausar",
   "tray.resume": "Reanudar",
   "tray.stop": "Detener",

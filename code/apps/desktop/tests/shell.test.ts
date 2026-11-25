@@ -33,8 +33,8 @@ describe("shell", () => {
     expect(await l.page.locator(".sk-main").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("0px");
     // Sidebar: Menu title, the four groups, Recent and Settings; no New reading and no Browser.
     const nav = l.page.getByRole("navigation", { name: "Main" });
-    for (const n of ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
-    for (const n of ["New reading", "Browser"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
+    for (const n of ["Library", "Voices", "Voice chat", "Dictation", "Modes", "Vocabulary", "History", "Settings"]) expect(await nav.getByRole("link", { name: n }).count()).toBe(1);
+    for (const n of ["New reading", "Browser", "Engines"]) expect(await nav.getByText(n, { exact: true }).count()).toBe(0);
     expect(await nav.getByText("Recent").count()).toBe(1);
     // A ready engine shows nothing in the title bar; the bell lives there.
     await l.page.getByTestId("title-engine-status").waitFor({ state: "detached" });
@@ -271,8 +271,7 @@ describe("settings", () => {
 
   it("the title bar says the voice engine is unloaded and wakes on play", async () => {
     const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
-    await l.page.getByRole("link", { name: "Engines" }).click();
-    await l.page.getByRole("heading", { name: "Engines", level: 1 }).waitFor();
+    await l.page.getByRole("heading", { name: "Dictation", level: 1 }).waitFor();
     expect(await l.page.locator("[data-engine=kokoro]").count()).toBe(0);
     expect(await l.page.getByTestId("title-engine-status").textContent()).toBe("Unloaded · Wakes on play");
     // Not ready: a grey 8 px dot and one line of text, no pill and no fill.

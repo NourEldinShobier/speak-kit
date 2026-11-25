@@ -89,6 +89,8 @@ export const SETTINGS = definePack({
   "s.store.other": "Settings and token",
   "s.store.deleteModels": "Delete downloaded models",
   "s.store.deleteHint": "Frees the space. Your library and settings stay.",
+  "s.store.speechModels": "Speech models",
+  "s.store.speechModelsHint": "The models for dictation are managed in Dictation, Models.",
   "s.store.delete": "Delete",
   "s.store.confirmTitle": "Delete downloaded models?",
   "s.store.doneTitle": "Downloads removed",

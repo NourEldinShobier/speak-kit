@@ -77,7 +77,7 @@ export function setupTray(ctx: Ctx, { reading, exports, updates, dictation, noti
     "cancel-switch": () => void dictation.speech.cancelSwitch(),
     "get-models": () => {
       ctx.showWindow();
-      ctx.sendUi({ type: "nav", page: "engines" });
+      ctx.sendUi({ type: "nav", page: "dictation", tab: "models" });
     },
     "check-updates": () => void updates.updates.checkAndDownload(),
     "restart-update": () => void updates.updates.installNow(),

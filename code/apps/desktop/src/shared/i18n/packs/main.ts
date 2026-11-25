@@ -31,7 +31,7 @@ export const MAIN = definePack({
   "tray.finishFirst": "Finish the recording first, then switch",
   "tray.switching": "{name} is checked before switching. The current model stays in use.",
   "tray.cancelSwitch": "Cancel the switch",
-  "tray.getModels": "Get more models in Engines",
+  "tray.getModels": "Get more models in Dictation",
   "tray.pause": "Pause",
   "tray.resume": "Resume",
   "tray.stop": "Stop",

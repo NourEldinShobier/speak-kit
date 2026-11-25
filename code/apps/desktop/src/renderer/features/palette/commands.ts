@@ -1,5 +1,5 @@
 import type { Command, PaletteAction } from "./model";
-import type { ShellAction } from "../../shell-model";
+import { navigate, type ShellAction } from "../../shell-model";
 
 interface CommandContext {
   dispatch(a: ShellAction): void;
@@ -10,7 +10,7 @@ interface CommandContext {
 type Runners = { [K in PaletteAction["type"]]: (a: Extract<PaletteAction, { type: K }>, c: Command, x: CommandContext) => void };
 
 const RUNNERS: Runners = {
-  nav: (a, _c, x) => x.dispatch({ type: "go", page: a.page, ...(a.sub ? { sub: a.sub } : {}) }),
+  nav: (a, _c, x) => navigate(x.dispatch, a),
   "open-doc": (a, _c, x) => {
     x.dispatch({ type: "go", page: "library" });
     x.dispatch({ type: "open-doc", doc: { id: a.id, autoplay: false } });

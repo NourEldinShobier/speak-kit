@@ -33,7 +33,7 @@ describe("sidebar", () => {
   it("shows the Menu title, groups, Recent and Settings in order, without New reading or Browser", () => {
     const html = render("dictation");
     const text = html.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
-    const order = ["Menu", "Read", "Library", "Voice", "Voices", "Voice chat", "Engines", "Dictation", "Dictation", "Modes", "Vocabulary", "History", "Recent", "Settings"];
+    const order = ["Menu", "Read", "Library", "Voice", "Voices", "Voice chat", "Dictation", "Dictation", "Modes", "Vocabulary", "History", "Recent", "Settings"];
     let at = -1;
     for (const w of order) {
       const i = text.indexOf(`|${w}|`, at + 1);
@@ -42,6 +42,7 @@ describe("sidebar", () => {
     }
     expect(html).not.toContain("New reading");
     expect(html).not.toContain("Browser");
+    expect(html).not.toContain("Engines");
   });
   it("lists recent readings by title in place of the empty hint", () => {
     const html = renderToStaticMarkup(

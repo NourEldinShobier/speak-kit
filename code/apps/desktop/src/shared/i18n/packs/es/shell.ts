@@ -82,6 +82,8 @@ export const ES_SHELL: Record<keyof typeof SHELL, string> = {
   "pal.count": "{n, plural, one {# resultado} other {# resultados}}",
   "pal.openPage": "Abrir {label}",
   "pal.openPageDoes": "Abre la página {label}.",
+  "pal.openModels": "Abrir los modelos de Dictado",
+  "pal.openModelsDoes": "Abre Dictado en la pestaña Modelos.",
   "pal.openSetting": "Ajustes: {label}",
   "pal.openSettingDoes": "Abre los ajustes en {label}.",
   "pal.readingDoes": "Abre esta lectura en la biblioteca.",

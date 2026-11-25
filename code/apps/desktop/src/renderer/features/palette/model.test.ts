@@ -20,8 +20,26 @@ describe("commands", () => {
     const c = all.find((x) => x.id === "page-dictation")!;
     expect([c.title, c.icon, c.action]).toEqual(["Open Dictation", "keyboard", { type: "nav", page: "dictation" }]);
   });
+  it("opens Dictation on the Models tab, and finds that command by model words", () => {
+    const c = all.find((x) => x.id === "page-dictation-models")!;
+    expect([c.title, c.does, c.action]).toEqual(["Open Dictation models", "Opens Dictation on the Models tab.", { type: "nav", page: "dictation", tab: "models" }]);
+    expect(titles("model download")[0]).toBe("Open Dictation models");
+    expect(titles("whisper")).toEqual(["Open Dictation models"]);
+  });
+  it("has no page command for Engines", () => {
+    expect(all.some((c) => c.id === "page-engines" || /engines/i.test(c.title))).toBe(false);
+  });
   it("has a page command for every menu item and a settings command for every settings page", () => {
-    expect(all.filter((c) => c.group === "Pages")).toHaveLength(8);
+    expect(all.filter((c) => c.group === "Pages").map((c) => c.id)).toEqual([
+      "page-library",
+      "page-voices",
+      "page-voice-chat",
+      "page-dictation",
+      "page-modes",
+      "page-vocabulary",
+      "page-history",
+      "page-dictation-models",
+    ]);
     expect(all.filter((c) => c.group === "Settings")).toHaveLength(8);
   });
   it("builds readings with minutes and voices with a Voice hint", () => {

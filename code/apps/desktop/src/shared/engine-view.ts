@@ -17,7 +17,7 @@ interface EngineView {
   spinner: boolean;
 }
 
-/** One place that turns server health into words, used by the title bar pill, Engines, Memory and the tray tooltip. */
+/** One place that turns server health into words, used by the title bar pill, Memory and the tray tooltip. */
 export function engineView(health: Health | null, serverError: DesktopError | null): EngineView {
   if (!health) return serverError ? { key: "error", label: at("engine.error"), tone: "red", spinner: false } : { key: "starting", label: at("engine.starting"), tone: "neutral", spinner: true };
   const e = health.engine;

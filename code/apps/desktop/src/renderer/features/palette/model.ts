@@ -1,12 +1,12 @@
 import type { Voice } from "@speakkit/protocol";
 import type { IconName } from "@speakkit/ui";
-import type { Page, SettingsSub } from "../../../shared/ipc";
+import type { DictationTab, Page, SettingsSub } from "../../../shared/ipc";
 import type { DocMeta } from "../../../shared/library/contract";
 import { MENU, SETTINGS_NAV } from "../../routes";
 import { ENGLISH, type Translator } from "../../i18n";
 
 export type PaletteGroup = "Pages" | "Settings" | "Readings" | "Voices";
-export type PaletteAction = { type: "nav"; page: Page; sub?: SettingsSub | undefined } | { type: "open-doc"; id: string } | { type: "preview"; voice: string };
+export type PaletteAction = { type: "nav"; page: Page; sub?: SettingsSub | undefined; tab?: DictationTab } | { type: "open-doc"; id: string } | { type: "preview"; voice: string };
 
 export interface Command {
   id: string;
@@ -36,7 +36,16 @@ const pageCommands = ({ t, label }: Translator) => {
     keywords: i.keywords,
     action: { type: "nav", page: i.page },
   }));
-  return pages;
+  const speechModels: Command = {
+    id: "page-dictation-models",
+    group: "Pages",
+    title: t("pal.openModels"),
+    does: t("pal.openModelsDoes"),
+    icon: "package",
+    keywords: "speech model download whisper parakeet compare import disk performance",
+    action: { type: "nav", page: "dictation", tab: "models" },
+  };
+  return [...pages, speechModels];
 };
 
 const settingsCommands = ({ t, label }: Translator) => {

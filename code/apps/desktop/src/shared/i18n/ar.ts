@@ -23,7 +23,6 @@ export const AR: Record<StringKey, string> = {
   "page.library": "المكتبة",
   "page.voices": "الأصوات",
   "page.voice-chat": "المحادثة الصوتية",
-  "page.engines": "المحركات",
   "page.dictation": "الإملاء",
   "page.modes": "الأنماط",
   "page.vocabulary": "المفردات",

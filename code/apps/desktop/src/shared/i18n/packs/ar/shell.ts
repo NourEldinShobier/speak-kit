@@ -81,6 +81,8 @@ export const AR_SHELL: Record<keyof typeof SHELL, string> = {
   "pal.count": "{n, plural, one {نتيجة واحدة} two {نتيجتان} few {# نتائج} other {# نتيجة}}",
   "pal.openPage": "فتح {label}",
   "pal.openPageDoes": "يفتح صفحة {label}.",
+  "pal.openModels": "فتح نماذج الإملاء",
+  "pal.openModelsDoes": "يفتح الإملاء على تبويب النماذج.",
   "pal.openSetting": "الإعدادات: {label}",
   "pal.openSettingDoes": "يفتح الإعدادات عند {label}.",
   "pal.readingDoes": "يفتح هذه القراءة في المكتبة.",

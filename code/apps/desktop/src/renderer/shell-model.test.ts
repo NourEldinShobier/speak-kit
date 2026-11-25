@@ -1,15 +1,37 @@
 import { describe, expect, it } from "vite-plus/test";
-import { currentLoc, initShell, recentReadings, shellReducer, type ShellAction, type ShellState } from "./shell-model";
+import { takeDictationTab } from "./dictation-tab";
+import { currentLoc, initShell, navigate, recentReadings, resolveNav, shellReducer, type ShellAction, type ShellState } from "./shell-model";
 
 const run = (actions: ShellAction[], from: ShellState = initShell()) => actions.reduce(shellReducer, from);
+
+describe("old and unknown places", () => {
+  it("sends the old Engines page to Dictation, Models tab", () => {
+    expect(resolveNav({ page: "engines" })).toEqual({ page: "dictation", tab: "models" });
+    expect(resolveNav({ page: "engines", sub: "storage" })).toEqual({ page: "dictation", tab: "models" });
+  });
+
+  it("opens Dictation for a page this version does not have, and keeps a known place as it is", () => {
+    expect(resolveNav({ page: "meetings" })).toEqual({ page: "dictation" });
+    expect(resolveNav({ page: "settings", sub: "storage" })).toEqual({ page: "settings", sub: "storage" });
+    expect(resolveNav({ page: "dictation", tab: "models" })).toEqual({ page: "dictation", tab: "models" });
+  });
+
+  it("goes to Dictation and leaves the Models tab for the page to take", () => {
+    const seen: ShellAction[] = [];
+    navigate((a) => seen.push(a), { page: "engines" });
+    expect(seen).toEqual([{ type: "go", page: "dictation" }]);
+    expect(takeDictationTab()).toBe("models");
+    expect(takeDictationTab()).toBeNull();
+  });
+});
 
 describe("navigation", () => {
   it("goes forward, back and forward again along the history", () => {
     let s = run([
       { type: "go", page: "voices" },
-      { type: "go", page: "engines" },
+      { type: "go", page: "modes" },
     ]);
-    expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "engines"]);
+    expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "modes"]);
     s = run([{ type: "back" }, { type: "back" }, { type: "back" }], s);
     expect(currentLoc(s).page).toBe("dictation");
     s = run([{ type: "forward" }], s);
@@ -17,7 +39,7 @@ describe("navigation", () => {
   });
 
   it("drops the forward entries when going somewhere new, and ignores a repeat of the current place", () => {
-    let s = run([{ type: "go", page: "voices" }, { type: "go", page: "engines" }, { type: "back" }, { type: "go", page: "history" }]);
+    let s = run([{ type: "go", page: "voices" }, { type: "go", page: "modes" }, { type: "back" }, { type: "go", page: "history" }]);
     expect(s.hist.map((l) => l.page)).toEqual(["dictation", "voices", "history"]);
     s = run([{ type: "go", page: "history" }], s);
     expect(s.hist).toHaveLength(3);

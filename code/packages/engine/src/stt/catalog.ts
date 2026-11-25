@@ -283,7 +283,7 @@ export const PREFERRED_MODEL: Record<string, SttModelId> = recommendedPreference
 /** The same on a computer without a usable graphics card, where only models that are quick enough on the CPU count. */
 export const PREFERRED_MODEL_CPU: Record<string, SttModelId> = recommendedPreference(STT_MODELS, "cpu") as Record<string, SttModelId>;
 
-/** The models the short lists offer: the default, the ones recommended for some language, and the floor model for a weak computer. The Engines page lists all of them. */
+/** The models the short lists offer: the default, the ones recommended for some language, and the floor model for a weak computer. The Models tab of Dictation lists all of them. */
 export const FEATURED_STT_MODELS: ReadonlySet<string> = new Set([
   DEFAULT_STT_MODEL,
   ...Object.values(PREFERRED_MODEL),

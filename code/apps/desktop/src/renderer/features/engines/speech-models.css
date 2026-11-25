@@ -1,4 +1,4 @@
-/* Speech models on the Engines page. Cards, rows and buttons come from @speakkit/ui; this file adds the model cards and the language table. */
+/* Speech models on the Models tab of Dictation. Cards, rows and buttons come from @speakkit/ui; this file adds the model cards and the language table. */
 .sk-engines-section {
   display: flex;
   flex-direction: column;

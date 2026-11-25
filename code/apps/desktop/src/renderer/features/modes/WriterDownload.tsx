@@ -17,7 +17,7 @@ export function WriterDownload({ w }: { w: WriterCard }) {
     <div className="modes-writer" aria-live="polite">
       {w.installed ? (
         <span className="modes-writer__done">
-          <Icon name="check" size={14} /> {w.name} is downloaded ({sizeText(w.diskBytes)}). Delete it under Engines, Disk space.
+          <Icon name="check" size={14} /> {w.name} is downloaded ({sizeText(w.diskBytes)}). Delete it under Dictation, Models, Disk space.
         </span>
       ) : null}
       {!w.installed && t ? (

@@ -55,7 +55,7 @@ describe("every control in the main menu pages has a name", () => {
   it("visits each page and finds no button, switch, link or field without an accessible name", async () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
-    const pages = ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"];
+    const pages = ["Library", "Voices", "Voice chat", "Dictation", "Modes", "Vocabulary", "History"];
     const problems: string[] = [];
     for (const name of pages) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
@@ -104,7 +104,7 @@ describe("accessibility scan with axe", () => {
     const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     const found: string[] = [];
-    for (const name of ["Library", "Voices", "Voice chat", "Engines", "Dictation", "Modes", "Vocabulary", "History"]) {
+    for (const name of ["Library", "Voices", "Voice chat", "Dictation", "Modes", "Vocabulary", "History"]) {
       await l.page.getByRole("link", { name, exact: true }).first().click();
       await l.page.getByRole("heading", { level: 1 }).first().waitFor();
       await l.page.waitForTimeout(300);

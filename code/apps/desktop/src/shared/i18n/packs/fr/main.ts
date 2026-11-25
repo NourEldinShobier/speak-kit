@@ -31,7 +31,7 @@ export const FR_MAIN: Record<keyof typeof MAIN, string> = {
   "tray.finishFirst": "Terminez d’abord l’enregistrement, puis changez",
   "tray.switching": "{name} est vérifié avant le changement. Le modèle actuel reste utilisé.",
   "tray.cancelSwitch": "Annuler le changement",
-  "tray.getModels": "Obtenir d’autres modèles dans Moteurs",
+  "tray.getModels": "Obtenir d’autres modèles dans Dictée",
   "tray.pause": "Pause",
   "tray.resume": "Reprendre",
   "tray.stop": "Arrêter",

@@ -80,7 +80,7 @@ export function LanguageScreen({ view, onBack, onSkip, onContinue }: { view: Spe
           </button>
         </p>
       )}
-      <p className="sk-lang__note">You can change the language or the model later in Dictation and Engines.</p>
+      <p className="sk-lang__note">You can change the language or the model later in Dictation.</p>
     </Frame>
   );
 }

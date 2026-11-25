@@ -46,6 +46,6 @@ describe("the writer download in the rewrite dialog", () => {
   });
 
   it("says it is downloaded, and where to delete it, once it is on disk", () => {
-    expect(text(card({ installed: true, diskBytes: 3_349_516_256 }))).toBe("Gemma 4 E2B is downloaded (3.3 GB). Delete it under Engines, Disk space.");
+    expect(text(card({ installed: true, diskBytes: 3_349_516_256 }))).toBe("Gemma 4 E2B is downloaded (3.3 GB). Delete it under Dictation, Models, Disk space.");
   });
 });

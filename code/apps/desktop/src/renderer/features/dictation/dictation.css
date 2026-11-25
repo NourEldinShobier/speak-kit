@@ -62,26 +62,6 @@
   font-size: 12px;
 }
 
-/* Speech model rows: radio, text, then the state on the right. */
-.dict-model {
-  align-items: flex-start;
-  padding-block: 13px;
-}
-.dict-model .lm-radio {
-  margin-block-start: 1px;
-}
-.dict-model .lm-row__text {
-  flex: 1;
-  min-inline-size: 0;
-}
-.dict-model .lm-row__label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dict-model .lm-row__control {
-  align-self: center;
-}
 .dict-hint {
   display: flex;
   align-items: center;
@@ -97,17 +77,6 @@
 .dict-model__notice {
   padding: 12px;
   border-bottom: 1px solid var(--stroke-hairline);
-}
-.dict-model__bar {
-  margin-block: 8px 6px;
-  max-inline-size: 380px;
-}
-.dict-installed {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 12px;
 }
 
 /* Test field. */
@@ -557,8 +526,4 @@
     inline-size: auto;
     flex: 1;
   }
-}
-.dict-model__more {
-  margin: 0;
-  padding: 16px;
 }

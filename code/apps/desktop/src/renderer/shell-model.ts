@@ -1,4 +1,6 @@
-import type { Page, SettingsSub } from "../shared/ipc";
+import type { Dispatch } from "react";
+import { PAGES, type DictationTab, type Page, type SettingsSub } from "../shared/ipc";
+import { requestDictationTab } from "./dictation-tab";
 import type { ExportOpen } from "./features/export";
 
 export interface Loc {
@@ -34,6 +36,26 @@ export type ShellAction =
   | { type: "quit"; open: boolean }
   | { type: "export"; open: ExportOpen | null }
   | { type: "open-doc"; doc: OpenDoc | null };
+
+export interface NavRequest {
+  page: string;
+  sub?: SettingsSub | undefined;
+  tab?: DictationTab | undefined;
+}
+
+/** Where a navigation request leads: the old Engines page is the Models tab of Dictation, and a page this version does not have opens Dictation. */
+export function resolveNav(e: NavRequest): { page: Page; sub?: SettingsSub; tab?: DictationTab } {
+  if (e.page === "engines") return { page: "dictation", tab: "models" };
+  if (!(PAGES as readonly string[]).includes(e.page)) return { page: "dictation" };
+  return { page: e.page as Page, ...(e.sub && { sub: e.sub }), ...(e.tab && { tab: e.tab }) };
+}
+
+/** Goes where the request leads, asking Dictation for the tab first. */
+export function navigate(dispatch: Dispatch<ShellAction>, e: NavRequest): void {
+  const t = resolveNav(e);
+  if (t.tab) requestDictationTab(t.tab);
+  dispatch({ type: "go", page: t.page, ...(t.sub ? { sub: t.sub } : {}) });
+}
 
 export const MAX_RECENT = 5;
 

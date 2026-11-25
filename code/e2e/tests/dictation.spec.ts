@@ -274,7 +274,7 @@ function dictationSpec() {
   });
 
   test.describe("dictation, first run @slow", () => {
-    test("turning dictation on without a model keeps the page and asks for a model; nothing downloads until chosen", async () => {
+    test("turning dictation on without a model keeps the page and asks for a model; Change opens the Models tab and nothing downloads until chosen", async () => {
       const rig = await startRig({ dictation: { enabled: false } });
       try {
         await rig.hook("setInstalled", "large-v3-turbo-q5_0", false);
@@ -283,10 +283,8 @@ function dictationSpec() {
         await rig.page.getByText("Choose a speech model").waitFor();
         await expect(rig.page.getByRole("heading", { name: "Clean-up" })).toBeVisible();
         await expect(rig.page.getByRole("progressbar", { name: /download/ })).toHaveCount(0);
-        await rig.page.getByTestId("model-large-v3-turbo-q5_0").getByRole("button", { name: "Download" }).click();
-        await expect(rig.page.getByRole("progressbar", { name: "Whisper Large v3 Turbo download" })).toBeVisible();
-        await rig.hook("finishDownload");
-        await expect.poll(async () => (await rig.bridge("status")).modelReady).toBe(true);
+        await rig.page.getByRole("button", { name: "Change" }).click();
+        await expect(rig.page.getByRole("radio", { name: "Models" })).toBeChecked();
       } finally {
         await rig.close();
       }

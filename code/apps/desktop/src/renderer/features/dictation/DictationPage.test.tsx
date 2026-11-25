@@ -11,6 +11,7 @@ const current = vi.hoisted(() => ({ status: null as unknown }));
 vi.mock("./useDictation", () => ({ useDictation: () => current.status }));
 const perms = vi.hoisted(() => ({ status: null as unknown }));
 vi.mock("./usePermissions", () => ({ usePermissions: () => perms.status }));
+vi.mock("../engines", () => ({ SpeechModelsSection: () => null }));
 
 import { guideFor } from "../../../shared/permissions/guide";
 import { DictationPage } from "./DictationPage";
@@ -117,32 +118,19 @@ describe("Settings > Dictation", () => {
       expect(t).toContain(s);
   });
 
-  it("lists the short list of models and points to the Engines page for the rest, unless a hidden one is installed or downloading", () => {
-    const more = (id: string, over: Partial<ModelView> = {}): ModelView => ({ ...parakeet, id: id as ModelView["id"], name: `Extra ${id}`, more: true, ...over });
-    const html = page(status({ models: [turbo, parakeet, more("tiny"), more("base"), more("small", { installed: true }), more("medium", { progress: { kind: "preparing" } })] }));
-    expect(html).not.toContain("Extra tiny");
-    expect(html).not.toContain("Extra base");
-    expect(html).toContain("Extra small");
-    expect(html).toContain("Extra medium");
-    expect(html).toContain("2 more models are on the Engines page.");
-    expect(page(status({ models: [turbo, parakeet, more("tiny")] }))).toContain("1 more model is on the Engines page.");
-    expect(page(status())).not.toContain("on the Engines page");
-  });
-
-  it("marks the chosen model, offers Download for the one that is not on disk, and only the recommended one carries Recommended", () => {
+  it("shows the model in use with a Change button, and leaves choosing and downloading to the Models tab", () => {
     const html = page(status());
-    expect(html).toContain("Installed");
-    expect(html).toContain("Download");
-    expect(html.match(/>Recommended</g)).toHaveLength(1);
-    expect(html).toMatch(/<input[^>]*aria-label="Whisper Large v3 Turbo"[^>]*checked/);
-    expect(html).toMatch(/<input[^>]*disabled[^>]*aria-label="Parakeet v3"/);
+    expect(text(html)).toContain("Speech model Whisper Large v3 Turbo Used for dictation. Change");
+    expect(html).not.toContain('type="radio"');
+    expect(text(html)).not.toContain("Parakeet v3");
+    expect(text(html)).not.toContain("Engines");
     expect(html).not.toContain("lm-field__label"); // the tester field carries no visible label
   });
 
-  it("shows a download in progress with Cancel and the size done", () => {
-    const t = text(page(status({ models: [turbo, { ...parakeet, progress: { kind: "downloading", fraction: 0.38, etaSeconds: 120 } }] })));
-    expect(t).toContain("Downloading 38%, 135 of 356 MB. About 2 minutes left.");
-    expect(t).toContain("Cancel");
+  it("offers the two tabs, Settings and Models, with Settings first", () => {
+    const html = page(status());
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(<span[^>]*>)?Settings</);
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="false"[^>]*>(<span[^>]*>)?Models</);
   });
 
   it("leaves out Arabic for a model that cannot do it", () => {
@@ -164,15 +152,14 @@ describe("Settings > Dictation", () => {
 
   it("keeps the whole page and asks for a model, without starting a download, when none is installed", () => {
     const t = text(page(status({ models: [{ ...turbo, installed: false }, parakeet], modelReady: false, modelInstalled: false })));
-    expect(t).toContain("Choose a speech model");
-    expect(t).toContain("Download");
+    expect(t).toContain("Choose a speech model Dictation needs a speech model on this computer. Download one on the Models tab");
     expect(t).toContain("Clean-up");
     expect(t).not.toContain("Set up dictation");
   });
 
-  it("shows a download in the model's own row and keeps the rest of the page", () => {
+  it("keeps the rest of the page and asks for nothing while the model downloads", () => {
     const t = text(page(status({ models: [{ ...turbo, installed: false, progress: { kind: "downloading", fraction: 0.63, etaSeconds: 60 } }, parakeet], modelReady: false, modelInstalled: false })));
-    expect(t).toContain("Downloading 63%");
+    expect(t).not.toContain("Choose a speech model");
     expect(t).toContain("Clean-up");
   });
 

@@ -51,7 +51,7 @@ export const engineAnnouncer = (ctx: Ctx, toasts: ToastCenter) => (prev: EngineS
     body: n.body,
     onClick: () => {
       ctx.showWindow();
-      ctx.sendUi({ type: "nav", page: "engines" });
+      ctx.sendUi({ type: "nav", page: "dictation", tab: "models" });
     },
   });
 };

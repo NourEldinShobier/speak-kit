@@ -26,7 +26,7 @@ const handlersOf = (s: SpeechModels): Handlers => ({
   openModelsFolder: () => s.openModelsFolder(),
 });
 
-/** The Engines page calls these (only the app window may); arguments are checked before any handler runs. */
+/** The Models tab of Dictation calls these (only the app window may); arguments are checked before any handler runs. */
 export function registerSpeechModelsIpc(s: SpeechModels, isAppWindow: (contents: Electron.WebContents) => boolean): void {
   const handlers = handlersOf(s);
   registerValidatedIpc<SpeechModelMethod>(ipcMain, {

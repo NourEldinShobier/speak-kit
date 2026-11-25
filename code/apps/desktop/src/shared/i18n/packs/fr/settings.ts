@@ -90,6 +90,8 @@ export const FR_SETTINGS: Record<keyof typeof SETTINGS, string> = {
   "s.store.other": "Réglages et jeton",
   "s.store.deleteModels": "Supprimer les modèles téléchargés",
   "s.store.deleteHint": "Libère de l’espace. Votre bibliothèque et vos réglages restent.",
+  "s.store.speechModels": "Modèles de reconnaissance vocale",
+  "s.store.speechModelsHint": "Les modèles de la dictée se gèrent dans Dictée, Modèles.",
   "s.store.delete": "Supprimer",
   "s.store.confirmTitle": "Supprimer les modèles téléchargés ?",
   "s.store.doneTitle": "Téléchargements supprimés",

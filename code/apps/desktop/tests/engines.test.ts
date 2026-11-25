@@ -22,12 +22,13 @@ const WITH_CARD = { SPEAKKIT_HARDWARE: JSON.stringify({ platform: "win32", arch:
 const CPU_ONLY = { SPEAKKIT_HARDWARE: JSON.stringify({ platform: "win32", arch: "x64", avx2: true, cores: 8, memoryGb: 16 }) };
 const configOf = (l: Launched) => JSON.parse(readFileSync(path.join(l.userData, "config.json"), "utf8"));
 const open = async (l: Launched) => {
-  await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Engines" }).click();
+  await l.page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Dictation" }).click();
+  await l.page.getByRole("radio", { name: "Models" }).click();
   await l.page.getByRole("heading", { name: "Speech models" }).waitFor();
 };
 const shot = (l: Launched, name: string) => (process.env.SPEAKKIT_SHOTS ? l.page.screenshot({ path: path.join(process.env.SPEAKKIT_SHOTS, `${name}.png`) }) : Promise.resolve(undefined));
 
-describe("Engines page", () => {
+describe("Dictation, Models tab", () => {
   it("lists every model with the one in use first, performance and disk space, and no language table", async () => {
     const l = await start({ config: DONE, env: WITH_CARD });
     await open(l);

@@ -23,7 +23,7 @@ export interface ModelView {
   selected: boolean;
   /** Languages it understands. */
   languages: string[];
-  /** Not one of the few the short list offers; shown there only once it is installed, selected or downloading. The Engines page lists every model. */
+  /** Not one of the few the short list offers; shown there only once it is installed, selected or downloading. The Models tab of Dictation lists every model. */
   more?: boolean;
   progress?: { kind: "downloading"; fraction: number; etaSeconds?: number } | { kind: "preparing" } | { kind: "paused"; fraction: number };
 }

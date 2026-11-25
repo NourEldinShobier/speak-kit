@@ -18,7 +18,6 @@ export const EN = {
   "page.library": "Library",
   "page.voices": "Voices",
   "page.voice-chat": "Voice chat",
-  "page.engines": "Engines",
   "page.dictation": "Dictation",
   "page.modes": "Modes",
   "page.vocabulary": "Vocabulary",

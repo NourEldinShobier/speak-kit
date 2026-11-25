@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ModelView } from "../../../shared/dictation/contract";
 import {
   appName,
   clockText,
   dayLabel,
-  downloadText,
   emptyHint,
   entriesText,
   entryLabel,
-  etaText,
   usageHint,
   versionsCapNote,
   expiryText,
@@ -19,8 +16,6 @@ import {
   hotkeyHelp,
   LANGUAGE_OPTIONS,
   languageNote,
-  mb,
-  modelLine,
   correctedTag,
   rewriteTag,
   rowApp,
@@ -30,24 +25,7 @@ import {
   toggled,
 } from "./model";
 
-const model = (over: Partial<ModelView> = {}): ModelView => ({
-  id: "large-v3-turbo-q5_0",
-  name: "Whisper Large v3 Turbo",
-  tag: "Accurate",
-  description: "Best accuracy.",
-  bytes: 809_000_000,
-  installed: false,
-  selected: false,
-  languages: ["auto", "en"],
-  ...over,
-});
-
-describe("model text", () => {
-  it("rounds sizes to whole megabytes", () => {
-    expect(mb(574_041_195)).toBe("574 MB");
-    expect(modelLine(model({ bytes: 466_000_000, description: "Fast on any computer." }))).toBe("466 MB. Fast on any computer.");
-  });
-
+describe("dictation language", () => {
   it("offers to follow the keyboard language, and explains it only once chosen", () => {
     expect(LANGUAGE_OPTIONS.slice(0, 3)).toEqual([
       { value: "auto", label: "Detect automatically" },
@@ -58,19 +36,6 @@ describe("model text", () => {
       "Uses the language of the keyboard layout in the app you dictate into. Falls back to automatic detection when the layout is unknown or the speech model cannot do it.",
     );
     expect(languageNote("de")).toBe("The language you speak.");
-  });
-
-  it("says how long a download has left", () => {
-    expect(etaText(undefined)).toBe("");
-    expect(etaText(20)).toBe("Less than a minute left.");
-    expect(etaText(60)).toBe("About 1 minute left.");
-    expect(etaText(125)).toBe("About 2 minutes left.");
-  });
-
-  it("describes a download in progress", () => {
-    expect(downloadText(model({ progress: { kind: "downloading", fraction: 0.38, etaSeconds: 120 } }))).toBe("Downloading 38%, 307 of 809 MB. About 2 minutes left.");
-    expect(downloadText(model({ progress: { kind: "downloading", fraction: 0.5 } }))).toBe("Downloading 50%, 405 of 809 MB.");
-    expect(downloadText(model())).toBe("Downloading 0%, 0 of 809 MB.");
   });
 });
 

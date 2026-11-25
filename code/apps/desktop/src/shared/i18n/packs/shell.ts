@@ -81,6 +81,8 @@ export const SHELL = definePack({
   "pal.count": "{n, plural, one {# result} other {# results}}",
   "pal.openPage": "Open {label}",
   "pal.openPageDoes": "Opens the {label} page.",
+  "pal.openModels": "Open Dictation models",
+  "pal.openModelsDoes": "Opens Dictation on the Models tab.",
   "pal.openSetting": "Settings: {label}",
   "pal.openSettingDoes": "Opens Settings on {label}.",
   "pal.readingDoes": "Opens this reading in the Library.",

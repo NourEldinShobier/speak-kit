@@ -15,7 +15,7 @@ export interface ModelDownloadCardProps {
   paused: boolean;
 }
 
-/** Model download card (setup step 4, Engines page): name and progress line on the left, no badge, a 6 px bar across the card. */
+/** Model download card (setup step 4, Dictation > Models): name and progress line on the left, no badge, a 6 px bar across the card. */
 export function ModelDownloadCard({ name, pct, totalMb, paused }: ModelDownloadCardProps) {
   const { t } = useT();
   return (

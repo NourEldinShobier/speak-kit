@@ -88,6 +88,8 @@ export const AR_SETTINGS: Record<keyof typeof SETTINGS, string> = {
   "s.store.other": "الإعدادات والرمز",
   "s.store.deleteModels": "حذف النماذج المنزَّلة",
   "s.store.deleteHint": "يحرّر المساحة. تبقى مكتبتك وإعداداتك.",
+  "s.store.speechModels": "نماذج الكلام",
+  "s.store.speechModelsHint": "تُدار نماذج الإملاء في الإملاء، النماذج.",
   "s.store.delete": "حذف",
   "s.store.confirmTitle": "حذف النماذج المنزَّلة؟",
   "s.store.doneTitle": "أُزيلت التنزيلات",

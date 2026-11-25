@@ -1,5 +1,5 @@
 import { MAX_VERSIONS } from "@speakkit/dictation";
-import type { HistoryItem, ModelView } from "../../../shared/dictation/contract";
+import type { HistoryItem } from "../../../shared/dictation/contract";
 import { DICTATION_LANGUAGES, type DictationConfig } from "../../../shared/dictation/settings";
 import { SPOKEN_LANGUAGE_LABELS } from "../../../shared/speech-models/config";
 
@@ -22,25 +22,6 @@ export const languageNote = (language: DictationConfig["language"]): string =>
 
 /** Shown once an entry holds the most versions: the next "Transcribe again" replaces the oldest one that is neither the original nor in use. */
 export const versionsCapNote = (count: number): string => (count >= MAX_VERSIONS ? "Oldest other version is replaced." : "");
-
-export const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
-
-export const modelLine = (m: ModelView) => `${mb(m.bytes)}. ${m.description}`;
-
-/** "About 2 minutes left." / "Less than a minute left." / "" when there is no estimate yet. */
-export function etaText(seconds: number | undefined): string {
-  if (seconds === undefined) return "";
-  if (seconds < 60) return "Less than a minute left.";
-  const minutes = Math.round(seconds / 60);
-  return `About ${minutes} ${minutes === 1 ? "minute" : "minutes"} left.`;
-}
-
-/** "Downloading 38%, 307 of 809 MB. About 2 minutes left." */
-export function downloadText(m: ModelView): string {
-  const p = m.progress?.kind === "downloading" ? m.progress : { fraction: 0, etaSeconds: undefined };
-  const done = Math.round((p.fraction * m.bytes) / 1e6);
-  return [`Downloading ${Math.round(p.fraction * 100)}%, ${done} of ${Math.round(m.bytes / 1e6)} MB.`, etaText(p.etaSeconds)].filter(Boolean).join(" ");
-}
 
 /** "9:41 PM" in the person's own clock. */
 export const timeText = (at: number) => new Date(at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });

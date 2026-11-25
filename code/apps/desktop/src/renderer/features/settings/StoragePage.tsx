@@ -84,6 +84,7 @@ export function StoragePage() {
             </Button>
           }
         />
+        <SettingRow label={t("s.store.speechModels")} description={t("s.store.speechModelsHint")} />
       </SettingsSection>
       <Suspense fallback={null}>
         <TranscriptSettings />

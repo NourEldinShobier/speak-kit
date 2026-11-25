@@ -23,7 +23,6 @@ export const ES: Record<StringKey, string> = {
   "page.library": "Biblioteca",
   "page.voices": "Voces",
   "page.voice-chat": "Chat de voz",
-  "page.engines": "Motores",
   "page.dictation": "Dictado",
   "page.modes": "Modos",
   "page.vocabulary": "Vocabulario",

@@ -4,7 +4,6 @@
  */
 import { lazy, Suspense, type ComponentType, type Dispatch } from "react";
 import type { AppState } from "../shared/ipc";
-import { EnginesPage } from "./features/engines";
 import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
 import { VoiceChatPage } from "./features/voice-chat";
@@ -56,7 +55,6 @@ export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
     />
   ),
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
-  engines: () => <EnginesPage />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => later(<ModesPage />),
   vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),

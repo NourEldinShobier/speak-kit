@@ -6,13 +6,14 @@ describe("routes", () => {
   it("the menu groups and rows are in the designed order", () => {
     expect(MENU.map((g) => [g.group, g.items.map((i) => i.label)])).toEqual([
       ["Read", ["Library"]],
-      ["Voice", ["Voices", "Voice chat", "Engines"]],
+      ["Voice", ["Voices", "Voice chat"]],
       ["Dictation", ["Dictation", "Modes", "Vocabulary", "History"]],
     ]);
   });
-  it("Engines uses the cube icon and Browser is not a page", () => {
-    expect(menuItem("engines").icon).toBe("package");
+  it("Engines and Browser are not pages, and Dictation answers to the model keywords", () => {
+    expect(PAGES as readonly string[]).not.toContain("engines");
     expect(PAGES as readonly string[]).not.toContain("browser");
+    expect(menuItem("dictation").keywords).toContain("speech model download");
   });
   it("every route id has a menu row or a settings row, and nothing else", () => {
     expect(MENU.flatMap((g) => g.items.map((i) => i.page)).sort()).toEqual(PAGES.filter((p) => p !== "settings").sort());

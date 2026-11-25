@@ -12,7 +12,7 @@ import { StartupState, Wizard } from "./features/wizard";
 import { LocaleProvider, useT } from "./i18n";
 import { PAGE_REGISTRY } from "./page-registry";
 import { PreviewCtx } from "./pages";
-import { currentLoc, initShell, shellReducer, recentReadings, type OpenDoc, type RecentReading, type ShellAction, type ShellState } from "./shell-model";
+import { currentLoc, initShell, navigate, shellReducer, recentReadings, type OpenDoc, type RecentReading, type ShellAction, type ShellState } from "./shell-model";
 import { api, useAppState, usePreview, useVisible } from "./ui";
 
 export function App() {
@@ -58,7 +58,7 @@ function useShellEvents(dispatch: Dispatch<ShellAction>, halt: () => void) {
   useEffect(
     () =>
       api.onUi((e: UiEvent) => {
-        if (e.type === "nav") dispatch({ type: "go", page: e.page, ...(e.sub ? { sub: e.sub } : {}) });
+        if (e.type === "nav") navigate(dispatch, e);
         else if (e.type === "confirm-quit") dispatch({ type: "quit", open: true });
         else if (e.type === "export") dispatch({ type: "export", open: { text: e.text ?? "" } });
         else if (e.type === "pause") haltRef.current();

@@ -11,5 +11,5 @@ declare global {
 /** The preload's speech models bridge (window.speakkitModels). */
 export const models: SpeechModelsBridge = window.speakkitModels;
 
-/** Changes the choices of the Engines page through the settings registry, then reads the view again; a refusal throws its message. */
+/** Changes the choices of the Models tab through the settings registry, then reads the view again; a refusal throws its message. */
 export const patchEngines = (patch: EnginesPatch) => patchViaRegistry("engines", patch, { status: () => models.view() });

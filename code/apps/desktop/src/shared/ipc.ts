@@ -15,9 +15,11 @@ export type { Config, ConfigPatch } from "./schemas";
 /** The answer to a change of settings made through the one validator. */
 export type SettingsResult = { ok: true } | { ok: false; message: string; shortcut?: Extract<ShortcutResult, { ok: false }> };
 
-export const PAGES = ["library", "voices", "voice-chat", "engines", "dictation", "modes", "vocabulary", "history", "settings"] as const;
+export const PAGES = ["library", "voices", "voice-chat", "dictation", "modes", "vocabulary", "history", "settings"] as const;
 export const SETTINGS_SUBS = ["general", "shortcuts", "accessibility", "storage", "privacy", "browser", "whatsnew", "about"] as const;
 export type Page = (typeof PAGES)[number];
+/** The two tabs of the Dictation page. */
+export type DictationTab = "settings" | "models";
 export type SettingsSub = (typeof SETTINGS_SUBS)[number];
 
 /** One line in the bell: something that happened while the user may not have been looking. */
@@ -83,7 +85,7 @@ export type OpenPath = "models" | "logs" | "data";
 
 /** Main to renderer, besides the state stream. */
 export type UiEvent =
-  | { type: "nav"; page: Page; sub?: SettingsSub }
+  | { type: "nav"; page: Page; sub?: SettingsSub; tab?: DictationTab }
   | { type: "confirm-quit" }
   | { type: "pause" }
   | { type: "export"; text?: string }

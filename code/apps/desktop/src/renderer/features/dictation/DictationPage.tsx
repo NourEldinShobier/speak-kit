@@ -1,13 +1,17 @@
-import { Banner, Button, Icon, Kbd, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
+import { useEffect, useState } from "react";
+import { Banner, Button, Icon, Kbd, Segmented, Select, SettingRow, SettingsSection, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
+import type { DictationTab } from "../../../shared/ipc";
+import { onDictationTab, takeDictationTab } from "../../dictation-tab";
 import { Page } from "../../ui";
+import { SpeechModelsSection } from "../engines";
 import { Cleanup } from "../vocabulary";
 import { hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation, patchDictation, platformName } from "./api";
 import { OtherAudioCard } from "./OtherAudioCard";
 import { FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
 import { entriesText, LANGUAGE_OPTIONS, languageNote, RETENTION_OPTIONS, usageHint } from "./model";
-import { ModelList } from "./ModelList";
+import { SpeechModelRow } from "./SpeechModelRow";
 import { PermissionGuide } from "./PermissionGuide";
 import { hotkeyFailedCopy } from "./permissions-model";
 import { usePermissions } from "./usePermissions";
@@ -129,15 +133,15 @@ function HistoryCard({ s, open }: { s: DictationStatus; open: () => void }) {
   );
 }
 
-/** Every card of the page. The speech model card comes first and says what is missing; nothing hides the rest. */
-function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void }) {
+/** Every card of the Settings tab. The speech model card says what is missing; nothing hides the rest. */
+function Cards({ s, openHistory, openModels }: { s: DictationStatus; openHistory: () => void; openModels: () => void }) {
   return (
     <>
       <ProblemBanner s={s} />
       <UsageHint s={s} />
       <TestField />
       <General s={s} />
-      <ModelList status={s} />
+      <SpeechModelRow status={s} change={openModels} />
       <LastProblem s={s} />
       <ShortcutsSections s={s} />
       <MicrophoneCard s={s} />
@@ -150,19 +154,24 @@ function Cards({ s, openHistory }: { s: DictationStatus; openHistory: () => void
   );
 }
 
-/** Settings > Dictation. */
-export function DictationPage({ openHistory }: { openHistory: () => void }) {
-  const s = useDictation();
+const TABS = [
+  { id: "settings", label: "Settings" },
+  { id: "models", label: "Models" },
+];
+
+/** The open tab: the one something asked for when the page opened, and any it asks for later. */
+function useTab() {
+  const [tab, setTab] = useState<DictationTab>(() => takeDictationTab() ?? "settings");
+  useEffect(() => onDictationTab(setTab), []);
+  return [tab, setTab] as const;
+}
+
+/** The Settings tab: the banners for what blocks dictation, then every card. */
+function SettingsTab({ s, openHistory, openModels }: { s: DictationStatus; openHistory: () => void; openModels: () => void }) {
   const permissions = usePermissions();
-  if (!s)
-    return (
-      <Page title="Dictation" lead={LEAD}>
-        {null}
-      </Page>
-    );
   const failed = hotkeyFailedCopy(platformName(), permissions?.guides.dictation.next ?? null);
   return (
-    <Page title="Dictation" lead={LEAD}>
+    <>
       {!s.supported && (
         <Banner tone="info" title="Not supported on this platform yet">
           Dictation needs a system-wide key hook, which exists on Windows only for now. The settings are kept for when it arrives.
@@ -174,7 +183,25 @@ export function DictationPage({ openHistory }: { openHistory: () => void }) {
         </Banner>
       )}
       <PermissionGuide status={permissions} onAct={(id, action) => void (action === "request" ? window.speakkitPermissions?.request(id) : window.speakkitPermissions?.openSettings(id))} />
-      <Cards s={s} openHistory={openHistory} />
+      <Cards s={s} openHistory={openHistory} openModels={openModels} />
+    </>
+  );
+}
+
+/** Dictation: its settings on one tab, its speech models on the other. */
+export function DictationPage({ openHistory }: { openHistory: () => void }) {
+  const s = useDictation();
+  const [tab, setTab] = useTab();
+  if (!s)
+    return (
+      <Page title="Dictation" lead={LEAD}>
+        {null}
+      </Page>
+    );
+  return (
+    <Page title="Dictation" lead={LEAD}>
+      <Segmented label="Dictation" value={tab} onChange={(t) => setTab(t as DictationTab)} items={TABS} />
+      {tab === "models" ? <SpeechModelsSection /> : <SettingsTab s={s} openHistory={openHistory} openModels={() => setTab("models")} />}
     </Page>
   );
 }

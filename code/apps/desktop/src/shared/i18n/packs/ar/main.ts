@@ -31,7 +31,7 @@ export const AR_MAIN: Record<keyof typeof MAIN, string> = {
   "tray.finishFirst": "أنهِ التسجيل أولًا ثم بدّل",
   "tray.switching": "يجري فحص {name} قبل التبديل. يبقى النموذج الحالي قيد الاستخدام.",
   "tray.cancelSwitch": "إلغاء التبديل",
-  "tray.getModels": "احصل على المزيد من النماذج في المحركات",
+  "tray.getModels": "احصل على المزيد من النماذج في الإملاء",
   "tray.pause": "إيقاف مؤقت",
   "tray.resume": "استئناف",
   "tray.stop": "إيقاف",
