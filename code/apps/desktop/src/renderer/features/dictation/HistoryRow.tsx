@@ -6,7 +6,9 @@ function RowMeta({ item }: { item: HistoryItem }) {
   const tag = rewriteTag(item.rewrite);
   return (
     <div className="dict-hist__body">
-      <p className="dict-hist__text">{item.text}</p>
+      <p className="dict-hist__text" dir="auto">
+        {item.text}
+      </p>
       <p className="dict-hist__meta">
         <span>{expiryText(item.expiresInMs)}</span>
         {item.recording ? <span>Recording kept</span> : null}
@@ -28,14 +30,18 @@ function RowMeta({ item }: { item: HistoryItem }) {
   );
 }
 
+const modelText = (item: HistoryItem) => [item.model, item.language].filter(Boolean).join(", ");
+
 function RowWhen({ item, label, open, onToggle }: { item: HistoryItem; label: string; open: boolean | undefined; onToggle: (() => void) | undefined }) {
   return (
     <div className="dict-hist__when">
       <span>{timeText(item.at)}</span>
-      <span className="dict-hist__app">{rowApp(item)}</span>
+      <span className="dict-hist__app" title={rowApp(item)}>
+        {rowApp(item)}
+      </span>
       {item.model ? (
-        <span className="dict-hist__app" data-testid="history-model">
-          {[item.model, item.language].filter(Boolean).join(", ")}
+        <span className="dict-hist__app" data-testid="history-model" title={modelText(item)}>
+          {modelText(item)}
         </span>
       ) : null}
       {item.recording && onToggle ? (
@@ -51,13 +57,13 @@ function RowWhen({ item, label, open, onToggle }: { item: HistoryItem; label: st
 function RowActions({ label, copied, onCopy, onFix, onDelete }: { label: string; copied: boolean; onCopy: () => void; onFix: () => void; onDelete: () => void }) {
   return (
     <div className="dict-hist__acts" data-copied={copied || undefined}>
-      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Copy: ${label}`} onClick={onCopy}>
+      <button type="button" className="lm-btn lm-btn--icon lm-btn--sm lm-btn--secondary" aria-label={`Copy: ${label}`} onClick={onCopy}>
         <Icon name={copied ? "check" : "copy"} size={14} />
       </button>
-      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Fix: ${label}`} onClick={onFix}>
+      <button type="button" className="lm-btn lm-btn--icon lm-btn--sm lm-btn--secondary" aria-label={`Fix: ${label}`} onClick={onFix}>
         <Icon name="pencil" size={14} />
       </button>
-      <button type="button" className="lm-btn lm-btn--icon lm-btn--secondary" aria-label={`Delete: ${label}`} onClick={onDelete}>
+      <button type="button" className="lm-btn lm-btn--icon lm-btn--sm lm-btn--secondary" aria-label={`Delete: ${label}`} onClick={onDelete}>
         <Icon name="trash" size={14} />
       </button>
       <span className="dict-hist__sr" role="status">

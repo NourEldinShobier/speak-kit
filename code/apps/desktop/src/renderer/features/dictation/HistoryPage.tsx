@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Icon, Kbd, onArrowKeys } from "@speakkit/ui";
 import { Advanced } from "../settings";
 import type { DictationStatus, HistoryItem } from "../../../shared/dictation/contract";
@@ -75,11 +75,11 @@ function Groups({ items, load, s, picked, toggle, openSettings, onFix }: GroupsP
     load();
   };
   return groups.map((g) => (
-    <section key={g.label} className="dict-hist__group" onKeyDown={onArrowKeys('[aria-label^="Copy: "]')}>
-      <h3 className="dict-hist__day">{g.label}</h3>
+    <section key={g.label} className="lm-section" onKeyDown={onArrowKeys('[aria-label^="Copy: "]')}>
+      <h3 className="lm-section__title">{g.label}</h3>
       <div className="lm-card">
         {g.items.map((item) => (
-          <div key={item.id}>
+          <Fragment key={item.id}>
             <HistoryRow
               item={item}
               copied={copied === item.id}
@@ -91,7 +91,7 @@ function Groups({ items, load, s, picked, toggle, openSettings, onFix }: GroupsP
               {...(picked && { selection: { checked: picked.has(item.id), toggle: () => toggle(item.id) } })}
             />
             {open === item.id && item.recording ? <RecordingPanel item={item} s={s} kept={expiryText(item.expiresInMs, "Kept for")} openDictation={openSettings} /> : null}
-          </div>
+          </Fragment>
         ))}
       </div>
     </section>

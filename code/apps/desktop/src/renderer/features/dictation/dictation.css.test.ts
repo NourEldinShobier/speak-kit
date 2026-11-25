@@ -12,9 +12,9 @@ describe("dictation styles", () => {
     expect(rule(".dict-hotkey")).toContain("flex-wrap: wrap");
   });
 
-  it("gives the history buttons the 36 px control size, 80 px for the pair", () => {
+  it("sizes the three history buttons to their content, not to a fixed width", () => {
     expect(css).not.toContain(".dict-hist__acts .lm-btn--icon");
-    expect(rule(".dict-hist__acts")).toContain("inline-size: 80px");
+    expect(rule(".dict-hist__acts")).not.toContain("inline-size");
   });
 
   it("positions the hidden status text against its own row of buttons", () => {

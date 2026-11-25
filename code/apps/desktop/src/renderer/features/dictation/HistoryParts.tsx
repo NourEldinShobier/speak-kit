@@ -13,7 +13,7 @@ export function CopyRecent({ disabled }: { disabled: boolean }) {
     <Popover
       title="Copy recent"
       width={380}
-      align="end"
+      align="start"
       onOpenChange={(o) => o && void dictation.historyRecent(5).then(setItems)}
       trigger={(p) => (
         <Button {...p} iconLeft="copy" iconRight="chevron-down" disabled={disabled}>

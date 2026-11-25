@@ -170,8 +170,12 @@
   outline: 2px solid var(--accent-default);
   outline-offset: 2px;
 }
+.dict-hist--embedded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+}
 .dict-hist__bar {
-  padding-inline-end: 12px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -189,36 +193,37 @@
 .dict-hist__tools {
   display: flex;
   flex: none;
+  justify-content: flex-end;
+  /* As wide as the select-mode buttons, so the search does not change width when selecting starts. */
+  min-inline-size: 320px;
   gap: 8px;
-}
-.dict-hist__tag {
-  margin-inline-start: 8px;
-  vertical-align: 1px;
 }
 .dict-clear {
   color: var(--tag-red);
 }
-.dict-hist__day {
-  margin: 0 0 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-}
 .dict-hist__row {
   align-items: flex-start;
-  gap: 24px;
-  padding-block: 14px;
+  gap: 16px;
+  padding-block: 12px;
+}
+/* Not the shared `.lm-row + .lm-row`: an open recording panel sits between two rows. */
+.dict-hist__row:not(:first-child) {
+  border-block-start: 1px solid var(--stroke-hairline);
 }
 .dict-hist__when {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  inline-size: 76px;
+  inline-size: 112px;
+  min-inline-size: 0;
   flex: none;
   font-size: 12px;
   font-weight: 500;
 }
 .dict-hist__app {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-tertiary);
   font-weight: 400;
   font-size: 11px;
@@ -234,9 +239,10 @@
   position: relative;
   display: flex;
   gap: 8px;
-  inline-size: 80px;
   justify-content: flex-end;
   align-items: center;
+  /* One text line high, so the 28 px buttons centre on the first line of the entry. */
+  block-size: 18px;
   flex: none;
 }
 /* With a mouse the buttons appear on hover or focus; with touch they are always there. */
@@ -521,9 +527,5 @@
 @media (max-width: 1000px) {
   .dict-hist__head-acts {
     flex-wrap: wrap;
-  }
-  .dict-hist__search {
-    inline-size: auto;
-    flex: 1;
   }
 }
