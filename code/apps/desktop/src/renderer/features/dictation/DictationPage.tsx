@@ -6,7 +6,7 @@ import { hotkeyLabels } from "../../../shared/dictation/keys";
 import { dictation, patchDictation, platformName } from "./api";
 import { OtherAudioCard } from "./OtherAudioCard";
 import { FeedbackCard, MicrophoneCard, OutputCard } from "./AudioCards";
-import { entriesText, LANGUAGE_OPTIONS, RETENTION_OPTIONS, usageHint } from "./model";
+import { entriesText, LANGUAGE_OPTIONS, languageNote, RETENTION_OPTIONS, usageHint } from "./model";
 import { ModelList } from "./ModelList";
 import { PermissionGuide } from "./PermissionGuide";
 import { hotkeyFailedCopy } from "./permissions-model";
@@ -41,7 +41,7 @@ function UsageHint({ s }: { s: DictationStatus }) {
 function General({ s }: { s: DictationStatus }) {
   const c = s.settings;
   const model = s.models.find((m) => m.selected);
-  const languages = LANGUAGE_OPTIONS.filter((l) => l.value === "auto" || !model || model.languages.includes(l.value));
+  const languages = LANGUAGE_OPTIONS.filter((l) => l.value === "auto" || l.value === "keyboard" || !model || model.languages.includes(l.value));
   return (
     <SettingsSection title="General">
       <SettingRow
@@ -52,7 +52,7 @@ function General({ s }: { s: DictationStatus }) {
       <SettingRow
         className="lm-row--control"
         label="Language"
-        description="The language you speak."
+        description={languageNote(c.language)}
         control={<Select label="Language" value={c.language} onChange={(language) => void patchDictation({ language: language as typeof c.language })} options={languages} />}
       />
     </SettingsSection>

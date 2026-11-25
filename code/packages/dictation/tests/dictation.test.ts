@@ -581,6 +581,17 @@ describe("transcription outcomes", () => {
     expect(r.stt.calls[0]?.language).toBe("ar");
   });
 
+  it("tells the transcriber the keyboard language of the window the key was pressed in, and records the language it used", async () => {
+    const r = await rig({ language: "keyboard" });
+    r.ins.state.current = target({ layout: "de" });
+    r.stt.state.result = { ok: true, text: "guten tag", language: "de" };
+    await r.hold(1000);
+    r.ins.state.current = target({ layout: "en" }); // a switch after the key went down does not count
+    await r.time.advance(200);
+    expect(r.stt.calls).toEqual([{ language: "keyboard", samples: 16000, layout: "de" }]);
+    expect(await r.dictation.history.list()).toMatchObject([{ language: "de" }]);
+  });
+
   it("the state shows transcribing while the engine works and pasting while the text goes in", async () => {
     const r = await rig();
     let open = () => {};

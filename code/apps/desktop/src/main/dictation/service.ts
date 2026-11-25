@@ -161,7 +161,12 @@ export class DictationService {
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await Promise.all([this.models.refresh(), this.history.refresh(), this.records.refreshKey()]);
-    this.#stopSpeech = startSpeech(this.speech, os, () => this.#cfg.enabled);
+    this.#stopSpeech = startSpeech(
+      this.speech,
+      os,
+      () => this.#cfg.enabled,
+      () => this.#cfg.language === "keyboard",
+    );
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 

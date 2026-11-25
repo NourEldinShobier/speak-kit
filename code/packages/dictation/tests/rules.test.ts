@@ -59,6 +59,7 @@ describe("fillers", () => {
 
   it("treats an unknown language as English", () => {
     expect(run("um hello", { fillers: true, language: "auto" })).toBe("hello");
+    expect(run("um hello", { fillers: true, language: "keyboard" })).toBe("hello");
   });
 
   it("does nothing when switched off", () => {

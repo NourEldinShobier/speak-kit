@@ -48,6 +48,29 @@ describe("transcriber", () => {
     expect(stt.calls()[0]!.language).toBe("auto");
   });
 
+  it("follows the keyboard: the language of the layout when the model has it", async () => {
+    const { stt, t } = await ready();
+    expect(await t.transcribe({ clip: clip([0.1]), language: "keyboard", layout: "de" })).toMatchObject({ language: "de" });
+    expect(stt.calls().map((c) => c.language)).toEqual(["de"]);
+  });
+
+  it("follows the keyboard: detection when the layout is unknown or the model lacks its language", async () => {
+    const { stt, t } = await ready();
+    expect(await t.transcribe({ clip: clip([0.1]), language: "keyboard" })).not.toHaveProperty("language");
+    await t.transcribe({ clip: clip([0.1]), language: "keyboard", layout: "xx" });
+    const detecting = [{ id: "large-v3-turbo-q5_0", languages: ["auto", "en"], detects: true }] as never;
+    const limited = createTranscriber({ stt, model: () => "large-v3-turbo-q5_0", models: () => detecting, onFailedClip: () => undefined });
+    await limited.transcribe({ clip: clip([0.1]), language: "keyboard", layout: "de" });
+    expect(stt.calls().map((c) => c.language)).toEqual(["auto", "auto", "auto"]);
+  });
+
+  it("follows the keyboard on a model that cannot detect: English when the layout has no language it knows", async () => {
+    const { stt, t } = await ready("parakeet-tdt-0.6b-v3-q4_0");
+    await t.transcribe({ clip: clip([0.1]), language: "keyboard", layout: "de" });
+    await t.transcribe({ clip: clip([0.1]), language: "keyboard", layout: "ar" });
+    expect(stt.calls().map((c) => c.language)).toEqual(["de", "en"]);
+  });
+
   it("returns empty text when the voice gate found no speech", async () => {
     const { stt, t } = await ready();
     stt.say({ text: "" });

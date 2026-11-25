@@ -17,7 +17,8 @@ export const modelId = v.union([
     v.transform((s) => s as `custom-${string}`),
   ),
 ]);
-export const DICTATION_LANGUAGES = ["auto", ...SPOKEN_LANGUAGE_CODES] as const;
+/** "keyboard": each dictation uses the language of the keyboard layout in the window in front. */
+export const DICTATION_LANGUAGES = ["auto", "keyboard", ...SPOKEN_LANGUAGE_CODES] as const;
 export const DUCK_MODES = ["nothing", "mute", "lower", "pause"] as const;
 export const RETENTIONS = ["off", "24h", "7d", "30d", "forever"] as const;
 export const MAX_REPLACEMENTS = 100;

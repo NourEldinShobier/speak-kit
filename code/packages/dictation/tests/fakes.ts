@@ -87,11 +87,11 @@ export function fakeRecorder() {
 }
 
 export function fakeTranscriber(text = "hello world") {
-  const calls: { language: string; samples: number; prompt?: string }[] = [];
+  const calls: { language: string; samples: number; prompt?: string; layout?: string }[] = [];
   const state = { result: { ok: true, text } as TranscribeResult, gate: undefined as Promise<void> | undefined, queue: [] as TranscribeResult[] };
   const transcriber: Transcriber = {
-    async transcribe({ clip, language, prompt }) {
-      calls.push({ language, samples: clip.pcm.length, ...(prompt !== undefined && { prompt }) });
+    async transcribe({ clip, language, layout, prompt }) {
+      calls.push({ language, samples: clip.pcm.length, ...(layout !== undefined && { layout }), ...(prompt !== undefined && { prompt }) });
       await state.gate;
       return state.queue.shift() ?? state.result;
     },

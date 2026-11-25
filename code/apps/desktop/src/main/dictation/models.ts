@@ -10,6 +10,7 @@ export const settle = (p: Promise<unknown>): Promise<void> =>
   );
 
 export const supportsLanguage = (id: DictationModelId, language: string, models: readonly SttModel[] = STT_MODELS) => {
+  if (language === "keyboard") return true; // every dictation falls back to detection (or English) where the model lacks the keyboard's language
   const m = models.find((x) => x.id === id);
   if (!m) return language === "auto" || language === "en";
   return m.languages.includes(language as never) && (language !== "auto" || m.detects);

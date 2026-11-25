@@ -105,13 +105,21 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
   return { stt, models, speech, writer };
 }
 
-/** Starts the speech models service (hardware probe, models on disk) and, while dictation is on, feeds the program in front and its keyboard layout to the automatic switching rules; the rules wait 300 ms for them to settle. Returns the stop function. */
-export function startSpeech(speech: SpeechModels, os: { foreground(want?: { layout: boolean }): { exe: string | null; layout?: string | undefined } | null }, dictationOn: () => boolean): () => void {
+/**
+ * Starts the speech models service (hardware probe, models on disk) and, while dictation is on, feeds the program in front and its keyboard layout to the automatic switching rules; the rules wait 300 ms for them to settle.
+ * The layout is also read while the dictation language follows the keyboard, so the reading is fresh at the next key press. Returns the stop function.
+ */
+export function startSpeech(
+  speech: SpeechModels,
+  os: { foreground(want?: { layout: boolean }): { exe: string | null; layout?: string | undefined } | null },
+  dictationOn: () => boolean,
+  followsKeyboard: () => boolean,
+): () => void {
   void speech.init();
   let last = "";
   const t = setInterval(() => {
     if (!dictationOn()) return;
-    const info = os.foreground({ layout: speech.wantsLayout() });
+    const info = os.foreground({ layout: speech.wantsLayout() || followsKeyboard() });
     const c = { app: info?.exe ?? undefined, layout: info?.layout };
     const key = `${c.app}|${c.layout}`;
     if (key === last) return;

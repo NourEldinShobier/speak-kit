@@ -17,6 +17,8 @@ import {
   historyFooter,
   historyLead,
   hotkeyHelp,
+  LANGUAGE_OPTIONS,
+  languageNote,
   mb,
   modelLine,
   correctedTag,
@@ -44,6 +46,18 @@ describe("model text", () => {
   it("rounds sizes to whole megabytes", () => {
     expect(mb(574_041_195)).toBe("574 MB");
     expect(modelLine(model({ bytes: 466_000_000, description: "Fast on any computer." }))).toBe("466 MB. Fast on any computer.");
+  });
+
+  it("offers to follow the keyboard language, and explains it only once chosen", () => {
+    expect(LANGUAGE_OPTIONS.slice(0, 3)).toEqual([
+      { value: "auto", label: "Detect automatically" },
+      { value: "keyboard", label: "Follow keyboard language" },
+      { value: "en", label: "English" },
+    ]);
+    expect(languageNote("keyboard")).toBe(
+      "Uses the language of the keyboard layout in the app you dictate into. Falls back to automatic detection when the layout is unknown or the speech model cannot do it.",
+    );
+    expect(languageNote("de")).toBe("The language you speak.");
   });
 
   it("says how long a download has left", () => {

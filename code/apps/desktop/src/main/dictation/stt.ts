@@ -116,10 +116,12 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
   return "model-loading";
 }
 
-/** A language the model lacks becomes English (the page says so); automatic detection only on a model that detects. */
-const pickLanguage = (id: string, language: string, models?: () => readonly SttModel[]): SttLanguage => {
+/** A language the model lacks becomes English (the page says so); automatic detection only on a model that detects. "keyboard" is the language of the keyboard layout, or detection when the model lacks it or the layout is unknown. */
+const pickLanguage = (id: string, language: string, models?: () => readonly SttModel[], layout?: string): SttLanguage => {
   const facts = (models?.() ?? STT_MODELS).find((m) => m.id === id);
-  return (facts ? resolveLanguage(facts, language).language : "en") as SttLanguage;
+  if (!facts) return "en";
+  const wanted = language === "keyboard" ? (layout && !resolveLanguage(facts, layout).changed ? layout : "auto") : language;
+  return resolveLanguage(facts, wanted).language as SttLanguage;
 };
 
 /** Kills the hung worker and loads a new one; nothing is left to kill when unloading itself fails, and the load starts a new worker either way. */
@@ -135,11 +137,11 @@ async function restart(stt: TranscriberDeps["stt"], id: SttModelId): Promise<voi
 /** The engine's answer for one clip, cut off at the deadline (then the worker is killed and loaded again). Throws when the engine fails or the deadline passes. */
 export async function heard(
   { stt, model, models, deadlineMs = transcribeDeadlineMs, onPromptDropped }: TranscriberDeps,
-  req: { clip: Clip; language: string; prompt?: string | undefined },
+  req: { clip: Clip; language: string; layout?: string | undefined; prompt?: string | undefined },
 ): Promise<TranscribeResult> {
-  const { clip, language, prompt } = req;
+  const { clip, language, layout, prompt } = req;
   const id = model();
-  const lang = pickLanguage(id, language, models);
+  const lang = pickLanguage(id, language, models, layout);
   const sent = prompt && supportsPrompt(id) ? prompt : undefined;
   if (prompt && !sent) onPromptDropped?.();
   const stop = new AbortController();
@@ -164,7 +166,7 @@ export async function heard(
  */
 export function createTranscriber(deps: TranscriberDeps): Transcriber {
   return {
-    async transcribe({ clip, language, prompt }): Promise<TranscribeResult> {
+    async transcribe({ clip, language, layout, prompt }): Promise<TranscribeResult> {
       const keep = (code: "model-loading" | "model-failed" | "failed"): TranscribeResult => (deps.onFailedClip(clip), { ok: false, code });
       const before = deps.stt.status().state;
       const from = Date.now();
@@ -173,7 +175,7 @@ export function createTranscriber(deps: TranscriberDeps): Transcriber {
       if (waiting) return waiting === "model-missing" ? { ok: false, code: waiting } : keep(waiting);
       deps.onUsed?.(deps.model());
       try {
-        return await heard(deps, { clip, language, prompt });
+        return await heard(deps, { clip, language, layout, prompt });
       } catch (e) {
         return keep(e instanceof EngineNotReadyError ? "model-loading" : "failed");
       }

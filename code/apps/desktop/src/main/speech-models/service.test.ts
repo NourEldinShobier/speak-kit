@@ -87,6 +87,17 @@ describe("SpeechModels: switching", () => {
     expect(speech.view().models.find((m) => m.id === PARAKEET)!.languageNote).toContain("switched to English");
   });
 
+  it("keeps following the keyboard language through a model change, and the page shows detection for it", async () => {
+    const { speech, models, cfg } = setup();
+    cfg.dictation.language = "keyboard";
+    await models.refresh();
+    expect(speech.view().dictationLanguage).toBe("auto");
+    await speech.use(PARAKEET);
+    expect(cfg.dictation.language).toBe("keyboard");
+    expect(speech.view().dictationLanguage).toBe("en"); // Parakeet cannot detect
+    expect(speech.view().models.find((m) => m.id === PARAKEET)!.languageNote).toBeUndefined();
+  });
+
   it("keeps the old model when the new one fails to load", async () => {
     const { speech, models, cfg, fake } = setup();
     await models.refresh();

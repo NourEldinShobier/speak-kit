@@ -34,7 +34,7 @@ export interface RulesTrace {
 
 const languageOf = (language: string): string => {
   const lang = language.toLowerCase().replace(/-.*/, "");
-  return lang === "auto" ? "en" : lang;
+  return lang === "auto" || lang === "keyboard" ? "en" : lang;
 };
 
 type Note = RulesTrace["notes"][number];

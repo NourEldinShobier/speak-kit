@@ -206,6 +206,10 @@ describe("languages", () => {
     expect(supportsLanguage(PARAKEET, "de")).toBe(true);
     expect(supportsLanguage(TURBO, "ar")).toBe(true);
   });
+
+  it("following the keyboard is kept on every model, so a model change does not reset it", () => {
+    expect([PARAKEET, TURBO, "custom-0123456789ab" as const].map((id) => supportsLanguage(id, "keyboard"))).toEqual([true, true, true]);
+  });
 });
 
 describe("languages and unknown models", () => {

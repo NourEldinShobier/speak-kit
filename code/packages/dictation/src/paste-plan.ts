@@ -11,6 +11,8 @@ export interface Target {
   passwordField: boolean;
   /** Host name of the page in front when the program is a browser that reports it. */
   site?: string;
+  /** Language code of the keyboard layout of the window ("de", "en"), when the system can tell. */
+  layout?: string;
 }
 
 export type CopyReason = "setting" | "elevated" | "focus-changed" | "interrupted" | "no-target" | "manual";

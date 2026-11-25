@@ -67,7 +67,7 @@ describe("constants shared with the renderer match the engine", () => {
     expect([...DEVICE_VALUES]).toEqual([...DEVICE_CHOICES]);
     expect([...SPOKEN_LANGUAGE_CODES]).toEqual(LANGUAGES.map((l) => l.code));
     expect(SPOKEN_LANGUAGE_LABELS).toEqual({ auto: AUTO_LABEL, ...Object.fromEntries(LANGUAGES.map((l) => [l.code, l.label])) });
-    expect([...DICTATION_LANGUAGES]).toEqual(["auto", ...LANGUAGES.map((l) => l.code)]);
+    expect([...DICTATION_LANGUAGES]).toEqual(["auto", "keyboard", ...LANGUAGES.map((l) => l.code)]);
   });
 
   it("the settings accept every catalog model", () => {

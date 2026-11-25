@@ -350,6 +350,10 @@ describe("languages and models", () => {
   it("keeps an automatic choice a person made earlier", () => {
     expect(parseConfig({ dictation: { language: "auto" } }).dictation.language).toBe("auto");
   });
+  it("keeps a choice to follow the keyboard language, and accepts it in a patch", () => {
+    expect(parseConfig({ dictation: { language: "keyboard" } }).dictation.language).toBe("keyboard");
+    expect(v.safeParse(DictationPatchSchema, { language: "keyboard" }).success).toBe(true);
+  });
   it("keeps the model an earlier version saved and accepts the models added since", () => {
     expect(parseConfig({ dictation: { model: "parakeet-tdt-0.6b-v3-q4_0" } }).dictation.model).toBe("parakeet-tdt-0.6b-v3-q4_0");
     for (const id of ["tiny-q5_1", "base", "small-q5_1", "medium-q5_0", "large-v3", "large-v3-turbo-q8_0", "distil-large-v3", "parakeet-tdt-0.6b-v3-q8_0", "parakeet-ultra-q8_0"])

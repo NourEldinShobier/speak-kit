@@ -189,7 +189,7 @@ export class SpeechModels {
       installed: new Set(cat.filter((m) => this.#d.models.isInstalled(m.id) && !this.#lib.missing.has(m.id)).map((m) => m.id)),
       missingFiles: this.#lib.missing,
       selected: this.#dict.model,
-      language: this.#dict.language,
+      language: this.#dict.language === "keyboard" ? "auto" : this.#dict.language, // the page shows what the language falls back to
       config: this.#cfg,
       hardware: this.#hw,
       transfers: this.#d.models.transfers.list(),
@@ -258,7 +258,7 @@ export class SpeechModels {
   #choose(id: DictationModelId): void {
     const model = this.#lib.find(id);
     const wanted = this.#dict.language;
-    const fit = model ? resolveLanguage(model, wanted) : { language: wanted, changed: false };
+    const fit = model && wanted !== "keyboard" ? resolveLanguage(model, wanted) : { language: wanted, changed: false };
     this.#languageNote =
       fit.changed && model ? { model: id, text: `${model.name} does not handle ${wanted === "auto" ? "automatic detection" : wanted}, so the language was switched to English.` } : undefined;
     this.#d.choose(id, fit.language);

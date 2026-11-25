@@ -83,20 +83,20 @@ const peakOf = (pcm: Float32Array): number => {
 };
 
 /** Transcribes a take of any length: a long one goes to the model in pieces, pieces with no sound are skipped, and the texts are joined. */
-async function hear(ctx: Context, clip: Clip, prompt: string): Promise<TranscribeResult & { droppedMs?: number }> {
+async function hear(ctx: Context, clip: Clip, prompt: string, layout: string | undefined): Promise<TranscribeResult & { droppedMs?: number }> {
   if (ctx.settings.skipPauses) {
     const cut = skipPauses(clip.pcm, clip.sampleRate);
     if (cut.droppedMs > 0) {
-      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm }, prompt);
+      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm }, prompt, layout);
       // Trimming only helps when it kept the speech: an empty answer or a failure is tried again on the whole recording.
       if (r.ok && r.text) return { ...r, droppedMs: cut.droppedMs };
     }
   }
-  return hearAll(ctx, clip, prompt);
+  return hearAll(ctx, clip, prompt, layout);
 }
 
-async function hearAll(ctx: Context, clip: Clip, prompt: string): Promise<TranscribeResult> {
-  const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language, ...(prompt && { prompt }) });
+async function hearAll(ctx: Context, clip: Clip, prompt: string, layout: string | undefined): Promise<TranscribeResult> {
+  const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language, ...(layout && { layout }), ...(prompt && { prompt }) });
   const pieces = chunkPcm(clip.pcm, clip.sampleRate);
   if (pieces.length === 1) return req(clip);
   const texts: string[] = [];
@@ -238,9 +238,14 @@ function cleanUp(heard: Heard, eff: Settings, language: string): string {
 }
 
 /** The speech engine's text for the take, with a made-up credit at the end removed; or why there is none. The take is kept when the engine fails. */
-async function transcribe(ctx: Context, clip: Clip, prompt: string): Promise<{ heard: Heard & { droppedMs?: number }; transcribeMs: number } | { error: DictationErrorCode }> {
+async function transcribe(
+  ctx: Context,
+  clip: Clip,
+  prompt: string,
+  layout: string | undefined,
+): Promise<{ heard: Heard & { droppedMs?: number }; transcribeMs: number } | { error: DictationErrorCode }> {
   const from = ctx.deps.clock.now();
-  const said = await hear(ctx, clip, prompt);
+  const said = await hear(ctx, clip, prompt, layout);
   const transcribeMs = ctx.deps.clock.now() - from;
   if (!said.ok) {
     ctx.deps.keepClip?.(clip, "failed");
@@ -299,7 +304,7 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
   const eff = applyMode(ctx.settings, withDefaultStyle(resolveMode(ctx.settings.modes, target?.exe, target?.site), ctx.settings));
   const prompt = ctx.settings.prompt ? buildPrompt(eff.terms).text : "";
-  const got = await transcribe(ctx, clip, prompt);
+  const got = await transcribe(ctx, clip, prompt, target?.layout);
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
   const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language);

@@ -31,8 +31,8 @@ export interface DictationOs {
   readonly supported: boolean;
   readonly hotkey: HotkeySource;
   readonly hud: Hud;
-  /** The window the user is typing into. Call it when the dictation key goes down and pass its `hwnd` to `insert` as `target`. */
-  foreground(): ForegroundInfo | null;
+  /** The window the user is typing into. Call it when the dictation key goes down and pass its `hwnd` to `insert` as `target`. `layout: false` skips the keyboard layout reading. */
+  foreground(want?: { layout: boolean }): ForegroundInfo | null;
   /** True when the focused control is a password field. */
   passwordFocused(): boolean;
   /** Gets text into the focused field of the foreground program. Calls are queued, so dictations paste in the order they finish. */
@@ -82,8 +82,8 @@ export async function createDictationOs(options: DictationOsOptions = {}): Promi
     supported: platform.supported,
     hotkey: platform.hotkey,
     hud,
-    foreground: () => {
-      const fg = platform.input.foreground();
+    foreground: (want) => {
+      const fg = platform.input.foreground(want);
       versions.warm(fg); // read while the person talks, so the paste does not wait for it
       return fg;
     },

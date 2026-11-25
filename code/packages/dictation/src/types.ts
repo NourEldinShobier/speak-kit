@@ -55,6 +55,8 @@ export interface Transcriber {
   transcribe(req: {
     clip: Clip;
     language: string;
+    /** The keyboard language of the window the key was pressed in; the port uses it when `language` is "keyboard". */
+    layout?: string;
     /** Words to bias the model towards; empty when there are none or the switch is off. The port drops it for a model that cannot read one. */ prompt?: string;
   }): Promise<TranscribeResult>;
 }

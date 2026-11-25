@@ -21,7 +21,7 @@ export interface Settings {
   mode: Mode;
   /** Types the last dictation again; "" is unset. Handled by the app, which owns the key hook. */
   pasteLastKey: string;
-  /** "auto" or a language code such as "en", "de", "ar". */
+  /** "auto", "keyboard" (the language of the keyboard layout in the window in front) or a language code such as "en", "de", "ar". */
   language: string;
   /** Other audio is being ducked, so the recorder must not capture the moments before the press. */
   duck: boolean;

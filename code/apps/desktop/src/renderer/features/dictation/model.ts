@@ -11,7 +11,14 @@ export const RETENTION_OPTIONS: { value: DictationConfig["retention"]; label: st
   { value: "forever", label: "Forever" },
 ];
 
-export const LANGUAGE_OPTIONS: { value: DictationConfig["language"]; label: string }[] = DICTATION_LANGUAGES.map((value) => ({ value, label: SPOKEN_LANGUAGE_LABELS[value] ?? value }));
+const LANGUAGE_LABELS: Readonly<Record<string, string>> = { ...SPOKEN_LANGUAGE_LABELS, keyboard: "Follow keyboard language" };
+
+export const LANGUAGE_OPTIONS: { value: DictationConfig["language"]; label: string }[] = DICTATION_LANGUAGES.map((value) => ({ value, label: LANGUAGE_LABELS[value] ?? value }));
+
+export const languageNote = (language: DictationConfig["language"]): string =>
+  language === "keyboard"
+    ? "Uses the language of the keyboard layout in the app you dictate into. Falls back to automatic detection when the layout is unknown or the speech model cannot do it."
+    : "The language you speak.";
 
 /** Shown once an entry holds the most versions: the next "Transcribe again" replaces the oldest one that is neither the original nor in use. */
 export const versionsCapNote = (count: number): string => (count >= MAX_VERSIONS ? "Oldest other version is replaced." : "");

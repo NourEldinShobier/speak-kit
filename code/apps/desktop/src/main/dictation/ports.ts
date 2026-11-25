@@ -2,14 +2,28 @@ import type { Clip, Inserter, Recorder } from "@speakkit/dictation";
 import { friendlyAppName } from "./app-name";
 import type { DictationOs, InsertResult } from "./index";
 
-/** The `Inserter` port over the OS layer. `onResult` sees how each insert really ended (the OS layer can fall back to copying where the plan said paste). */
-export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void, pageSite?: () => string | undefined): Inserter {
+/**
+ * The `Inserter` port over the OS layer. `onResult` sees how each insert really ended (the OS layer can fall back to copying where the plan said paste).
+ * `wantsLayout` says whether the keyboard layout of the window is needed (the layer may skip a costly reading otherwise).
+ */
+export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void, pageSite?: () => string | undefined, wantsLayout?: () => boolean): Inserter {
   return {
     async target() {
-      const fg = os.foreground();
+      const layout = wantsLayout?.() ?? false;
+      const fg = os.foreground({ layout });
       const name = friendlyAppName(fg?.exe);
       const site = fg && pageSite?.();
-      return fg ? { id: fg.hwnd, exe: fg.exe ?? "", ...(name && { name }), ...(site && { site }), elevated: fg.elevated, passwordField: os.passwordFocused() } : undefined;
+      return fg
+        ? {
+            id: fg.hwnd,
+            exe: fg.exe ?? "",
+            ...(name && { name }),
+            ...(site && { site }),
+            ...(layout && fg.layout && { layout: fg.layout }),
+            elevated: fg.elevated,
+            passwordField: os.passwordFocused(),
+          }
+        : undefined;
     },
     focus: (t) => os.focus(t.id),
     cancel: () => os.cancelTyping(),
