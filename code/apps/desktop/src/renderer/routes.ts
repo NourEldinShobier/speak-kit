@@ -21,7 +21,7 @@ export const MENU: { group: string; items: MenuItemDef[] }[] = [
   {
     group: "Voice",
     items: [
-      { page: "voices", label: "Voices", icon: "microphone", lead: "Pick a voice and hear it.", keywords: "preview speaker" },
+      { page: "voices", label: "Voices", icon: "microphone", lead: "Pick a voice and hear it.", keywords: "preview speaker pronunciation read as" },
       { page: "voice-chat", label: "Voice chat", icon: "message", lead: "Talk to an assistant out loud.", keywords: "talk conversation openai" },
     ],
   },
@@ -30,7 +30,7 @@ export const MENU: { group: string; items: MenuItemDef[] }[] = [
     items: [
       { page: "dictation", label: "Dictation", icon: "keyboard", lead: "Speak and the text appears where you type.", keywords: "hotkey speech to text speech model download" },
       { page: "modes", label: "Modes", icon: "adjustments-horizontal", lead: "How dictated text is cleaned up for each app.", keywords: "style rewrite writer local offline gemma openai" },
-      { page: "vocabulary", label: "Vocabulary", icon: "book-2", lead: "Words Speak Kit should spell your way.", keywords: "words heard as suggested pronunciation" },
+      { page: "vocabulary", label: "Vocabulary", icon: "book-2", lead: "Words Speak Kit should spell your way.", keywords: "words heard as suggested learned" },
       { page: "history", label: "History", icon: "history", lead: "What you dictated recently.", keywords: "transcripts past" },
     ],
   },

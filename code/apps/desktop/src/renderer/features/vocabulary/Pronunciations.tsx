@@ -2,7 +2,7 @@ import { useState } from "react";
 import { addPronunciation, applyReadAs, MAX_PRONUNCIATIONS, MAX_SPOKEN, MAX_WRITTEN, type Pronunciation } from "@speakkit/dictation";
 import { Banner, Button, EmptyState, Icon, Modal, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
-import { patchDictation } from "../dictation-bridge";
+import { patchDictation, useDictation } from "../dictation-bridge";
 import { usePlayer } from "../../pages";
 import { pronunciationCount } from "./model";
 import { useLive } from "./useLive";
@@ -199,8 +199,7 @@ function NoPronunciations({ onAdd }: { onAdd(): void }) {
   );
 }
 
-/** The Read as tab: how the reader and voice chat say a written form. The text on screen does not change. */
-export function ReadAs({ s, voice }: { s: DictationStatus; voice: string }) {
+function PronunciationList({ s, voice }: { s: DictationStatus; voice: string }) {
   const [list, update] = useLive<Pronunciation>(s.settings.readAs, (next) => patchDictation({ readAs: next }));
   const [adding, setAdding] = useState(false);
   const { playing, error, toggle } = usePlayer();
@@ -228,4 +227,10 @@ export function ReadAs({ s, voice }: { s: DictationStatus; voice: string }) {
       <AddDialog open={adding} list={list} onClose={() => setAdding(false)} onSave={(next) => update(() => next)} />
     </>
   );
+}
+
+/** How the reader and voice chat say a written form, shown on the Voices page. The text on screen does not change. */
+export function Pronunciations({ voice }: { voice: string }) {
+  const s = useDictation();
+  return s ? <PronunciationList s={s} voice={voice} /> : null;
 }

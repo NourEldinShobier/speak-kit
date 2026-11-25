@@ -1,6 +1,7 @@
 import { exeKey } from "../paste-plan";
 import { isActive, MAX_SOUNDS, MAX_TERMS, newId, release, sameText, type Learned, type Term } from "../vocabulary/terms";
 import type { Candidate } from "./learn";
+import { isCommonPhrase } from "./words";
 
 const MAX_SOURCES = 5;
 
@@ -70,6 +71,30 @@ export function remember(list: readonly Term[], fix: Candidate, opts: { now: num
   if (!open) return [...list];
   const entry: Term = { id: newId(), word: correct, soundsLike: [heard], ...(app && { app }), learned, ...(!opts.confirmed && { suggested: true }) };
   return opts.confirmed ? [...release(open, [heard], entry.id, app).list, entry] : [...open, entry];
+}
+
+const isFixOf = (t: Term, fix: Candidate): boolean => !!t.learned && sameText(t.word, fix.correct) && t.soundsLike.some((s) => sameText(s, fix.heard));
+
+/** The entry without the spelling of the fix; none when that was its only spelling. */
+function without(t: Term, fix: Candidate): Term[] {
+  const kept = t.soundsLike.filter((s) => !sameText(s, fix.heard));
+  if (!kept.length) return [];
+  const next = { ...t, soundsLike: kept };
+  if (t.learned && sameText(t.learned.heard, fix.heard)) delete next.learned;
+  return [next];
+}
+
+/**
+ * Saves a fix on purpose (it applies at once) and picks where it applies: the program it was made in when the heard words are all everyday words, which would change
+ * right sentences elsewhere, else everywhere. A fix already saved for another program is widened to everywhere, since it is wanted in more than one.
+ */
+export function saveFix(list: readonly Term[], fix: Candidate, opts: { now: number; app?: string | undefined; source?: string | undefined }): Term[] {
+  const key = opts.app ? exeKey(opts.app) : undefined;
+  const elsewhere = (t: Term): boolean => !!t.app && t.app !== key && isFixOf(t, fix);
+  const widen = list.some(elsewhere);
+  const app = key && !widen && isCommonPhrase(fix.heard) ? key : undefined;
+  const base = widen ? list.flatMap((t) => (elsewhere(t) ? without(t, fix) : [t])) : list;
+  return remember(base, fix, { now: opts.now, confirmed: true, source: opts.source, app });
 }
 
 /** The listed suggestions become saved entries, joining the entry for the same word and program when there is one. */

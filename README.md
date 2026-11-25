@@ -22,7 +22,7 @@ Speak Kit is a set of speaking tools for Chrome and your desktop: have pages rea
 
 **Read aloud.** Select text in Chrome, press a key, and a natural voice reads it while the current sentence and word are highlighted. The Chrome extension reads selections and whole pages, with a floating player, a reader view and a side panel queue. 28 Kokoro voices run on the CPU of any computer.
 
-**Dictation (Windows).** Hold Right Ctrl in any app, speak, release, and the text is pasted where your cursor is. English filler words are removed, your own words and the way they are misheard are swapped in, each app can have its own mode, past dictations are kept in a history, and a misheard word you fix once, in the history or with an optional shortcut, is added to your words and corrected from then on. Speech recognition runs on your computer with Whisper or Parakeet models.
+**Dictation (Windows).** Hold Right Ctrl in any app, speak, release, and the text is pasted where your cursor is. English filler words are removed, your own words and the way they are misheard are swapped in, each app can have its own mode, past dictations are kept in a history, and a misheard word you fix once, with the pencil on a history entry, is added to your words and corrected from then on. Speech recognition runs on your computer with Whisper or Parakeet models.
 
 **Library.** The desktop app opens PDF, EPUB, DOCX, Markdown and text files, reads them with word highlighting, and exports MP3 and WAV.
 

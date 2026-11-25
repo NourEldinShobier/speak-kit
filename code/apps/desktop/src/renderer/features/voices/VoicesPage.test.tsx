@@ -23,4 +23,10 @@ describe("VoicesPage", () => {
     expect(html).not.toContain("Filter voices");
     expect(html).not.toContain('role="dialog"');
   });
+
+  it("points to the pronunciations below the voices, with no link to another page", () => {
+    const html = page();
+    expect(html).toContain("Words sound wrong when read aloud?");
+    expect(html).toContain("Fix a pronunciation");
+  });
 });

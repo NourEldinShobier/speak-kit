@@ -110,7 +110,7 @@ describe("the Learn correction key", () => {
   it("keeps a first sighting as a suggestion and offers a button that makes it a word that applies", async () => {
     const r = rig();
     await r.learner.press();
-    expect(r.shown).toEqual(['Remember "cloud code" as "Claude Code"? [Remember:learn-save]']);
+    expect(r.shown).toEqual(["cloud code → Claude Code [Remember:learn-save]"]);
     expect(r.state.list).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], suggested: true, learned: { heard: "cloud code", count: 1, sources: ["e1"] } }]);
     expect(activeFixes(r.state.list, undefined)).toEqual([]);
     r.learner.save();
@@ -124,7 +124,7 @@ describe("the Learn correction key", () => {
     await r.learner.press();
     expect(r.state.list).toMatchObject([{ learned: { count: 1 } }]);
     expect(r.state.list.some(isActive)).toBe(false);
-    expect(r.shown[1]).toBe('Remember "cloud code" as "Claude Code"? [Remember:learn-save]');
+    expect(r.shown[1]).toBe("cloud code → Claude Code [Remember:learn-save]");
   });
 
   it("starts a fix that was seen in another dictation, with a button that takes it back", async () => {
@@ -138,7 +138,7 @@ describe("the Learn correction key", () => {
       now: () => NOW,
     });
     await again.press();
-    expect(r.shown[1]).toBe('Learned "cloud code" as "Claude Code" [Undo:learn-undo]');
+    expect(r.shown[1]).toBe("cloud code → Claude Code [Undo:learn-undo]");
     expect(r.state.list).toMatchObject([{ learned: { count: 2, sources: ["e1", "e2"] } }]);
     expect(r.state.list.every(isActive)).toBe(true);
     again.undo();

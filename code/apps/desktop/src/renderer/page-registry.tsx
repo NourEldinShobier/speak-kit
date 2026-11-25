@@ -8,7 +8,6 @@ import { LibraryPage } from "./features/library";
 import { Reader } from "./features/reader";
 import { VoiceChatPage } from "./features/voice-chat";
 import { VoicesPage } from "./features/voices";
-import { requestVocabularyTab } from "./vocabulary-tab";
 import type { MenuPage } from "./routes";
 import type { OpenDoc, ShellAction } from "./shell-model";
 
@@ -45,18 +44,10 @@ function LibraryRoute({ s, dispatch, doc }: PageProps) {
 
 export const PAGE_REGISTRY: Record<MenuPage, ComponentType<PageProps>> = {
   library: LibraryRoute,
-  voices: ({ s, dispatch }) => (
-    <VoicesPage
-      s={s}
-      onFixPronunciation={() => {
-        requestVocabularyTab("read");
-        dispatch({ type: "go", page: "vocabulary" });
-      }}
-    />
-  ),
+  voices: ({ s }) => <VoicesPage s={s} />,
   "voice-chat": ({ s }) => <VoiceChatPage s={s} />,
   dictation: ({ dispatch }) => later(<DictationPage openHistory={() => dispatch({ type: "go", page: "history" })} />),
   modes: () => later(<ModesPage />),
-  vocabulary: ({ s }) => later(<VocabularyPage voice={s.config.voice} />),
+  vocabulary: () => later(<VocabularyPage />),
   history: ({ dispatch }) => later(<HistoryPage openSettings={() => dispatch({ type: "go", page: "settings", sub: "storage" })} openDictation={() => dispatch({ type: "go", page: "dictation" })} />),
 };

@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { takeVocabularyTab, type VocabularyTab } from "../../vocabulary-tab";
 import { exportVocabulary, importVocabulary, type ExportFormat } from "@speakkit/dictation";
-import { Banner, Button, DropdownMenu, DropdownMenuItem, Modal, Segmented } from "@speakkit/ui";
+import { Banner, Button, DropdownMenu, DropdownMenuItem, Modal } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { dictation, patchDictation } from "../dictation-bridge";
 import { useDictation } from "../dictation-bridge";
 import { HeardAs } from "./HeardAs";
 import { importView, type ImportView } from "./model";
-import { ReadAs } from "./ReadAs";
 import "./vocabulary.css";
 
-const LEAD = "Teach Speak Kit the names and terms you use. One list helps dictation, History search and the reader.";
+const LEAD = "Teach Speak Kit the names and terms you use. One list helps dictation and History search.";
 
 function ResultDialog({ view, onClose }: { view: ImportView | null; onClose(): void }) {
   return (
@@ -83,10 +81,9 @@ function Transfer({ s, onImport, onError }: { s: DictationStatus; onImport(): vo
   );
 }
 
-/** Vocabulary: the words dictation hears, and the pronunciations the reader uses. */
-export function VocabularyPage({ voice, initialTab = "heard" }: { voice: string; initialTab?: VocabularyTab }) {
+/** Vocabulary: the words dictation hears. */
+export function VocabularyPage() {
   const s = useDictation();
-  const [tab, setTab] = useState<VocabularyTab>(() => takeVocabularyTab() ?? initialTab);
   const [result, setResult] = useState<ImportView | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!s)
@@ -115,16 +112,7 @@ export function VocabularyPage({ voice, initialTab = "heard" }: { voice: string;
           {error}
         </Banner>
       ) : null}
-      <Segmented
-        label="Vocabulary"
-        value={tab}
-        onChange={(t) => setTab(t as VocabularyTab)}
-        items={[
-          { id: "heard", label: "Heard as" },
-          { id: "read", label: "Read as" },
-        ]}
-      />
-      {tab === "heard" ? <HeardAs s={s} onImport={() => void importFile()} /> : <ReadAs s={s} voice={voice} />}
+      <HeardAs s={s} onImport={() => void importFile()} />
       <ResultDialog view={result} onClose={() => setResult(null)} />
     </Page>
   );

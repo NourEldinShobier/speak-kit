@@ -29,7 +29,7 @@ async function mount(terms: Term[]) {
 
 const headings = (d: Document) => [...d.querySelectorAll("h3")].map((h) => h.textContent);
 
-describe("the Heard as tab", () => {
+describe("the Vocabulary page body", () => {
   it("has one list of words and the prompt card, and no Replacements or Corrections section", async () => {
     const d = await mount([saved]);
     expect(headings(d)).toEqual(["Words and names", "Speech model prompt"]);
@@ -44,6 +44,14 @@ describe("the Heard as tab", () => {
     expect(row?.textContent).toContain("Kubernetes");
     expect(row?.textContent).toContain("Only in code.exe. Matches capitals");
     expect(row?.textContent).toContain("cooper netties");
+  });
+
+  it("marks a word that was learned from a fix, and no other", async () => {
+    const learned: Term = { id: "l", word: "Claude Code", soundsLike: ["cloud code"], learned: { heard: "cloud code", count: 1, createdAt: 1 } };
+    const d = await mount([saved, learned]);
+    expect(d.querySelector("[data-term=l] .lm-badge")?.textContent).toBe("Learned");
+    expect(d.querySelector("[data-term=w] .lm-badge")).toBeNull();
+    expect(d.querySelector("[data-term=l]")?.textContent).not.toContain("Seen");
   });
 
   it("puts the suggested fixes at the top, with how often each was seen", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { fixLabel, keepsAll, limitByDefault, saveFixes, scopeLabel, suggestionsFor } from "./model";
+import { fixLabel, keepsAll, saveFixes, suggestionsFor } from "./model";
 
 describe("fixing a dictation", () => {
   it("lists the fixes in the edited text, and none when the edit is a rewrite", () => {
@@ -8,12 +8,10 @@ describe("fixing a dictation", () => {
     expect(suggestionsFor("i opened cloud code and ran it", "completely different words here now please")).toEqual([]);
   });
 
-  it("saves the ticked fixes as words for every program, or for the program of the entry", () => {
+  it("saves the fixes as words that apply at once", () => {
     const fixes = [{ heard: "cloud code", correct: "Claude Code" }];
     expect(saveFixes([], fixes, { now: 5 })).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], learned: { heard: "cloud code", count: 1, createdAt: 5 } }]);
-    expect(saveFixes([], fixes, { now: 5 })[0]).not.toHaveProperty("app");
     expect(saveFixes([], fixes, { now: 5 })[0]).not.toHaveProperty("suggested");
-    expect(saveFixes([], fixes, { now: 5, app: "Slack.exe" })[0]).toMatchObject({ app: "slack" });
   });
 
   it("adds the heard words to the word that is in the list", () => {
@@ -40,17 +38,27 @@ describe("fixing a dictation", () => {
 });
 
 describe("where a fix applies", () => {
-  it("starts limited to the program only when the heard words are all everyday words", () => {
-    expect(limitByDefault([{ heard: "cloud code" }])).toBe(true);
-    expect(limitByDefault([{ heard: "their" }])).toBe(true);
-    expect(limitByDefault([{ heard: "kubernetis" }])).toBe(false);
-    expect(limitByDefault([{ heard: "cloud code" }, { heard: "get hub" }])).toBe(false);
-    expect(limitByDefault([])).toBe(false);
+  const apps = (list: ReturnType<typeof saveFixes>) => list.map((t) => [t.word, t.app]);
+
+  it("limits each fix to the program only when its heard words are all everyday words", () => {
+    const fixes = [
+      { heard: "cloud code", correct: "Claude Code" },
+      { heard: "kubernetis", correct: "Kubernetes" },
+    ];
+    expect(apps(saveFixes([], fixes, { now: 1, app: "Slack.exe" }))).toEqual([
+      ["Claude Code", "slack"],
+      ["Kubernetes", undefined],
+    ]);
+    expect(apps(saveFixes([], fixes, { now: 1 }))).toEqual([
+      ["Claude Code", undefined],
+      ["Kubernetes", undefined],
+    ]);
   });
 
-  it("names the program in plain words with its file name", () => {
-    expect(scopeLabel({ app: "code.exe", appName: "Visual Studio Code" })).toBe("Only when dictating into Visual Studio Code (code.exe)");
-    expect(scopeLabel({ app: "code.exe" })).toBe("Only when dictating into code.exe");
-    expect(scopeLabel({ app: "code.exe", appName: "code.exe" })).toBe("Only when dictating into code.exe");
+  it("widens a fix to every program when it is saved from another program", () => {
+    const fixes = [{ heard: "cloud code", correct: "Claude Code" }];
+    const first = saveFixes([], fixes, { now: 1, app: "code.exe", source: "e1" });
+    expect(apps(first)).toEqual([["Claude Code", "code"]]);
+    expect(apps(saveFixes(first, fixes, { now: 2, app: "slack.exe", source: "e2" }))).toEqual([["Claude Code", undefined]]);
   });
 });

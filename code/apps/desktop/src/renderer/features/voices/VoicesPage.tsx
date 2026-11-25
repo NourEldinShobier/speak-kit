@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { lazy, Suspense, useEffect, useMemo, useReducer } from "react";
 import { Avatar, Badge, Banner, Button, EmptyState, StatusPill, TextInput, type Tone } from "@speakkit/ui";
 import type { Voice } from "@speakkit/protocol";
 import type { AppState } from "../../../shared/ipc";
@@ -91,7 +91,10 @@ function VoiceGrid({ shown, defaultId, playing, tone, preview }: GridProps) {
   );
 }
 
-export function VoicesPage({ s, onFixPronunciation }: { s: AppState; onFixPronunciation?: () => void }) {
+/** The pronunciations load with the Vocabulary code, which the shell keeps out of its first paint. */
+const Pronunciations = lazy(() => import("../vocabulary").then((m) => ({ default: m.Pronunciations })));
+
+export function VoicesPage({ s }: { s: AppState }) {
   const { t } = useT();
   const [st, dispatch] = useReducer(voicesReducer, undefined, initVoices);
   const { playing, error, toggle } = usePlayer();
@@ -103,11 +106,9 @@ export function VoicesPage({ s, onFixPronunciation }: { s: AppState; onFixPronun
   return (
     <Page title={t("v.title")} lead={t("v.lead", { n: st.voices.length })} wide>
       {failure && <Banner tone="error">{failure}</Banner>}
-      {onFixPronunciation && (
-        <Banner tone="info" title={t("v.fixTitle")} action={<Button onClick={onFixPronunciation}>{t("v.fixAction")}</Button>} role="status">
-          {t("v.fixBody")}
-        </Banner>
-      )}
+      <Banner tone="info" title={t("v.fixTitle")} action={<Button onClick={() => document.getElementById("vocab-read")?.scrollIntoView({ block: "start" })}>{t("v.fixAction")}</Button>} role="status">
+        {t("v.fixBody")}
+      </Banner>
       <Toolbar query={st.query} dispatch={dispatch} />
       {st.voices.length === 0 && !st.error ? (
         <EmptyState icon="microphone" title={t("v.empty")}>
@@ -116,6 +117,9 @@ export function VoicesPage({ s, onFixPronunciation }: { s: AppState; onFixPronun
       ) : (
         <VoiceGrid shown={shown} tone={tone} defaultId={s.config.voice} playing={playing} preview={preview} />
       )}
+      <Suspense fallback={null}>
+        <Pronunciations voice={s.config.voice} />
+      </Suspense>
     </Page>
   );
 }

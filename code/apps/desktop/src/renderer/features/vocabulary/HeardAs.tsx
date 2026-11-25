@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { acceptSuggestions, MAX_TERMS, removeTerm, type Term } from "@speakkit/dictation";
-import { Banner, Button, Chip, EmptyState, Icon, SettingRow, TextInput, Toggle } from "@speakkit/ui";
+import { Badge, Banner, Button, Chip, EmptyState, Icon, SettingRow, TextInput, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { patchDictation } from "../dictation-bridge";
 import { filterTerms, promptSummary, savedTerms, seenText, suggestedTerms, termNotes, wordCount } from "./model";
@@ -23,6 +23,7 @@ function WordRow({ term, onEdit, onDelete }: RowProps) {
     <li className="lm-row vocab-row" data-term={term.id}>
       <span className="vocab-row__word">
         {term.word}
+        {term.learned ? <Badge>Learned</Badge> : null}
         {notes.length ? <span className="vocab-row__notes">{notes.join(". ")}</span> : null}
       </span>
       <span className="vocab-row__chips">
@@ -174,8 +175,8 @@ export function WordsCard({ terms, update, onImport }: { terms: Term[]; update(c
           {wordCount(saved.length)}
         </span>
         <p className="lm-section__desc">
-          When dictation gets a word wrong, add it here, with how it is heard if you know. Heard as spellings are swapped for the word after you speak. Fix a dictation in History, or press the Learn
-          correction shortcut after you fix text in another app, to add one from there.
+          When dictation gets a word wrong, add it here, with how it is heard if you know. Heard as spellings are swapped for the word after you speak. Fix a dictation in History to add one from
+          there.
         </p>
       </header>
       {saved.length === 0 ? (
@@ -226,7 +227,7 @@ export function PromptCard({ s, terms }: { s: DictationStatus; terms: readonly T
   );
 }
 
-/** The Heard as tab: suggested fixes, the one list of words and the model prompt. */
+/** The Vocabulary page body: suggested fixes, the one list of words and the model prompt. */
 export function HeardAs({ s, onImport }: { s: DictationStatus; onImport(): void }) {
   const [terms, update] = useLive<Term>(s.settings.terms, (next) => patchDictation({ terms: next }));
   return (

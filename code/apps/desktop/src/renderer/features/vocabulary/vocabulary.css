@@ -64,6 +64,9 @@
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+.vocab-row__word .lm-badge {
+  margin-inline-start: 8px;
+}
 .vocab-row__chips {
   display: flex;
   flex-wrap: wrap;

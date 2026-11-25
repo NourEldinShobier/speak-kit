@@ -18,6 +18,7 @@ import {
   remember,
   removeTerm,
   rewritePass,
+  saveFix,
   type Fix,
   type Rewriter,
   type Settings,
@@ -202,6 +203,53 @@ describe("remembering fixes as words", () => {
     const own: Term = { id: "w", word: "Claude Code", soundsLike: Array.from({ length: MAX_SOUNDS }, (_, i) => `spelling ${i}`) };
     const suggestion = remember([own], { heard: "cloud code", correct: "Claude Code" }, { now });
     expect(acceptSuggestions(suggestion, [suggestion[1]!.id])).toEqual(suggestion);
+  });
+});
+
+describe("saving a fix on purpose", () => {
+  const now = 5;
+  const shown = (list: Term[]) => list.map((t) => [t.word, t.soundsLike, t.app, !!t.suggested, !!t.learned]);
+
+  it("limits a fix of everyday words to the program it was made in, and applies it at once", () => {
+    const list = saveFix([], { heard: "cloud code", correct: "Claude Code" }, { now, app: "Code.exe", source: "e1" });
+    expect(shown(list)).toEqual([["Claude Code", ["cloud code"], "code", false, true]]);
+    expect(activeFixes(list, "code.exe")).toHaveLength(1);
+  });
+
+  it("keeps a fix of distinctive words for every program", () => {
+    expect(shown(saveFix([], { heard: "kubernetis", correct: "Kubernetes" }, { now, app: "Code.exe" }))).toEqual([["Kubernetes", ["kubernetis"], undefined, false, true]]);
+    expect(shown(saveFix([], { heard: "cloud code", correct: "Claude Code" }, { now }))).toEqual([["Claude Code", ["cloud code"], undefined, false, true]]);
+  });
+
+  it("widens an app fix to every program when it is saved from another program", () => {
+    const once = saveFix([], { heard: "cloud code", correct: "Claude Code" }, { now, app: "code.exe", source: "e1" });
+    const twice = saveFix(once, { heard: "cloud code", correct: "Claude Code" }, { now, app: "slack.exe", source: "e2" });
+    expect(shown(twice)).toEqual([["Claude Code", ["cloud code"], undefined, false, true]]);
+  });
+
+  it("keeps the fix for its program when it is saved again from the same program", () => {
+    const once = saveFix([], { heard: "cloud code", correct: "Claude Code" }, { now, app: "code.exe", source: "e1" });
+    expect(shown(saveFix(once, { heard: "cloud code", correct: "Claude Code" }, { now, app: "Code.exe", source: "e2" }))).toEqual([["Claude Code", ["cloud code"], "code", false, true]]);
+  });
+
+  it("widens a spelling added to a program entry when it is saved from another program", () => {
+    const first = saveFix([], { heard: "cloud code", correct: "Claude Code" }, { now, app: "code.exe", source: "e1" });
+    const both = saveFix(first, { heard: "clawed code", correct: "Claude Code" }, { now, app: "code.exe", source: "e2" });
+    const wide = saveFix(both, { heard: "clawed code", correct: "Claude Code" }, { now, app: "slack.exe", source: "e3" });
+    expect(shown(wide)).toEqual([
+      ["Claude Code", ["cloud code"], "code", false, true],
+      ["Claude Code", ["clawed code"], undefined, false, true],
+    ]);
+  });
+
+  it("widens only the fix, not the other spellings the program entry has", () => {
+    const own: Term = { id: "w", word: "Claude Code", soundsLike: ["clawd code"], app: "code" };
+    const once = saveFix([own], { heard: "cloud code", correct: "Claude Code" }, { now, app: "code.exe" });
+    const wide = saveFix(once, { heard: "cloud code", correct: "Claude Code" }, { now, app: "slack.exe" });
+    expect(shown(wide)).toEqual([
+      ["Claude Code", ["clawd code"], "code", false, false],
+      ["Claude Code", ["cloud code"], undefined, false, true],
+    ]);
   });
 });
 

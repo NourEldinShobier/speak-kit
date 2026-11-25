@@ -34,23 +34,60 @@ async function mount(entry: HistoryItem) {
   return document;
 }
 
+/** Types into the box. The fake DOM has no input event, so React listens for a change through focus and key-up, the way it does in old browsers, which needs these two methods. */
+async function edit(d: Document, text: string) {
+  const area = d.querySelector("textarea") as HTMLTextAreaElement;
+  Object.assign(area, { attachEvent: () => undefined, detachEvent: () => undefined });
+  const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(area), "value")?.set;
+  await act(async () => area.dispatchEvent(new window.Event("focusin", { bubbles: true })));
+  await act(async () => {
+    set?.call(area, text);
+    area.dispatchEvent(new window.Event("keyup", { bubbles: true }));
+  });
+}
+
+const lines = (d: Document) => [...d.querySelectorAll('[aria-label="Fixes found"] li')].map((li) => li.textContent);
+const button = (d: Document, text: string) => [...d.querySelectorAll("button")].find((b) => b.textContent === text) as HTMLButtonElement;
+
 describe("the Fix dialog", () => {
-  it("has no box to copy the corrected text", async () => {
-    const d = await mount(item({ app: "code.exe", appName: "Visual Studio Code" }));
-    expect(d.body.textContent).not.toContain("Also copy the corrected text");
-    expect(d.querySelectorAll('input[type="checkbox"]')).toHaveLength(1);
+  it("shows one hint and a disabled Save until a fix is found", async () => {
+    const d = await mount(item());
+    expect(d.body.textContent).toContain("Change only the misheard words");
+    expect(lines(d)).toEqual([]);
+    expect(button(d, "Save").disabled).toBe(true);
   });
 
-  it("names the program in plain words with its file name, only when the entry recorded one", async () => {
-    const withApp = await mount(item({ app: "code.exe", appName: "Visual Studio Code" }));
-    expect(withApp.body.textContent).toContain("Only when dictating into Visual Studio Code (code.exe)");
-    const without = await mount(item());
-    expect(without.body.textContent).not.toContain("Only when dictating into");
-    expect(without.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+  it("shows one line per fix as the text is edited, and no checkbox, scope question or copy box", async () => {
+    const d = await mount(item({ app: "code.exe", appName: "Visual Studio Code" }));
+    await edit(d, "i opened Claude Code and ran it");
+    expect(lines(d)).toEqual(["cloud code → Claude Code"]);
+    expect(d.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    expect(d.body.textContent).not.toContain("Only when dictating into");
+    expect(d.body.textContent).not.toContain("copy");
   });
 
-  it("starts for everywhere", async () => {
-    const d = await mount(item({ app: "code.exe", appName: "Visual Studio Code" }));
-    expect((d.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(false);
+  it("takes a line away with its remove button", async () => {
+    const d = await mount(item());
+    await edit(d, "i opened Claude Code and ran it");
+    await act(async () => (d.querySelector('[aria-label="Remove cloud code → Claude Code"]') as HTMLElement).click());
+    expect(lines(d)).toEqual([]);
+    expect(button(d, "Save").disabled).toBe(true);
+  });
+
+  it("saves the fix as a word that applies at once, limited to the program for everyday words", async () => {
+    const d = await mount(item({ app: "Code.exe" }));
+    await edit(d, "i opened Claude Code and ran it");
+    await act(async () => button(d, "Save").click());
+    expect(patched).toHaveLength(1);
+    expect(patched[0]?.terms).toMatchObject([{ word: "Claude Code", soundsLike: ["cloud code"], app: "code", learned: { heard: "cloud code", count: 1, sources: ["e1"] } }]);
+    expect(patched[0]?.terms?.[0]).not.toHaveProperty("suggested");
+  });
+
+  it("saves a fix of distinctive words for every program", async () => {
+    const d = await mount(item({ text: "we run kubernetis daily", app: "Code.exe" }));
+    await edit(d, "we run Kubernetes daily");
+    await act(async () => button(d, "Save").click());
+    expect(patched[0]?.terms).toMatchObject([{ word: "Kubernetes", soundsLike: ["kubernetis"] }]);
+    expect(patched[0]?.terms?.[0]).not.toHaveProperty("app");
   });
 });

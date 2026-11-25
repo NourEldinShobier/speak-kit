@@ -119,10 +119,9 @@ describe("Vocabulary page", () => {
     await l.page.getByRole("dialog", { name: "Could not import" }).getByText("bad.json is not a file Speak Kit can read. Nothing was added.").waitFor();
   });
 
-  it("keeps pronunciations for the reader, shows the spoken wording and refuses a repeat", async () => {
+  it("keeps pronunciations for the reader on the Voices page, shows the spoken wording and refuses a repeat", async () => {
     const l = await start();
-    await open(l, "Vocabulary");
-    await l.page.getByRole("radio", { name: "Read as" }).click();
+    await open(l, "Voices");
     await l.page.getByRole("button", { name: "Add pronunciation" }).first().click();
     const dialog = l.page.getByRole("dialog", { name: "Add a pronunciation" });
     await dialog.getByLabel("Written as").fill("kubectl");
@@ -139,12 +138,13 @@ describe("Vocabulary page", () => {
     await dialog.getByText("That written form is already in the list.").waitFor();
   });
 
-  it("the Voices page points to Fix a pronunciation, which opens the Read as tab", async () => {
+  it("the Voices page shows Fix a pronunciation, which scrolls to the pronunciations, and Vocabulary has no tabs", async () => {
     const l = await start();
     await open(l, "Voices");
     await l.page.getByRole("button", { name: "Fix a pronunciation" }).click();
-    await l.page.getByRole("heading", { name: "Vocabulary", exact: true, level: 1 }).waitFor();
-    expect(await l.page.getByRole("radio", { name: "Read as" }).getAttribute("aria-checked")).toBe("true");
+    await l.page.getByRole("heading", { name: "Pronunciations", level: 3 }).waitFor();
+    await open(l, "Vocabulary");
+    expect(await l.page.getByRole("radio").count()).toBe(0);
   });
 });
 

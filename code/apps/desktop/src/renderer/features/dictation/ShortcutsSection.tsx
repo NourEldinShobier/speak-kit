@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Banner, Button, Modal, Select, SettingRow, SettingsSection } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { hotkeyText } from "../../../shared/dictation/keys";
+import { Advanced } from "../settings";
 import type { DictationPatch } from "../../../shared/dictation/settings";
 import { patchDictation } from "./api";
 import { HotkeyRecorder } from "./HotkeyRecorder";
@@ -90,13 +91,21 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
           />
         }
       />
+    </SettingsSection>
+  );
+}
+
+/** The shortcut that learns a fix made in another app; the History Fix dialog does the same without a shortcut. */
+function Learn({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) => Promise<boolean> }) {
+  return (
+    <div className="lm-card">
       <SettingRow
         className="lm-row--control"
         label="Learn correction"
         description="After you fix a misheard word in the app you dictated into, press this to teach Speak Kit the fix. It reads that text once, when you press the key, and nothing leaves this computer."
-        control={<HotkeyRecorder slot="learn" label="Learn correction" value={c.learnHotkey} restore="" status={s} save={(learnHotkey) => patch({ learnHotkey })} confirmAdvanced={confirm} />}
+        control={<HotkeyRecorder slot="learn" label="Learn correction" value={s.settings.learnHotkey} restore="" status={s} save={(learnHotkey) => patch({ learnHotkey })} confirmAdvanced={confirm} />}
       />
-    </SettingsSection>
+    </div>
   );
 }
 
@@ -121,6 +130,9 @@ export function ShortcutsSections({ s }: { s: DictationStatus }) {
       <Primary s={s} confirm={confirm} />
       <AdvancedKeysDialog ask={ask} close={close} />
       <Others s={s} confirm={confirm} />
+      <Advanced page="dictation" subtitle="Learn a fix from another app" count={1}>
+        <Learn s={s} confirm={confirm} />
+      </Advanced>
     </>
   );
 }
