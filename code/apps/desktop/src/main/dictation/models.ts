@@ -93,19 +93,19 @@ export class ModelManager {
     for (const [k, val] of next) this.#installed.set(k, val);
   }
 
-  /** Loads the selected model in the background when it is on disk. `keepError` leaves a failure shown for something else (a download) in place. */
-  warm(keepError = false): void {
+  /** Loads the selected model in the background when it is on disk; resolves when that is over (at once when there is nothing to load). `keepError` leaves a failure shown for something else (a download) in place. */
+  warm(keepError = false): Promise<void> {
     this.#stopped = false;
-    this.#reload(keepError);
+    return this.#reload(keepError);
   }
 
-  #reload(keepError: boolean): void {
+  async #reload(keepError: boolean): Promise<void> {
     const id = this.#d.selected();
     if (!this.isInstalled(id) || this.#d.stt.status().state === "ready") return;
     if (this.#d.switching?.()) return; // a switch is loading the model that will be chosen; loading the old one now would land on top of it
     const blocked = this.#d.blocked?.();
     if (blocked) return void this.report(blocked);
-    void this.#d.stt.warm(id as SttModelId).then(() => {
+    await this.#d.stt.warm(id as SttModelId).then(() => {
       const s = this.#d.stt.status();
       if (s.state === "error") this.error = s.detail ?? "The speech model could not be loaded.";
       else if (!keepError || (s.state === "ready" && !this.failure)) this.error = undefined;

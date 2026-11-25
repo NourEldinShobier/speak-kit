@@ -100,12 +100,13 @@ function Failure({ view }: { view: Extract<HudView, { kind: "error" }> }) {
   );
 }
 
-function Transcribing({ skip }: { skip: Extract<HudView, { kind: "transcribing" }>["skip"] }) {
+function Transcribing({ view }: { view: Extract<HudView, { kind: "transcribing" }> }) {
   const { t } = useT();
+  const { skip } = view;
   return (
     <>
       <Spinner size={14} />
-      <b>{skip ? t("hud.tidying") : t("hud.transcribing")}</b>
+      <b>{skip ? t("hud.tidying") : view.loading ? t("hud.loadingModel") : t("hud.transcribing")}</b>
       {skip?.key && <Hint>{t("hud.skipHint", { key: skip.key })}</Hint>}
       {skip && <Act action={skip} />}
     </>
@@ -126,7 +127,7 @@ function Content({ view }: { view: HudView }) {
     case "recording":
       return <Recording view={view} />;
     case "transcribing":
-      return <Transcribing skip={view.skip} />;
+      return <Transcribing view={view} />;
     case "pasted":
       return <Lead name="check" />; // a check and nothing else: the text is already in the app
     case "copied":

@@ -12,7 +12,16 @@ export interface Migration {
 }
 
 /** One-time fixes to the stored file, by id. Add to the end; an applied id is remembered in the file and never runs again. */
-export const MIGRATIONS: readonly Migration[] = [];
+export const MIGRATIONS: readonly Migration[] = [
+  {
+    // The speech and writer models were released after 15 minutes by default (5 was a choice on the same list); both now stay loaded, which is what the default is.
+    id: "engines-models-stay-loaded",
+    run: (raw) => {
+      const engines = raw.engines as Record<string, unknown> | undefined;
+      return engines && (engines.idleMinutes === 15 || engines.idleMinutes === 5) ? { ...raw, engines: { ...engines, idleMinutes: 0 } } : raw;
+    },
+  },
+];
 
 export type SettingsNotice = { kind: "repaired"; fields: string[] } | { kind: "newer"; version: number };
 
@@ -57,7 +66,7 @@ export function loadSettings(stored: unknown, list: readonly Migration[] = MIGRA
   const applied = Array.isArray(raw.appliedMigrations) ? raw.appliedMigrations.filter((x): x is string => typeof x === "string") : [];
   const migrated = runMigrations(raw, applied, list);
   const config = parseConfig({ ...migrated.raw, appliedMigrations: migrated.applied, configVersion: CONFIG_VERSION });
-  const changed = migrated.applied.length !== applied.length;
+  const changed = JSON.stringify(migrated.raw) !== JSON.stringify(raw);
   return { config, invalidFields, newerVersion: null, needsBackup: invalidFields.length > 0 || changed };
 }
 

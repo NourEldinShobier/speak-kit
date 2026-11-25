@@ -4,7 +4,7 @@ import type { HudView } from "../../shared/dictation/contract";
 import type { Hud, HudState } from "./hud";
 import { HudPresenter } from "./hud-presenter";
 
-function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" | "bottom" | "off"; platform?: NodeJS.Platform } = {}) {
+function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" | "bottom" | "off"; platform?: NodeJS.Platform; speechLoading?: () => boolean } = {}) {
   const shown: (HudView | "hide")[] = [];
   const updates: HudView[] = [];
   const hud = {
@@ -19,6 +19,7 @@ function setup(over: { canRetry?: boolean; copied?: boolean; indicator?: "top" |
     canRetry: () => over.canRetry ?? false,
     insertedAsCopy: () => over.copied ?? false,
     indicator: () => over.indicator ?? "bottom",
+    ...(over.speechLoading && { speechLoading: over.speechLoading }),
   });
   return { p, shown, updates };
 }
@@ -67,6 +68,17 @@ describe("HUD presenter", () => {
     vi.advanceTimersByTime(200);
     p.setLevel(0.7);
     expect(updates).toEqual([expect.objectContaining({ kind: "recording", level: 0.7 })]);
+  });
+
+  it("changes the pill from loading the speech model to transcribing when the engine becomes ready, and ignores engine changes outside a transcription", () => {
+    let loading = true;
+    const { p, shown } = setup({ speechLoading: () => loading });
+    p.onSpeechStatus();
+    expect(shown).toEqual([]);
+    p.onState(state({ status: "transcribing" }));
+    loading = false;
+    p.onSpeechStatus();
+    expect(shown).toEqual([{ kind: "transcribing", loading: true }, { kind: "transcribing" }]);
   });
 
   it("goes from recording to transcribing to Pasted and hides when idle again", () => {

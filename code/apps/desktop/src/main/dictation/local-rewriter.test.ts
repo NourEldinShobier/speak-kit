@@ -1,4 +1,4 @@
-import type { Rewriter } from "@speakkit/dictation";
+import { WriterLoadingError, type Rewriter } from "@speakkit/dictation";
 import { describe, expect, it } from "vite-plus/test";
 import { chooseRewriter, createLocalRewriter, type LocalWriterPort } from "./local-rewriter";
 import { instructions } from "./openai-rewriter";
@@ -7,14 +7,18 @@ type Req = Parameters<LocalWriterPort["complete"]>[0];
 const live = () => new AbortController().signal;
 
 /** A model host that answers `answer` and remembers what it was asked. */
-function fakeWriter(answer: string, { downloaded = true }: { downloaded?: boolean } = {}) {
+function fakeWriter(answer: string, { downloaded = true, state = "ready" }: { downloaded?: boolean; state?: string } = {}) {
   const asked: Req[] = [];
+  const warmed: string[] = [];
   const port: LocalWriterPort = {
     downloaded: async () => downloaded,
+    status: () => ({ state }),
+    warm: async () => void warmed.push("warm"),
     complete: async (req) => (asked.push(req), answer),
   };
-  return { asked, port };
+  return { asked, warmed, port };
 }
+const ready = { status: () => ({ state: "ready" }), warm: async () => {} };
 
 describe("rewriting on this computer", () => {
   it("sends the instructions for the capital and full-stop choices with the text, and returns the trimmed answer", async () => {
@@ -46,6 +50,24 @@ describe("rewriting on this computer", () => {
     expect(asked).toEqual([]);
   });
 
+  it("does not wait for a model that is loading or released: it keeps loading for the next dictation and the pass pastes the text as said", async () => {
+    for (const state of ["loading", "unloaded"]) {
+      const { port, asked, warmed } = fakeWriter("Hello.", { state });
+      await expect(createLocalRewriter(port).rewrite({ text: "hello", signal: live() })).rejects.toBeInstanceOf(WriterLoadingError);
+      expect(asked).toEqual([]);
+      expect(warmed).toEqual(["warm"]);
+    }
+  });
+
+  it("tries a model that failed to load again in the background and reports a plain failure", async () => {
+    const { port, asked, warmed } = fakeWriter("Hello.", { state: "error" });
+    const job = createLocalRewriter(port).rewrite({ text: "hello", signal: live() });
+    await expect(job).rejects.toThrow("the writer failed to load");
+    await expect(job).rejects.not.toBeInstanceOf(WriterLoadingError);
+    expect(asked).toEqual([]);
+    expect(warmed).toEqual(["warm"]);
+  });
+
   it("throws when the model gives no text", async () => {
     await expect(createLocalRewriter(fakeWriter(" \n").port).rewrite({ text: "hello", signal: live() })).rejects.toThrow("no answer");
   });
@@ -53,6 +75,7 @@ describe("rewriting on this computer", () => {
   it("throws the deadline's reason when it passes while the model works, and when it passed before the model was asked", async () => {
     const stop = new AbortController();
     const slow: LocalWriterPort = {
+      ...ready,
       downloaded: async () => true,
       complete: ({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })),
     };
@@ -68,7 +91,7 @@ describe("rewriting on this computer", () => {
   });
 
   it("passes on a failure of the model host as it is", async () => {
-    const broken: LocalWriterPort = { downloaded: async () => true, complete: async () => Promise.reject(new Error("out of memory")) };
+    const broken: LocalWriterPort = { ...ready, downloaded: async () => true, complete: async () => Promise.reject(new Error("out of memory")) };
     await expect(createLocalRewriter(broken).rewrite({ text: "hello", signal: live() })).rejects.toThrow("out of memory");
   });
 });

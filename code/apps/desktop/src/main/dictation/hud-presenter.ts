@@ -27,6 +27,8 @@ interface Deps {
   /** The recording indicator is switched off: only what needs reading still shows. */
   indicator?(): Indicator;
   secureInput?(): boolean;
+  /** The speech model is not loaded yet. */
+  speechLoading?(): boolean;
 }
 
 const busy = (s: DictationState) => s.status === "recording" || s.status === "locked" || s.status === "transcribing" || s.status === "pasting";
@@ -61,6 +63,11 @@ export class HudPresenter {
       if (!wasRecording) this.#startedAt = Date.now();
     } else this.#level = 0;
     this.#render();
+  }
+
+  /** The speech engine loaded or lost its model: a pill that says "Loading speech model" or "Transcribing" follows it. */
+  onSpeechStatus(): void {
+    if (this.#state.status === "transcribing") this.#render();
   }
 
   setLevel(level: number): void {
@@ -121,6 +128,7 @@ export class HudPresenter {
       level: this.#level,
       insertedAsCopy: this.#d.insertedAsCopy(),
       secureInput: this.#d.secureInput?.() ?? false,
+      speechLoading: this.#d.speechLoading?.() ?? false,
       canRetry: this.#d.canRetry(),
       ...(this.#d.cancelLabel && { cancelLabel: this.#d.cancelLabel() }),
     });
@@ -160,7 +168,7 @@ export class HudPresenter {
 }
 
 /** The presenter of a dictation service: what it shows comes from the dictation OS, the config, the last failure and the last insert. */
-export function createPresenter(h: { os(): DictationOs | undefined; cfg(): DictationConfig; failure: Failure; lastInsert(): InsertResult | undefined }): HudPresenter {
+export function createPresenter(h: { os(): DictationOs | undefined; cfg(): DictationConfig; failure: Failure; lastInsert(): InsertResult | undefined; speechReady(): boolean }): HudPresenter {
   return new HudPresenter({
     hud: () => h.os()?.hud,
     hotkey: () => h.cfg().hotkey,
@@ -169,6 +177,7 @@ export function createPresenter(h: { os(): DictationOs | undefined; cfg(): Dicta
     canRetry: () => !!h.failure.clip,
     cancelLabel: () => keyLabel(h.cfg().cancelKey === "Escape" ? "Esc" : h.cfg().cancelKey),
     insertedAsCopy: () => h.lastInsert()?.status === "copied",
+    speechLoading: () => !h.speechReady(),
     secureInput: () => {
       const r = h.lastInsert();
       return r?.status === "copied" && r.reason === "secure-input";

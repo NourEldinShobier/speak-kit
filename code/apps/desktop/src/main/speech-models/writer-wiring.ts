@@ -35,6 +35,8 @@ export function createWriterParts(a: Args): WriterParts {
   engine.onStatus((s) => (s.state === "ready" ? idle.touch() : idle.stop()));
   const port: LocalWriterPort = {
     downloaded: () => engine.downloaded(),
+    status: () => engine.status(),
+    warm: () => engine.warm(),
     complete: async (req) => {
       try {
         return await engine.complete(req);

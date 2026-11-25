@@ -59,7 +59,8 @@ describe("HUD pill", () => {
   });
 
   it("covers the short states", () => {
-    expect(text({ kind: "transcribing" })).toBe("Transcribing");
+    expect(text({ kind: "transcribing" })).toBe("Transcribing…");
+    expect(text({ kind: "transcribing", loading: true })).toBe("Loading speech model…");
     expect(text({ kind: "pasted" })).toBe("");
     expect(renderToStaticMarkup(<Pill view={{ kind: "pasted" }} />)).toContain('aria-label="Pasted into the window it came from"');
     expect(text({ kind: "notice", text: "Cancelled" })).toBe("Cancelled");

@@ -55,7 +55,8 @@ export const AR_MAIN: Record<keyof typeof MAIN, string> = {
   "toast.readingTitle": "انتهت القراءة",
 
   "hud.ready": "الإملاء جاهز",
-  "hud.transcribing": "جارٍ التفريغ",
+  "hud.transcribing": "جارٍ التفريغ…",
+  "hud.loadingModel": "جارٍ تحميل نموذج الكلام…",
   "hud.tidying": "جارٍ تنسيق النص",
   "hud.skip": "تخطي",
   "hud.skipHint": "{key} للتخطي",

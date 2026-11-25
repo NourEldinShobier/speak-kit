@@ -30,6 +30,12 @@ describe("the HUD for each dictation state", () => {
     expect(hudViewFor(input({ status: "locked" }))).toMatchObject({ kind: "recording", locked: true });
   });
 
+  it("says the speech model is loading while a recording waits for it, and tidying only while the writer runs", () => {
+    expect(hudViewFor({ ...input({ status: "transcribing" }), speechLoading: true })).toEqual({ kind: "transcribing", loading: true });
+    expect(hudViewFor({ ...input({ status: "transcribing" }), speechLoading: false })).toEqual({ kind: "transcribing" });
+    expect(hudViewFor({ ...input({ status: "transcribing", rewriting: true }), speechLoading: true })).toEqual({ kind: "transcribing", skip: { label: "Skip", id: "skip-rewrite" } });
+  });
+
   it("shows transcribing for both the recognition and the paste", () => {
     expect(hudViewFor(input({ status: "transcribing" }))).toEqual({ kind: "transcribing" });
     expect(hudViewFor(input({ status: "pasting" }))).toEqual({ kind: "transcribing" });

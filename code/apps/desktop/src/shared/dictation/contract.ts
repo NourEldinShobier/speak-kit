@@ -130,8 +130,8 @@ export interface HistoryItem {
 type HudBody =
   | { kind: "ready"; hotkey: string }
   | { kind: "recording"; locked: boolean; startedAt: number; level: number; hotkey: string; /** Name of the key that cancels this recording, when one does. */ cancel?: string }
-  /** `skip` while the writer tidies the text: its button (and the key, when one is named) ends the wait and the text goes in as said. */
-  | { kind: "transcribing"; skip?: { label: string; id: HudAction; key?: string } }
+  /** `loading` while the speech model is still being loaded; `skip` while the writer tidies the text: its button (and the key, when one is named) ends the wait and the text goes in as said. */
+  | { kind: "transcribing"; loading?: true; skip?: { label: string; id: HudAction; key?: string } }
   | { kind: "pasted" }
   | { kind: "copied"; reason: "clipboard" | "elevated" | "secure-input" }
   | { kind: "notice"; text: string; action?: { label: string; id: HudAction } }

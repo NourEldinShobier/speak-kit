@@ -142,6 +142,8 @@ export function rewriteTag(outcome: HistoryItem["rewrite"]): string | undefined 
       return "Rewritten";
     case "skipped":
       return "Pasted as said (skipped)";
+    case "writer-loading":
+      return "Pasted as said (writer was loading)";
     case "failed":
       return "Pasted as said, the writer could not be reached";
     case "numbers-only":

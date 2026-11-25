@@ -23,7 +23,7 @@ import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
 import { createOutputSide } from "./service-output";
-import { createRecovery, onRecordingStart, onStateChange, prepareModel, syncWriter, warmCaret, warmWriter } from "./service-extras";
+import { createRecovery, onRecordingStart, onStateChange, prepareModel, syncWriter, warmCaret, warmWriterAfter } from "./service-extras";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import type { Stt } from "./stt";
@@ -93,7 +93,8 @@ export class DictationService {
     this.fake = __TEST_CODE__ && o.test && !o.stt && !process.env.SPEAKKIT_REAL_STT ? fakeStt() : undefined;
     const sp = createSpeechParts({ ctx, o, stt: o.stt ?? this.fake, svc: this, select: (id) => this.#choose(id), push: (soon) => this.#push(soon) });
     [this.stt, this.models, this.speech, this.writer] = [sp.stt, sp.models, sp.speech, sp.writer];
-    this.presenter = createPresenter({ os: () => this.os, cfg: () => this.#cfg, failure: this.#failure, lastInsert: () => this.#lastInsert });
+    this.presenter = createPresenter({ os: () => this.os, cfg: () => this.#cfg, failure: this.#failure, lastInsert: () => this.#lastInsert, speechReady: () => this.stt.status().state === "ready" });
+    this.stt.onStatus(() => this.presenter.onSpeechStatus());
     const parts = createParts({
       ready: () => this.ready,
       failure: this.#failure,
@@ -281,8 +282,8 @@ export class DictationService {
     void this.#recorder?.prepare().then(() => this.mic.refresh());
     this.#recover?.();
     await this.models.refresh();
-    prepareModel(this.models, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
-    if (!quiet || this.#ctx.config.engines.idleMinutes === 0) warmWriter(this.writer.engine, this.#cfg);
+    const speech = prepareModel(this.models, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
+    if (!quiet || this.#ctx.config.engines.idleMinutes === 0) warmWriterAfter(speech, this.writer.engine, this.#cfg);
     if (!quiet && ready && this.models.installed) this.presenter.flashReady();
   }
 

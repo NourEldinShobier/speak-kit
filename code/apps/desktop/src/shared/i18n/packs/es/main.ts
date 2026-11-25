@@ -55,7 +55,8 @@ export const ES_MAIN: Record<keyof typeof MAIN, string> = {
   "toast.readingTitle": "Lectura terminada",
 
   "hud.ready": "Dictado listo",
-  "hud.transcribing": "Transcribiendo",
+  "hud.transcribing": "Transcribiendo…",
+  "hud.loadingModel": "Cargando el modelo de voz…",
   "hud.tidying": "Puliendo el texto",
   "hud.skip": "Omitir",
   "hud.skipHint": "{key} omite",

@@ -75,6 +75,27 @@ describe("one-time migrations", () => {
   });
 });
 
+describe("the migration that keeps the models loaded", () => {
+  it.each([15, 5])("moves the old default of %i minutes to never, remembers it and asks for a backup", (minutes) => {
+    const l = loadSettings({ engines: { idleMinutes: minutes, device: "gpu" } });
+    expect(l.config.engines).toMatchObject({ idleMinutes: 0, device: "gpu" });
+    expect(l.config.appliedMigrations).toEqual(["engines-models-stay-loaded"]);
+    expect(l.needsBackup).toBe(true);
+  });
+
+  it("leaves every other choice alone, and a choice made after the migration ran", () => {
+    expect(loadSettings({ engines: { idleMinutes: 60 } }).config.engines.idleMinutes).toBe(60);
+    expect(loadSettings({ engines: { idleMinutes: 30 } }).config.engines.idleMinutes).toBe(30);
+    expect(loadSettings({ engines: { idleMinutes: 15 }, appliedMigrations: ["engines-models-stay-loaded"] }).config.engines.idleMinutes).toBe(15);
+  });
+
+  it("a file without engines loads the default (never) without a backup", () => {
+    const l = loadSettings({ appearance: "light" });
+    expect(l.config.engines.idleMinutes).toBe(0);
+    expect(l.needsBackup).toBe(false);
+  });
+});
+
 describe("stored values of the wrong type", () => {
   it("a version that is not a number counts as version 1, not as newer", () => {
     expect(loadSettings({ configVersion: "9" }).newerVersion).toBeNull();

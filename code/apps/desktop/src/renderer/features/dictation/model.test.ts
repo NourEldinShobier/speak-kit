@@ -202,6 +202,7 @@ describe("history numbers and tags", () => {
   it("names what the rewrite pass did", () => {
     expect(rewriteTag("rewritten")).toBe("Rewritten");
     expect(rewriteTag("skipped")).toBe("Pasted as said (skipped)");
+    expect(rewriteTag("writer-loading")).toBe("Pasted as said (writer was loading)");
     expect(rewriteTag("numbers-only")).toBe("Not rewritten, only numbers");
     expect(rewriteTag("failed")).toContain("could not be reached");
     expect(rewriteTag("changed-facts")).toContain("changed a number");

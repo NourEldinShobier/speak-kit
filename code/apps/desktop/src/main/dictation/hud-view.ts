@@ -20,6 +20,8 @@ export interface HudInput {
   canRetry: boolean;
   /** Key that cancels a toggled recording, as a label. */
   cancelLabel?: string;
+  /** The speech model is not loaded yet, so a recording that was handed over waits for it. */
+  speechLoading?: boolean;
 }
 
 const E = (text: string, icon: Extract<HudView, { kind: "error" }>["icon"], action?: Extract<HudView, { kind: "error" }>["action"]): HudView => ({
@@ -89,7 +91,8 @@ export function hudViewFor(i: HudInput): HudView | null {
     case "locked":
       return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, i.platform) };
     case "transcribing":
-      return s.rewriting ? { kind: "transcribing", skip: { label: at("hud.skip"), id: "skip-rewrite", ...(i.cancelLabel && { key: i.cancelLabel }) } } : { kind: "transcribing" };
+      if (s.rewriting) return { kind: "transcribing", skip: { label: at("hud.skip"), id: "skip-rewrite", ...(i.cancelLabel && { key: i.cancelLabel }) } };
+      return i.speechLoading ? { kind: "transcribing", loading: true } : { kind: "transcribing" };
     case "pasting":
       return { kind: "transcribing" };
     case "error":

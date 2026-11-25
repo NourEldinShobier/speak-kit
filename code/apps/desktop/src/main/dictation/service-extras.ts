@@ -64,9 +64,9 @@ export function onStateChange(h: {
   } else if (next.status === "idle" && (next.notice?.kind === "inserted" || next.notice?.kind === "copied")) failure.last = undefined;
 }
 
-/** After the key hook starts: warm an installed model. A missing one is not fetched: the page asks the person to choose and download one. At launch (quiet) with release-when-idle on, the model stays on disk and the first dictation loads it. */
-export function prepareModel(models: ModelManager, o: { quiet: boolean; idleMinutes: number }): void {
-  if (models.installed && (!o.quiet || o.idleMinutes === 0)) models.warm();
+/** After the key hook starts: warm an installed model; resolves when that load is over. A missing one is not fetched: the page asks the person to choose and download one. At launch (quiet) with release-when-idle on, the model stays on disk and the first dictation loads it. */
+export function prepareModel(models: ModelManager, o: { quiet: boolean; idleMinutes: number }): Promise<void> {
+  return models.installed && (!o.quiet || o.idleMinutes === 0) ? models.warm() : Promise.resolve();
 }
 
 type WriterChoice = Pick<DictationConfig, "rewrite" | "rewriteWriter">;
@@ -77,10 +77,12 @@ export const warmWriter = (writer: { warm(): Promise<void> }, cfg: WriterChoice)
   if (wantsLocalWriter(cfg)) void writer.warm();
 };
 
-/** A recording starts: a speech model and a writer that were released while idle start loading, so the load overlaps the recording. */
+/** The writer loads once the speech model's load is over: the two do not compete for the disk and the graphics card, and speech is what a dictation needs first. */
+export const warmWriterAfter = (speech: Promise<void>, writer: { warm(): Promise<void> }, cfg: WriterChoice): void => void speech.then(() => warmWriter(writer, cfg));
+
+/** A recording starts: a speech model and a writer that were released while idle start loading (speech first), so the load overlaps the recording. */
 export function onRecordingStart(models: Pick<ModelManager, "warm">, writer: { warm(): Promise<void> }, cfg: WriterChoice): void {
-  models.warm(true);
-  warmWriter(writer, cfg);
+  warmWriterAfter(models.warm(true), writer, cfg);
 }
 
 /** Settings changed while dictation is on: if the rewrite choice was among them, the writer on this computer loads now when it is wanted, and is released when it is not, so it does not hold memory for nothing. */

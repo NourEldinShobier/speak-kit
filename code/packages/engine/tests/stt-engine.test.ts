@@ -171,6 +171,20 @@ describe("WhisperStt", () => {
     expect((await e.transcribe(speech(100), "en")).speech).toBe(true);
   });
 
+  it("starts the host with a shader cache of its own that the graphics driver does not trim, so a load after a trim does not compile for 20 s again", async () => {
+    const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "cache");
+    dirs.push(join(log, ".."));
+    process.env.SPEAKKIT_FAKE_CACHE_LOG = log;
+    try {
+      const { e, modelsDir } = await make({ gpu: false });
+      await e.load("large-v3-turbo-q5_0");
+      expect(await readFile(log, "utf8")).toBe(`${join(modelsDir, "gpu-cache")}|1`);
+      expect((await stat(join(modelsDir, "gpu-cache"))).isDirectory()).toBe(true);
+    } finally {
+      delete process.env.SPEAKKIT_FAKE_CACHE_LOG;
+    }
+  });
+
   it("aborting a transcription tells the worker to stop that job, once", async () => {
     const log = join(await mkdtemp(join(tmpdir(), "stt-log-")), "starts");
     dirs.push(join(log, ".."));

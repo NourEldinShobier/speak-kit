@@ -45,6 +45,19 @@ describe("model manager", () => {
     expect(stt.status().state).toBe("ready");
   });
 
+  it("resolves the warm-up when the load is over, and at once when there is nothing to load", async () => {
+    const { stt, m } = setup();
+    await m.refresh();
+    await m.warm();
+    expect(stt.status().state).toBe("ready");
+    await expect(m.warm()).resolves.toBeUndefined();
+    await stt.setInstalled(TURBO, false);
+    await stt.unload();
+    await m.refresh();
+    await expect(m.warm()).resolves.toBeUndefined();
+    expect(stt.status().state).toBe("unloaded");
+  });
+
   it("does not warm a model that is not on disk", async () => {
     const { stt, m } = setup();
     await stt.setInstalled(TURBO, false);

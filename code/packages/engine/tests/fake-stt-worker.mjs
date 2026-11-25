@@ -11,6 +11,8 @@ const DEVICES = [
   ["dev4", 4],
 ];
 if (process.env.SPEAKKIT_FAKE_LOG) appendFileSync(process.env.SPEAKKIT_FAKE_LOG, `vk=${vk} warmup=${init.warmup}\n`);
+// SPEAKKIT_FAKE_CACHE_LOG names a file that gets the shader cache variables the host started with.
+if (process.env.SPEAKKIT_FAKE_CACHE_LOG) appendFileSync(process.env.SPEAKKIT_FAKE_CACHE_LOG, `${process.env.__GL_SHADER_DISK_CACHE_PATH}|${process.env.__GL_SHADER_DISK_CACHE_SKIP_CLEANUP}`);
 process.send({ type: "status", state: "loading" });
 if (init.modelPath.includes("bad")) process.send({ type: "fatal", message: "cannot open model" });
 else if (!init.gpu) process.send({ type: "status", state: "ready", backend: "cpu" });

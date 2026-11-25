@@ -55,7 +55,8 @@ export const MAIN = definePack({
   "toast.readingTitle": "Finished reading",
 
   "hud.ready": "Dictation ready",
-  "hud.transcribing": "Transcribing",
+  "hud.transcribing": "Transcribing…",
+  "hud.loadingModel": "Loading speech model…",
   "hud.tidying": "Tidying text",
   "hud.skip": "Skip",
   "hud.skipHint": "{key} skips",

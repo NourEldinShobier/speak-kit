@@ -4,7 +4,7 @@ import { DEFAULT_DICTATION } from "../../shared/dictation/settings";
 
 vi.mock("electron", () => ({ powerSaveBlocker: { start: () => 1, stop: () => undefined, isStarted: () => false }, clipboard: {}, shell: {} }));
 vi.mock("../system/clipboard", () => ({ electronClipboard: {} }));
-const { createRecovery, onStateChange, prepareModel, onRecordingStart, recoverTakes, syncWriter, warmWriter } = await import("./service-extras");
+const { createRecovery, onStateChange, prepareModel, onRecordingStart, recoverTakes, syncWriter, warmWriter, warmWriterAfter } = await import("./service-extras");
 
 const idle: DictationState = { status: "idle" };
 
@@ -69,6 +69,8 @@ describe("onStateChange", () => {
     expect(r.failure.last).toBeDefined();
   });
 });
+
+const flushPromises = () => new Promise<void>((r) => setTimeout(r, 0));
 
 describe("prepareModel", () => {
   const models = (installed: boolean) => {
@@ -135,12 +137,27 @@ describe("syncWriter", () => {
 });
 
 describe("onRecordingStart", () => {
-  it("starts loading the speech model, and the writer when the pass is set to use it", () => {
+  it("starts loading the speech model, and the writer after it when the pass is set to use it", async () => {
     const log: string[] = [];
-    const models = { warm: (quiet?: boolean) => void log.push(`models:${quiet}`) };
+    const models = { warm: async (quiet?: boolean) => void log.push(`models:${quiet}`) };
     onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true }, rewriteWriter: "local" });
     onRecordingStart(models, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true }, rewriteWriter: "openai" });
-    expect(log).toEqual(["models:true", "writer", "models:true"]);
+    await flushPromises();
+    expect(log).toEqual(["models:true", "models:true", "writer"]);
+  });
+});
+
+describe("warmWriterAfter", () => {
+  it("starts the writer only when the speech model's load is over", async () => {
+    const log: string[] = [];
+    let done!: () => void;
+    const speech = new Promise<void>((r) => (done = r));
+    warmWriterAfter(speech, { warm: async () => void log.push("writer") }, { rewrite: { enabled: true }, rewriteWriter: "local" });
+    await flushPromises();
+    expect(log).toEqual([]);
+    done();
+    await flushPromises();
+    expect(log).toEqual(["writer"]);
   });
 });
 

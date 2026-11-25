@@ -18,6 +18,7 @@ import {
   setApps,
   type WritingMode as Mode,
   type Rewriter,
+  WriterLoadingError,
 } from "../src";
 import { flush, rig, target } from "./fakes";
 
@@ -164,6 +165,22 @@ describe("rewrite pass", () => {
     skip.abort();
     expect(await run({ rewrite: async () => ((called = true), "x") }, "hello ", skip).p).toEqual({ text: "hello ", outcome: "skipped" });
     expect(called).toBe(false);
+  });
+
+  it("pastes the text as said at once when the writer is still loading, and tags it", async () => {
+    const { p } = run({ rewrite: () => Promise.reject(new WriterLoadingError()) });
+    expect(await p).toEqual({ text: "hello there ", outcome: "writer-loading" });
+    const sync = run({
+      rewrite: () => {
+        throw new WriterLoadingError();
+      },
+    });
+    expect(await sync.p).toEqual({ text: "hello there ", outcome: "writer-loading" });
+  });
+
+  it("still waits for a writer that is ready, and a writer that answers with the word failed is an answer", async () => {
+    const { p } = run({ rewrite: ({ text }) => new Promise((r) => setTimeout(() => r(`${text.trim()} failed`), 20)) });
+    expect(await p).toEqual({ text: "hello there failed ", outcome: "rewritten" });
   });
 
   it("falls back on an error, an empty answer and a writer that throws at once", async () => {
@@ -332,6 +349,15 @@ describe("dictation with modes, words and rewrite", () => {
     await r.time.advance(200);
     expect(r.ins.inserted[0]?.text).toBe("Hello world ");
     expect((await r.dictation.history.list())[0]?.rewrite).toBe("failed");
+  });
+
+  it("a writer that is still loading is not waited for: the text goes in as said and the history says why", async () => {
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
+    const r = await rig({ modes: [chat], rewrite: { enabled: true } }, undefined, { rewriter: { rewrite: () => Promise.reject(new WriterLoadingError()) } });
+    await r.hold(1000);
+    await r.time.advance(200);
+    expect(r.ins.inserted[0]?.text).toBe("Hello world ");
+    expect((await r.dictation.history.list())[0]?.rewrite).toBe("writer-loading");
   });
 
   it("rewrites apps in no mode only with a default style chosen, and a mode's own choice wins", async () => {

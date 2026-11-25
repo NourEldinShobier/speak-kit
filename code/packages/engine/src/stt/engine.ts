@@ -1,4 +1,5 @@
 import { availableParallelism } from "node:os";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { processChannel, type Channel } from "../channel";
 import { EngineNotReadyError, StatusEmitter, type EngineStatus } from "../types";
@@ -54,6 +55,11 @@ export interface SpeechToText {
 
 type Host = Channel<SttToWorker, SttFromWorker>;
 type HostSpec = Pick<SttWorkerInit, "engine" | "modelPath" | "vadPath">;
+/**
+ * The graphics driver compiles the model's shaders at the first transcription (20 s, measured) and keeps the result in a cache it trims on its own;
+ * after a trim the next load pays the 20 s again. The model host gets a cache of its own that is not trimmed (NVIDIA's variables; other drivers ignore them).
+ */
+const shaderCacheEnv = (dir: string): Record<string, string> => ({ __GL_SHADER_DISK_CACHE_PATH: dir, __GL_SHADER_DISK_CACHE_SKIP_CLEANUP: "1" });
 const defaultWorker = () => new URL(import.meta.url.endsWith(".ts") ? "./worker.ts" : "./stt-worker.js", import.meta.url);
 
 /** whisper.cpp (Whisper and Parakeet models) in a child process, so a native crash cannot take the app down and unloading returns all memory. */
@@ -176,6 +182,10 @@ export class WhisperStt implements SpeechToText {
     return join(this.#o.modelsDir, "stt");
   }
 
+  #shaderCache(): string {
+    return join(this.#o.modelsDir, "gpu-cache");
+  }
+
   #serial(f: () => Promise<void>): Promise<void> {
     // The second argument keeps the queue moving after a failed step; that step's own caller gets the rejection.
     const run = this.#queue.then(f, f);
@@ -187,6 +197,7 @@ export class WhisperStt implements SpeechToText {
     if (this.#em.status.state === "ready" && this.#model === m) return;
     await this.#unload();
     await this.#o.beforeLoad?.();
+    await mkdir(this.#shaderCache(), { recursive: true }).catch(() => undefined); // without it the driver falls back to its own cache
     const dir = this.#dir();
     const ac = (this.#abort = new AbortController());
     try {
@@ -267,7 +278,10 @@ export class WhisperStt implements SpeechToText {
 
   #start(spec: HostSpec, vk: string, o: { warmup?: boolean; gpu?: boolean } = {}): Promise<Extract<SttFromWorker, { state: "ready" }>> {
     const init: SttWorkerInit = { ...spec, gpu: o.gpu ?? this.#wantsGpu(), threads: Math.min(8, availableParallelism()), warmup: o.warmup ?? true };
-    const w = (this.#host = processChannel<SttToWorker, SttFromWorker>(this.#o.workerUrl ?? defaultWorker(), init, vk ? { GGML_VK_VISIBLE_DEVICES: vk } : {}));
+    const w = (this.#host = processChannel<SttToWorker, SttFromWorker>(this.#o.workerUrl ?? defaultWorker(), init, {
+      ...(vk && { GGML_VK_VISIBLE_DEVICES: vk }),
+      ...shaderCacheEnv(this.#shaderCache()),
+    }));
     return new Promise((resolve, reject) => {
       let loaded = false;
       const fail = (message: string) => {
