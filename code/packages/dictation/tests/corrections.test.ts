@@ -104,6 +104,18 @@ describe("learning a correction from an edit", () => {
     expect(hand("open the big red door now", "close that small blue window later")).toEqual([]);
     expect(learnCorrections("Can you open the HTML file?", "Can you read the HTML file?")).toEqual([]);
   });
+
+  it("a changed word at the end of a sentence counts: the full stop beside it is not part of a link, and a capitalised neighbour makes the fix a phrase", () => {
+    const hand = (pasted: string, edited: string) => learnCorrections(pasted, edited, true).map((c) => [c.heard, c.correct]);
+    const said = "I honestly love to play with Claude and VS good.";
+    expect(hand(said, "I honestly love to play with Claude and VS Code.")).toEqual([["VS good", "VS Code"]]);
+    expect(hand(said, "I honestly love to play with Claude and VS Cod.")).toEqual([["VS good", "VS Cod"]]);
+    expect(hand(`${said} `, "I honestly love to play with Claude and VS Code.")).toEqual([["VS good", "VS Code"]]);
+    expect(hand("we love the good.", "we love the great.")).toEqual([["good", "great"]]);
+    expect(hand("we met Bob today.", "we met Bob yesterday.")).toEqual([["Bob today", "Bob yesterday"]]);
+    expect(hand("Good morning team.", "Good evening team.")).toEqual([["morning", "evening"]]);
+    expect(hand("see example.com now", "see example.org now")).toEqual([]);
+  });
 });
 
 describe("remembering fixes as words", () => {

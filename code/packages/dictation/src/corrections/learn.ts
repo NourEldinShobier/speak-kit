@@ -96,6 +96,20 @@ function widen(h: Hunk, e: Edit): Hunk {
   return after && !isFunctionWord(after.key) && near(e, h.to - 1, h.newTo - 1) ? { ...h, to: h.to + 1, newTo: h.newTo + 1 } : h;
 }
 
+/** A word of a name: all capitals ("VS"), a capital inside ("GitHub"), or a capital in the middle of a sentence ("Claude"). */
+function namePart(e: Edit, i: number): boolean {
+  const w = e.a[i];
+  if (!w || isFunctionWord(w.key)) return false;
+  if (/^\p{Lu}{2,}$/u.test(w.text) || /\p{Ll}\p{Lu}/u.test(w.text)) return true;
+  const prev = e.a[i - 1];
+  return /^\p{Lu}/u.test(w.text) && !!prev && !/[.!?\n]/.test(e.pasted.slice(prev.end, w.start));
+}
+
+/** A hand edit of one word next to a word of a name ("VS good" to "VS Code") is kept as the phrase, since "good" alone turns up in ordinary text. */
+function withName(h: Hunk, e: Edit): Hunk {
+  return h.to - h.from === 1 && namePart(e, h.from - 1) && near(e, h.from - 1, h.newFrom - 1) ? { ...h, from: h.from - 1, newFrom: h.newFrom - 1 } : h;
+}
+
 /** The words with the text stuck to them on both sides ("example.com" around "com"), to tell a link or a file name. */
 function surround(text: string, words: Word[]): string {
   const [first, last] = [words[0]!, words[words.length - 1]!];
@@ -126,7 +140,8 @@ function inflected(x: string, y: string): boolean {
 function plausible(h: Hunk, e: Edit, byHand: boolean): boolean {
   const [old, now] = [e.a.slice(h.from, h.to), e.b.slice(h.newFrom, h.newTo)];
   if (!old.length || !now.length || old.length > MAX_PHRASE || now.length > MAX_PHRASE || (!byHand && Math.abs(old.length - now.length) > 1)) return false;
-  if (hasDigits(phrase(e.pasted, old) + phrase(e.edited, now)) || looksTechnical(surround(e.pasted, old) + surround(e.edited, now))) return false;
+  // Each side alone: joined, the full stop after "good." and the "Cod" after it would read as an address.
+  if (hasDigits(phrase(e.pasted, old) + phrase(e.edited, now)) || looksTechnical(surround(e.pasted, old)) || looksTechnical(surround(e.edited, now))) return false;
   if (old.map((w) => w.key).join(" ") === now.map((w) => w.key).join(" ") || inflected(phrase(e.pasted, old), phrase(e.edited, now))) return false;
   return !(old.every((w) => isFunctionWord(w.key)) && now.every((w) => isFunctionWord(w.key)));
 }
@@ -159,7 +174,7 @@ export function learnCorrections(pasted: string, edited: string, byHand = false)
   if (!found.length || found.length > MAX_HUNKS || tooMuch) return [];
   const out = new Map<string, Candidate>();
   for (const hunk of found.filter((h) => plausible(h, e, byHand))) {
-    const c = candidate(byHand ? hunk : widen(hunk, e), e, byHand);
+    const c = candidate(byHand ? withName(hunk, e) : widen(hunk, e), e, byHand);
     if (c) out.set(`${c.heard.toLowerCase()}>${c.correct}`, out.get(`${c.heard.toLowerCase()}>${c.correct}`) ?? c);
   }
   return [...out.values()];

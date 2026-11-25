@@ -6,6 +6,8 @@ describe("fixing a dictation", () => {
     const found = suggestionsFor("i opened cloud code and ran it", "i opened Claude Code and ran it");
     expect(found.map(fixLabel)).toEqual(["cloud code → Claude Code"]);
     expect(suggestionsFor("i opened cloud code and ran it", "completely different words here now please")).toEqual([]);
+    const said = "I honestly love to play with Claude and VS good.";
+    for (const edited of ["VS Code.", "VS Cod."]) expect(suggestionsFor(said, said.replace("VS good.", edited)).map(fixLabel)).toEqual([`VS good → ${edited.slice(0, -1)}`]);
   });
 
   it("saves the fixes as words that apply at once", () => {
