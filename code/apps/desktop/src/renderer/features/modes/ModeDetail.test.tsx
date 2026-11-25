@@ -29,25 +29,35 @@ const { ModeDetail } = await import("./ModeDetail");
 const { createRoot } = await import("react-dom/client");
 
 const chat: WritingMode = { ...defaultMode(), id: "m1", name: "Chat", apps: ["slack"], rewrite: true };
-const status = (enabled: boolean) => ({ settings: { rewrite: { enabled }, terms: [] } }) as unknown as DictationStatus;
+const mine = { id: "u-abc123", name: "Support", line: "For customers", prompt: "Be kind.", keepsLists: false };
+const status = (enabled: boolean, styles: unknown[] = []) => ({ settings: { rewrite: { enabled }, terms: [], styles } }) as unknown as DictationStatus;
 
-async function mount(mode: WritingMode, { writer = true, onChange = () => {} }: { writer?: boolean; onChange?(m: WritingMode): void } = {}) {
+async function mount(mode: WritingMode, { writer = true, styles = [], onChange = () => {} }: { writer?: boolean; styles?: unknown[]; onChange?(m: WritingMode): void } = {}) {
   const { window, document } = parseHTML('<!doctype html><html><body><div id="root"></div></body></html>');
   Object.assign(globalThis, { window, document, IS_REACT_ACT_ENVIRONMENT: true });
   for (const k of Object.getOwnPropertyNames(window)) if (/^[A-Z]/.test(k) && !(k in globalThis)) (globalThis as Record<string, unknown>)[k] = (window as unknown as Record<string, unknown>)[k];
-  const props = { s: status(writer), mode, others: [], onBack() {}, onChange, onApps() {}, onSites() {}, onDelete() {} };
+  const props = { s: status(writer, styles), mode, others: [], onBack() {}, onChange, onApps() {}, onSites() {}, onDelete() {} };
   await act(async () => createRoot(document.getElementById("root")!).render(<ModeDetail {...props} />));
   return document;
 }
 
 describe("mode detail rewrite style", () => {
-  it("shows the mode's template by name and lists all eight with their one-line description", async () => {
+  it("shows the mode's template by name and lists all eleven with their one-line description", async () => {
     const document = await mount({ ...chat, template: "notes" });
     expect(document.querySelector('[aria-label="Rewrite style"]')?.textContent).toBe("Notes");
     const options = [...document.querySelectorAll('[aria-label="Rewrite style options"] li')].map((li) => li.textContent);
-    expect(options).toHaveLength(8);
+    expect(options).toHaveLength(11);
     expect(options[0]).toBe("Tidy: Punctuation, capitals, no fillers. For most apps.");
     expect(options[5]).toBe(`Notes: ${TEMPLATES.notes.line}`);
+  });
+
+  it("lists the person's own styles after the built-in ones, shows the chosen one by name, and shows Tidy when it was deleted", async () => {
+    const options = (d: Document) => [...d.querySelectorAll('[aria-label="Rewrite style options"] li')].map((li) => li.textContent);
+    const own = await mount({ ...chat, template: "u-abc123" }, { styles: [mine] });
+    expect(own.querySelector('[aria-label="Rewrite style"]')?.textContent).toBe("Support");
+    expect(options(own).slice(-2)).toEqual([`Diplomatic: ${TEMPLATES.diplomatic.line}`, "Support: For customers (your style)"]);
+    const gone = await mount({ ...chat, template: "u-abc123" });
+    expect(gone.querySelector('[aria-label="Rewrite style"]')?.textContent).toBe("Tidy");
   });
 
   it("saves the chosen template on the mode and keeps its other fields", async () => {

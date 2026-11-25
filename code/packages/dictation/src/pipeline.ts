@@ -5,7 +5,6 @@ import { findHints, type Hint } from "./corrections/hints";
 import type { History } from "./history";
 import { applyMode, DEFAULT_MODE_ID, resolveMode, type Mode } from "./modes/modes";
 import { rewritePass, type RewriteOutcome, type RewriteStyle } from "./modes/rewrite";
-import type { TemplateId } from "./modes/templates";
 import { planPaste, type Target } from "./paste-plan";
 import { applyRules } from "./rules";
 import { spaceBefore } from "./spacing";
@@ -215,10 +214,11 @@ async function keepRecording(ctx: Context, id: string, clip: Clip): Promise<void
   }
 }
 
-const rewriteStyle = (s: Pick<Settings, "autoCapitalize" | "stripFinalStop"> & { template: TemplateId }): RewriteStyle => ({
+const rewriteStyle = (s: Pick<Settings, "autoCapitalize" | "stripFinalStop" | "styles"> & { template: string }): RewriteStyle => ({
   capitals: s.autoCapitalize ? "sentence" : "keep",
   stripFinalStop: s.stripFinalStop,
   template: s.template,
+  ...(s.styles.length && { styles: s.styles }),
 });
 
 /** A take with no sound is refused and kept; one cut short is kept too, and goes on. */
@@ -254,7 +254,7 @@ async function transcribe(
 }
 
 /** The rewrite pass, when the mode asks for one, it is switched on and a writer is there; otherwise undefined. */
-async function rewriteStep(ctx: Context, eff: Settings & { template: TemplateId }, spoken: { text: string; hints: Hint[] }): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
+async function rewriteStep(ctx: Context, eff: Settings & { template: string }, spoken: { text: string; hints: Hint[] }): Promise<{ text: string; outcome: RewriteOutcome } | undefined> {
   if (!eff.rewrite || !ctx.settings.rewrite.enabled || !ctx.deps.rewriter) return undefined;
   const wait = ctx.rewriting();
   try {
@@ -272,7 +272,7 @@ interface Polished {
 }
 
 /** The learned fixes for the program, then the rewrite pass with the spots that look like a misheard phrase of a word that was not caught. */
-async function polish(ctx: Context, eff: Settings & { template: TemplateId }, said: string, exe: string | undefined): Promise<Polished> {
+async function polish(ctx: Context, eff: Settings & { template: string }, said: string, exe: string | undefined): Promise<Polished> {
   const fixed = applyCorrections(said, activeFixes(eff.terms, exe));
   const rewritten = await rewriteStep(ctx, eff, { text: fixed.text, hints: findHints(fixed.text, hintFixes(eff.terms, exe)) });
   return { text: rewritten?.text ?? fixed.text, ...(fixed.applied.length && { corrected: fixed.applied }), ...(rewritten && { rewrite: rewritten.outcome }) };

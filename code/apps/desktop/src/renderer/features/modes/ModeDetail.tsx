@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { overridesShared, TEMPLATES, type TemplateId, type WritingMode as Mode, type Term } from "@speakkit/dictation";
+import { overridesShared, resolveStyle, type CustomStyle, type WritingMode as Mode, type Term } from "@speakkit/dictation";
 import { Button, Chip, Icon, Modal, Select, SettingRow, TextInput } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import { Page } from "../../ui";
 import { WordDialog } from "../vocabulary";
 import { AddSiteDialog, SitesCard } from "./SitesCard";
-import { appLabel, heardAs, STYLE_OPTIONS, SUGGESTED_APPS } from "./model";
+import { appLabel, heardAs, styleOptions, SUGGESTED_APPS } from "./model";
 
 function AppFields({ mode, others, name, setName }: { mode: Mode; others: readonly Mode[]; name: string; setName(v: string): void }) {
   const key = name
@@ -208,7 +208,7 @@ function RewriteRow({ mode, rewriteReady, onChange }: { mode: Mode; rewriteReady
   );
 }
 
-function TemplateRow({ mode, active, onChange }: { mode: Mode; active: boolean; onChange(next: Mode): void }) {
+function TemplateRow({ mode, styles, active, onChange }: { mode: Mode; styles: readonly CustomStyle[]; active: boolean; onChange(next: Mode): void }) {
   return (
     <SettingRow
       className="lm-row--control"
@@ -217,11 +217,11 @@ function TemplateRow({ mode, active, onChange }: { mode: Mode; active: boolean; 
       control={
         <Select
           label="Rewrite style"
-          value={mode.template}
+          value={resolveStyle(mode.template, styles).id}
           disabled={!active}
-          onChange={(v) => onChange({ ...mode, template: v as TemplateId })}
-          options={STYLE_OPTIONS}
-          renderValue={(o) => TEMPLATES[o?.value as TemplateId]?.name}
+          onChange={(v) => onChange({ ...mode, template: v })}
+          options={styleOptions(styles)}
+          renderValue={(o) => resolveStyle(o?.value ?? "", styles).name}
         />
       }
     />
@@ -261,7 +261,7 @@ export function ModeDetail({ s, mode, others, onBack, onChange, onApps, onSites,
       <SitesCard mode={mode} onSites={onSites} onAdd={() => setAddSite(true)} />
       <div className="lm-card">
         <RewriteRow mode={mode} rewriteReady={s.settings.rewrite.enabled} onChange={onChange} />
-        <TemplateRow mode={mode} active={mode.rewrite && s.settings.rewrite.enabled} onChange={onChange} />
+        <TemplateRow mode={mode} styles={s.settings.styles} active={mode.rewrite && s.settings.rewrite.enabled} onChange={onChange} />
       </div>
       <ModeWords mode={mode} shared={s.settings.terms} onChange={(terms) => onChange({ ...mode, terms })} />
       <AddAppDialog open={addApp} mode={mode} others={others} onClose={() => setAddApp(false)} onSave={onApps} />

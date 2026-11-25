@@ -27,6 +27,7 @@ const DEFAULTS = {
   rewrite: { enabled: false },
   rewriteWriter: "openai",
   rewriteDefault: "off",
+  styles: [],
   keepRecordings: false,
   smartSpacing: false,
   sounds: { enabled: false, volume: 50 },
@@ -280,13 +281,52 @@ describe("vocabulary, modes and rewrite in the config", () => {
     expect(v.safeParse(DictationPatchSchema, { rewriteWriter: "gpt" }).success).toBe(false);
   });
 
-  it("stores the style for apps in no mode: off unless saved, one of the eight styles, and nothing else", () => {
+  it("stores the style for apps in no mode: off unless saved, one of the built-in styles, and nothing else", () => {
     expect(v.parse(DictationConfigSchema, {}).rewriteDefault).toBe("off");
     expect(v.parse(DictationConfigSchema, { rewriteDefault: "email" }).rewriteDefault).toBe("email");
     expect(v.parse(DictationConfigSchema, { rewriteDefault: "poetry" }).rewriteDefault).toBe("off");
     expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "notes" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "off" }).success).toBe(true);
     expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "poetry" }).success).toBe(false);
+  });
+
+  const mine = { id: "u-k3j9x0", name: "Support", line: "For customers", prompt: "Write like a friendly support agent.", keepsLists: true };
+
+  it("loads a config saved before custom styles as an empty list, and keeps good styles", () => {
+    expect(v.parse(DictationConfigSchema, {}).styles).toEqual([]);
+    expect(v.parse(DictationConfigSchema, { styles: [mine] }).styles).toEqual([mine]);
+    expect(v.parse(DictationConfigSchema, { styles: "no" }).styles).toEqual([]);
+  });
+
+  it("drops one bad style alone, fills the optional fields, trims, and keeps each id once", () => {
+    const bare = { id: "u-bare1", name: " Plain ", prompt: " Shorten it. " };
+    const bad = [
+      { ...mine, id: "u-empty", name: "" },
+      { ...mine, id: "u-noprompt", prompt: "  " },
+      { ...mine, id: "not-mine" },
+      { ...mine, id: "u-long", prompt: "x".repeat(601) },
+      "x",
+      { ...mine, id: "u-dup", name: "Other" },
+    ];
+    const got = v.parse(DictationConfigSchema, { styles: [mine, ...bad, { ...mine, id: "u-dup", name: "Same id" }, bare] }).styles;
+    expect(got).toEqual([mine, { ...mine, id: "u-dup", name: "Other" }, { id: "u-bare1", name: "Plain", line: "", prompt: "Shorten it.", keepsLists: false }]);
+    expect(countDropped({ styles: [mine, { id: "u-x", name: "", prompt: "p" }] })).toBe(1);
+  });
+
+  it("keeps at most twenty styles", () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({ ...mine, id: `u-s${i}` }));
+    expect(v.parse(DictationConfigSchema, { styles: many }).styles).toHaveLength(20);
+    expect(v.safeParse(DictationPatchSchema, { styles: many }).success).toBe(false);
+    expect(v.safeParse(DictationPatchSchema, { styles: many.slice(0, 20) }).success).toBe(true);
+  });
+
+  it("lets a mode and the default style name a style of the person's, and refuses an id that cannot be one", () => {
+    const old = { id: "m1", name: "Mail", apps: [], rewrite: true, terms: [] };
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, template: "u-k3j9x0" }] }).modes[0]?.template).toBe("u-k3j9x0");
+    expect(v.parse(DictationConfigSchema, { modes: [{ ...old, template: "professional" }] }).modes[0]?.template).toBe("professional");
+    expect(v.parse(DictationConfigSchema, { rewriteDefault: "u-k3j9x0" }).rewriteDefault).toBe("u-k3j9x0");
+    expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "u-k3j9x0" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { rewriteDefault: "U-K3J9X0" }).success).toBe(false);
   });
 
   it("lets the renderer change them, refusing a list that is too long or a field it does not know", () => {

@@ -21,8 +21,12 @@ vi.mock("../dictation-bridge", () => ({ patchDictation: () => Promise.resolve() 
 vi.mock("../engines", () => ({ useSpeechModels: () => ({ view: null }), models: {} }));
 const { RewriteCard } = await import("./RewriteCard");
 
-const status = (settings: { enabled: boolean; rewriteDefault?: string }) =>
-  ({ rewriteKey: true, settings: { rewrite: { enabled: settings.enabled }, rewriteWriter: "openai", rewriteDefault: settings.rewriteDefault ?? "off" } }) as unknown as DictationStatus;
+const mine = { id: "u-abc123", name: "Support", line: "For customers", prompt: "Be kind.", keepsLists: false };
+const status = (settings: { enabled: boolean; rewriteDefault?: string; styles?: unknown[] }) =>
+  ({
+    rewriteKey: true,
+    settings: { rewrite: { enabled: settings.enabled }, rewriteWriter: "openai", rewriteDefault: settings.rewriteDefault ?? "off", styles: settings.styles ?? [], modes: [] },
+  }) as unknown as DictationStatus;
 const html = (s: DictationStatus) => renderToStaticMarkup(<RewriteCard s={s} />);
 const text = (s: DictationStatus) =>
   html(s)
@@ -38,12 +42,26 @@ describe("the rewrite card", () => {
     expect(t).toContain("While it works you can skip it and the text is pasted as you said it.");
   });
 
-  it("lists the eight writing styles and lets the style for apps in no mode be chosen", () => {
+  it("lets the style for apps in no mode be chosen from the built-in styles", () => {
     const h = html(status({ enabled: true, rewriteDefault: "email" }));
-    expect(h).toContain("Writing styles: Tidy (default), Exact, Message, Email, Formal, Notes, Concise, Technical.");
     expect(h).toContain('<button aria-label="Style for apps in no mode">Email</button>');
     expect(h).toContain("<li>Off: the text is pasted as you said it</li>");
     expect(h).toContain("<li>Notes: Brief lines and lists. For Notion, Obsidian and meeting jottings.</li>");
+  });
+
+  it("lists the built-in styles to copy and the person's own to edit or delete", () => {
+    const h = html(status({ enabled: true, styles: [mine] }));
+    expect(h.match(/>Duplicate</g)).toHaveLength(11);
+    expect(h).toContain("Professional reply");
+    expect(h).toContain("<li>Support: For customers (your style)</li>");
+    expect(h.match(/>Edit</g)).toHaveLength(1);
+    expect(h.match(/>Delete</g)).toHaveLength(1);
+    expect(h).toContain("Add style");
+  });
+
+  it("shows the default style as Tidy when the style it names was deleted", () => {
+    expect(html(status({ enabled: true, rewriteDefault: "u-abc123" }))).toContain('<button aria-label="Style for apps in no mode">Tidy</button>');
+    expect(html(status({ enabled: true, rewriteDefault: "u-abc123", styles: [mine] }))).toContain('<button aria-label="Style for apps in no mode">Support</button>');
   });
 
   it("shows no styles until the pass is on", () => {

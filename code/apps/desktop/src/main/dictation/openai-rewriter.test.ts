@@ -60,14 +60,17 @@ describe("OpenAI rewriter", () => {
     notes: "into brief notes",
     concise: "Shorten this dictated text.",
     technical: "for a code editor or terminal",
+    professional: "as a calm, professional one",
+    firm: "so it stays firm but polite",
+    diplomatic: "as a warm, diplomatic one",
   };
 
-  it("builds the prompt of every template from its task and the guard, in at most 80 words", () => {
+  it("builds the prompt of every template from its task and the guard, in at most 92 words", () => {
     for (const id of TEMPLATE_IDS) {
       const text = instructions({ capitals: "sentence", stripFinalStop: false, template: id });
       expect(text, id).toContain(KEY[id]);
       expect(text.endsWith(GUARD), id).toBe(true);
-      expect(text.split(/\s+/).length, id).toBeLessThanOrEqual(80);
+      expect(text.split(/\s+/).length, id).toBeLessThanOrEqual(92);
     }
   });
 
@@ -76,6 +79,19 @@ describe("OpenAI rewriter", () => {
     const text = instructions({ capitals: "keep", stripFinalStop: true, template: "email" });
     expect(text).toContain("as the body of an email");
     expect(text.endsWith(`Do not change any capital or small letter. Do not end the text with a full stop. ${GUARD}`)).toBe(true);
+  });
+
+  const mine = { id: "u-abc123", name: "Support", line: "", prompt: "Write like a friendly support agent.", keepsLists: false };
+
+  it("uses the prompt of a style the person wrote in place of a template's, then the capital notes and the guard", () => {
+    const text = instructions({ capitals: "keep", stripFinalStop: false, template: mine.id, styles: [mine] });
+    expect(text).toBe(`Write like a friendly support agent. Do not change any capital or small letter. ${GUARD}`);
+  });
+
+  it("uses Tidy for a style that was deleted, or one that is not in the list", () => {
+    const tidy = instructions({ capitals: "sentence", stripFinalStop: false, template: "tidy" });
+    expect(instructions({ capitals: "sentence", stripFinalStop: false, template: mine.id, styles: [] })).toBe(tidy);
+    expect(instructions({ capitals: "sentence", stripFinalStop: false, template: "u-other", styles: [mine] })).toBe(tidy);
   });
 
   it("lists the spots that may be misheard words after the template, before the guard", () => {

@@ -1,4 +1,4 @@
-import { DEFAULT_TEMPLATE, TEMPLATE_IDS, TEMPLATES, type Term, type WritingMode as Mode } from "@speakkit/dictation";
+import { TEMPLATE_IDS, TEMPLATES, type CustomStyle, type Term, type WritingMode as Mode } from "@speakkit/dictation";
 
 const KNOWN: Record<string, string> = {
   code: "Visual Studio Code",
@@ -61,10 +61,13 @@ export const LOCAL_WRITER = "Gemma 4 on this computer";
 /** The writer a setting names, as the page calls it. */
 export const writerName = (writer: "openai" | "local"): string => (writer === "local" ? LOCAL_WRITER : WRITER);
 
-/** The picker's entries for a writing style: its name and the one line that says where it fits. */
-export const STYLE_OPTIONS = TEMPLATE_IDS.map((id) => ({ value: id, label: `${TEMPLATES[id].name}: ${TEMPLATES[id].line}` }));
-/** "Tidy (default), Exact, Message, ...": every style by name. */
-export const STYLE_NAMES = TEMPLATE_IDS.map((id) => (id === DEFAULT_TEMPLATE ? `${TEMPLATES[id].name} (default)` : TEMPLATES[id].name)).join(", ");
+/** The picker's entries for a writing style: its name and the one line that says where it fits. The built-in styles come first, then the person's own, marked as theirs. */
+export const styleOptions = (custom: readonly CustomStyle[]) => [
+  ...TEMPLATE_IDS.map((id) => ({ value: id, label: `${TEMPLATES[id].name}: ${TEMPLATES[id].line}` })),
+  ...custom.map((c) => ({ value: c.id, label: `${c.name}${c.line ? `: ${c.line}` : ""} (your style)` })),
+];
+
+export const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length;
 
 /** "Heard as: cooper netties, kuber nettys", or nothing for a word with no sounds-like. */
 export const heardAs = (t: Term): string => (t.soundsLike.length ? `Heard as: ${t.soundsLike.join(", ")}` : "");

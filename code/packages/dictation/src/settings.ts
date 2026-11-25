@@ -1,5 +1,5 @@
 import type { Mode as WritingMode } from "./modes/modes";
-import type { TemplateId } from "./modes/templates";
+import type { CustomStyle } from "./modes/templates";
 import type { Term } from "./vocabulary/terms";
 
 export type Retention = "off" | "24h" | "7d" | "30d" | "forever";
@@ -48,7 +48,9 @@ export interface Settings {
   modes: WritingMode[];
   rewrite: { enabled: boolean };
   /** The style for apps that are in no mode, or "off" to leave their text as said. A mode with its own rewrite choice ignores it. */
-  rewriteDefault: "off" | TemplateId;
+  rewriteDefault: string;
+  /** The rewrite styles the person wrote, next to the built-in ones. */
+  styles: CustomStyle[];
   /** Adds a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: boolean;
   /** Keep the audio of each dictation next to its history entry (needs an audio store). */
@@ -79,6 +81,7 @@ export const defaultSettings: Readonly<Settings> = {
   modes: [],
   rewrite: { enabled: false },
   rewriteDefault: "off",
+  styles: [],
   smartSpacing: false,
   keepRecordings: false,
 };

@@ -1,4 +1,4 @@
-export const TEMPLATE_IDS = ["tidy", "exact", "message", "email", "formal", "notes", "concise", "technical"] as const;
+export const TEMPLATE_IDS = ["tidy", "exact", "message", "email", "formal", "notes", "concise", "technical", "professional", "firm", "diplomatic"] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 export const DEFAULT_TEMPLATE: TemplateId = "tidy";
 
@@ -9,7 +9,7 @@ export interface Template {
   name: string;
   /** One line for the picker, with where the template fits. */
   line: string;
-  /** The task. With the guard that follows it, a prompt stays within 80 words: the small local writer loses track of longer ones. */
+  /** The task. With the guard that follows it, a prompt stays within about 90 words: the small local writer loses track of longer ones. */
   prompt: string;
   /** Whether the dictated list lines must survive: false for the templates whose job is to turn prose into a list or merge items. */
   keepsLists: boolean;
@@ -82,4 +82,54 @@ export const TEMPLATES: Record<TemplateId, Template> = {
     keepsLists: true,
     keepsWords: true,
   },
+  professional: {
+    name: "Professional reply",
+    line: "Rewrite an angry or blunt message into a calm, professional one",
+    prompt:
+      'Rewrite this dictated message as a calm, professional one, as the speaker (I, you), in the same language and du/Sie form. Keep the disagreement and every point, ask, question, number, deadline and who did what. Remove insults, blame, "always", "never" and exclamation marks. Say sarcasm as its plain meaning. Keep questions as questions. Do not answer questions.',
+    keepsLists: false,
+    keepsWords: false,
+  },
+  firm: {
+    name: "Firm but polite",
+    line: "Keep the demand as strong as said, without insults or sarcasm",
+    prompt:
+      'Rewrite this dictated message so it stays firm but polite, as the speaker (I, you), in the same language and du/Sie form. Keep the disagreement and every point, ask, question, number, deadline, consequence and who did what, as strong as said. Remove insults, blame, sarcasm, "always", "never" and exclamation marks; state facts, not judgments. Keep questions as questions.',
+    keepsLists: false,
+    keepsWords: false,
+  },
+  diplomatic: {
+    name: "Diplomatic",
+    line: "Say the same thing gently, with I-statements",
+    prompt:
+      'Rewrite this dictated message as a warm, diplomatic one, as the speaker (I, you), in the same language and du/Sie form. Keep the disagreement and every point, ask, question, number, deadline and who did what, but say it gently with I-statements. Remove insults, sarcasm, blame, "always", "never" and exclamation marks. Do not thank or apologize. Keep questions as questions.',
+    keepsLists: false,
+    keepsWords: false,
+  },
 };
+
+/** A style the person wrote. Its prompt takes the place of a template's task; the guard and the figures check still apply. */
+export interface CustomStyle {
+  /** "u-" and random letters and digits. */
+  id: string;
+  name: string;
+  /** Optional one-line description for the picker. */
+  line: string;
+  prompt: string;
+  keepsLists: boolean;
+}
+
+export const MAX_STYLES = 20;
+export const MAX_STYLE_NAME = 40;
+export const MAX_STYLE_LINE = 120;
+export const MAX_STYLE_PROMPT = 600;
+
+const isBuiltIn = (id: string): id is TemplateId => (TEMPLATE_IDS as readonly string[]).includes(id);
+
+/** What a style id means now: a built-in template, a style in the list, or Tidy when the id is unknown (a deleted style). */
+export function resolveStyle(id: string, custom: readonly CustomStyle[] = []): Template & { id: string } {
+  const own = isBuiltIn(id) ? undefined : custom.find((c) => c.id === id);
+  if (own) return { id, name: own.name, line: own.line, prompt: own.prompt, keepsLists: own.keepsLists, keepsWords: false };
+  const known = isBuiltIn(id) ? id : DEFAULT_TEMPLATE;
+  return { id: known, ...TEMPLATES[known] };
+}

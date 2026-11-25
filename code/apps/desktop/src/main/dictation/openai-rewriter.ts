@@ -1,4 +1,4 @@
-import { DEFAULT_TEMPLATE, GUARD, hintBlock, TEMPLATES, type Hint, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, GUARD, hintBlock, resolveStyle, type Hint, type Rewriter, type RewriteStyle } from "@speakkit/dictation";
 import { OPENAI_BASE_URL } from "../voice-chat/openai";
 
 /** The writer model the rewrite pass uses; the opt-in dialog names it. */
@@ -6,12 +6,12 @@ export const REWRITE_MODEL = "gpt-4o-mini";
 
 const CASE_NOTE = { sentence: "", keep: " Do not change any capital or small letter." } as const;
 
-/** The system prompt: the template's task, then the clean-up choices about capitals and the final full stop (told to the model, not left to it), the spots that may be misheard words, then the guard. */
+/** The system prompt: the task of the template or of the person's own style (Tidy when that style is gone), then the clean-up choices about capitals and the final full stop (told to the model, not left to it), the spots that may be misheard words, then the guard. */
 export const instructions = (style?: RewriteStyle, hints: readonly Hint[] = []): string => {
   const case_ = style ? CASE_NOTE[style.capitals] : "";
   const stop = style?.stripFinalStop ? " Do not end the text with a full stop." : "";
   const misheard = hints.length ? ` ${hintBlock(hints)}` : "";
-  return `${TEMPLATES[style?.template ?? DEFAULT_TEMPLATE].prompt}${case_}${stop}${misheard} ${GUARD}`;
+  return `${resolveStyle(style?.template ?? DEFAULT_TEMPLATE, style?.styles).prompt}${case_}${stop}${misheard} ${GUARD}`;
 };
 
 interface Options {

@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { DEFAULT_TEMPLATE, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
+import { DEFAULT_TEMPLATE, MAX_STYLE_LINE, MAX_STYLE_NAME, MAX_STYLE_PROMPT, MAX_STYLES, normalizeSite, TEMPLATE_IDS } from "@speakkit/dictation";
 import { firstClash, type Shortcuts } from "./conflicts";
 import { AUDIO_CAPS_MB, INDICATORS, SoundsSchema } from "./feedback";
 export { AUDIO_CAPS_MB, type Indicator } from "./feedback";
@@ -35,6 +35,7 @@ const Pronunciation = v.object({ id, written: v.pipe(v.string(), v.trim(), v.min
 const DEFAULT_ID = "default";
 const lower = (x: string) => x.toLowerCase();
 const distinct = (keys: string[]): boolean => new Set(keys).size === keys.length;
+const bool = (d: boolean) => v.fallback(v.boolean(), d);
 // A bad or repeated entry is dropped, the rest of the list stays.
 const lenient = <T extends v.GenericSchema>(item: T, max: number, keys: (x: v.InferOutput<T>) => string[] = () => []) =>
   v.fallback(
@@ -61,6 +62,17 @@ const termList = v.pipe(
   v.maxLength(MAX_TERMS),
   v.check((items: TermOut[]) => distinct(items.flatMap(termKeys)), "Words must be different"),
 );
+// A built-in template, or a style the person wrote ("u-" and random characters). Whether a custom one still exists is decided where it is used, so a deleted one falls back to Tidy.
+const customId = v.pipe(v.string(), v.regex(/^u-[a-z0-9]{1,20}$/));
+const styleId = v.union([v.picklist(TEMPLATE_IDS), customId]);
+const Style = v.object({
+  id: customId,
+  name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(MAX_STYLE_NAME)),
+  line: v.fallback(v.pipe(v.string(), v.trim(), v.maxLength(MAX_STYLE_LINE)), ""),
+  prompt: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(MAX_STYLE_PROMPT)),
+  keepsLists: bool(false),
+});
+const styleKeys = (s: { id: string }) => [`i:${s.id}`];
 const modeEntries = {
   id,
   name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
@@ -75,7 +87,7 @@ const modeEntries = {
   ),
   rewrite: v.boolean(),
   /** How the rewrite pass words the text; modes saved before templates existed, or with an unknown one, use Tidy. */
-  template: v.fallback(v.picklist(TEMPLATE_IDS), DEFAULT_TEMPLATE),
+  template: v.fallback(styleId, DEFAULT_TEMPLATE),
 };
 type ModeOut = v.InferOutput<ReturnType<typeof v.object<typeof modeEntries & { terms: typeof termList }>>>;
 // The built-in default mode is not stored: a saved one (from before it was fixed) is dropped, and no mode may take its id or name.
@@ -88,7 +100,6 @@ const modeList = v.pipe(
   v.maxLength(MAX_MODES),
   v.check((items: ModeOut[]) => distinct(items.flatMap(modeKeys)), "Modes must have different names"),
 );
-const bool = (d: boolean) => v.fallback(v.boolean(), d);
 
 /** The clean-up switches. Every one is on, as before they could be changed, except the two new transformations. */
 export const CleanupSchema = v.fallback(
@@ -145,7 +156,9 @@ const CORE_KEYS = {
   rewrite: RewriteSchema,
   rewriteWriter: v.fallback(v.picklist(REWRITE_WRITERS), "openai"),
   /** The style for apps that are in no mode; "off" leaves their text as said, which is what a file from before this setting does. */
-  rewriteDefault: v.fallback(v.picklist(["off", ...TEMPLATE_IDS]), "off"),
+  rewriteDefault: v.fallback(v.union([v.literal("off"), styleId]), "off"),
+  /** The rewrite styles the person wrote; a bad or repeated one is dropped alone. */
+  styles: v.fallback(lenient(Style, MAX_STYLES, styleKeys), []),
   keepRecordings: bool(false),
   /** Add a space before the text when the character before the caret is a letter, digit or closing punctuation. */
   smartSpacing: bool(false),
@@ -192,7 +205,7 @@ export type DictationConfig = v.InferOutput<typeof DictationConfigSchema>;
 const count = (x: unknown): number => (Array.isArray(x) ? x.length : 0);
 
 /**
- * How many entries of the stored dictation section loading leaves out: words, pronunciations and modes that are broken, repeated or over the limit, the words inside a
+ * How many entries of the stored dictation section loading leaves out: words, pronunciations, modes and styles that are broken, repeated or over the limit, the words inside a
  * mode that are, and the old replacements and corrections that did not fit the one list of words. The person is told, so nothing disappears without a word.
  * `applied` are the migrations already run: once the old lists were turned into words they are not looked for again.
  */
@@ -202,7 +215,7 @@ export function countDropped(raw: unknown, applied: readonly string[] = []): num
   const kept = v.parse(DictationConfigSchema, r);
   // A saved default mode is dropped on purpose, so it is not counted as lost.
   const savedModes = Array.isArray(r.modes) ? r.modes.filter((m: unknown) => (m as { id?: unknown } | null)?.id !== DEFAULT_ID) : [];
-  const lists = (["terms", "readAs", "modes"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
+  const lists = (["terms", "readAs", "modes", "styles"] as const).reduce((n, k) => n + Math.max(0, count(k === "modes" ? savedModes : r[k]) - kept[k].length), 0);
   // Words inside the modes that were kept: a bad word costs the word, not the mode.
   const insideKept = kept.modes.reduce((n, m) => n + m.terms.length, 0);
   const insideRaw = (Array.isArray(r.modes) ? r.modes : []).reduce((n: number, m: unknown) => (v.safeParse(LenientMode, m).success ? n + count((m as { terms?: unknown }).terms) : n), 0);
@@ -244,7 +257,12 @@ export const DictationPatchSchema = v.partial(
     modes: modeList,
     rewrite: v.strictObject({ enabled: v.boolean() }),
     rewriteWriter: v.picklist(REWRITE_WRITERS),
-    rewriteDefault: v.picklist(["off", ...TEMPLATE_IDS]),
+    rewriteDefault: v.union([v.literal("off"), styleId]),
+    styles: v.pipe(
+      v.array(Style),
+      v.maxLength(MAX_STYLES),
+      v.check((items: v.InferOutput<typeof Style>[]) => distinct(items.flatMap(styleKeys)), "Styles must have different ids"),
+    ),
     keepRecordings: v.boolean(),
     smartSpacing: v.boolean(),
     sounds: v.strictObject({ enabled: v.boolean(), volume: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100)) }),

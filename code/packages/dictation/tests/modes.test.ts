@@ -376,6 +376,22 @@ describe("dictation with modes, words and rewrite", () => {
     expect(styles).toEqual(["email", "message"]);
   });
 
+  it("hands the writer the person's styles with the mode's choice, and a deleted style reaches it as an id with no style behind it", async () => {
+    const seen: unknown[] = [];
+    const rewriter: Rewriter = { rewrite: async ({ text, style }) => (seen.push([style?.template, style?.styles?.map((x) => x.name)]), text) };
+    const own = { id: "u-abc123", name: "Support", line: "", prompt: "Be kind.", keepsLists: false };
+    const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true, template: "u-abc123" });
+    for (const styles of [[own], []]) {
+      const r = await rig({ modes: [chat], rewrite: { enabled: true }, styles }, undefined, { rewriter });
+      await r.hold(1000);
+      await r.time.advance(200);
+    }
+    expect(seen).toEqual([
+      ["u-abc123", ["Support"]],
+      ["u-abc123", undefined],
+    ]);
+  });
+
   it("does not rewrite when the opt-in switch is off, even in a mode that asks", async () => {
     let called = 0;
     const chat = mode({ id: "chat", apps: ["notepad"], rewrite: true });
@@ -423,9 +439,12 @@ describe("heard-as swaps per mode", () => {
 });
 
 describe("rewrite templates", () => {
-  it("lists the eight templates, and only notes and concise may change list lines", () => {
-    expect([...TEMPLATE_IDS]).toEqual(["tidy", "exact", "message", "email", "formal", "notes", "concise", "technical"]);
-    expect(TEMPLATE_IDS.filter((id) => !TEMPLATES[id].keepsLists)).toEqual(["notes", "concise"]);
+  it("lists the eleven templates, and only notes, concise and the three work-message ones may change list lines", () => {
+    expect([...TEMPLATE_IDS]).toEqual(["tidy", "exact", "message", "email", "formal", "notes", "concise", "technical", "professional", "firm", "diplomatic"]);
+    expect(TEMPLATE_IDS.filter((id) => !TEMPLATES[id].keepsLists)).toEqual(["notes", "concise", "professional", "firm", "diplomatic"]);
+    expect(TEMPLATES.professional.name).toBe("Professional reply");
+    expect(TEMPLATES.firm.name).toBe("Firm but polite");
+    expect(TEMPLATES.diplomatic.name).toBe("Diplomatic");
     expect(TEMPLATES.tidy.name).toBe("Tidy");
   });
 

@@ -1,7 +1,7 @@
 import { exeKey } from "../paste-plan";
 import type { Settings } from "../settings";
 import { mergeTerms, type Term } from "../vocabulary";
-import { DEFAULT_TEMPLATE, type TemplateId } from "./templates";
+import { DEFAULT_TEMPLATE } from "./templates";
 
 /** How dictation behaves in some apps: its own words and an optional rewrite. */
 export interface Mode {
@@ -12,8 +12,8 @@ export interface Mode {
   /** Website host names such as "mail.google.com": in a supported browser these pick the mode by the page in front, ahead of `apps`. */
   sites: string[];
   rewrite: boolean;
-  /** How the rewrite pass words the text. The default mode uses the app default. */
-  template: TemplateId;
+  /** How the rewrite pass words the text: a built-in template id or the id of a custom style (Tidy when that style is gone). The default mode uses the app default. */
+  template: string;
   terms: Term[];
 }
 
@@ -112,7 +112,7 @@ export function resolveMode(modes: readonly Mode[], exe: string | undefined, sit
 export type ModeSettings = Pick<Settings, "terms">;
 
 /** The words for one dictation: the person's settings, with the mode's own on top. The default mode changes nothing. */
-export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean; template: TemplateId } {
+export function applyMode<S extends ModeSettings>(base: S, mode: Mode): S & { rewrite: boolean; template: string } {
   if (mode.id === DEFAULT_MODE_ID) return { ...base, rewrite: mode.rewrite, template: mode.template };
   return { ...base, terms: mergeTerms(base.terms, mode.terms), rewrite: mode.rewrite, template: mode.template };
 }

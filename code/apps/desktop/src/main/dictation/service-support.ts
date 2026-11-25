@@ -52,6 +52,7 @@ export const coreSettings = (c: DictationConfig): Partial<Settings> => ({
   modes: c.modes,
   rewrite: c.rewrite,
   rewriteDefault: c.rewriteDefault,
+  styles: c.styles,
   keepRecordings: c.keepRecordings,
   smartSpacing: c.smartSpacing,
 });

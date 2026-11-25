@@ -1,13 +1,15 @@
 import { keepsOtherWords, type Hint } from "../corrections/hints";
 import { dropFinalStop, isNumbersOnly } from "../rules";
-import { DEFAULT_TEMPLATE, TEMPLATES, type TemplateId } from "./templates";
+import { DEFAULT_TEMPLATE, resolveStyle, type CustomStyle } from "./templates";
 
 /** The clean-up choices about capitals and the final full stop, which the rewrite must not undo. */
 export interface RewriteStyle {
   capitals: "sentence" | "keep";
   stripFinalStop: boolean;
-  /** The wording of the task; the app default when absent. */
-  template?: TemplateId;
+  /** The wording of the task: a built-in template id or the id of one of `styles`; the app default when absent, and for an id that is neither. */
+  template?: string;
+  /** The styles the person wrote. */
+  styles?: readonly CustomStyle[];
 }
 const SENTENCE_STYLE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
 
@@ -30,8 +32,8 @@ const upperCount = (s: string): number => (s.match(/\p{Lu}/gu) ?? []).length;
 const listLines = (s: string): number => (s.match(/^\s*(?:[-*•]|\d+[.)])\s/gm) ?? []).length;
 
 /** A rewrite may change wording and never the figures; it may change a dictated list only when the template's job is to make or merge lists. */
-export const keepsFacts = (original: string, rewritten: string, template: TemplateId = DEFAULT_TEMPLATE): boolean =>
-  digits(original) === digits(rewritten) && (!TEMPLATES[template].keepsLists || listLines(original) === listLines(rewritten));
+export const keepsFacts = (original: string, rewritten: string, template: string = DEFAULT_TEMPLATE, styles: readonly CustomStyle[] = []): boolean =>
+  digits(original) === digits(rewritten) && (!resolveStyle(template, styles).keepsLists || listLines(original) === listLines(rewritten));
 
 /** The writer's answer, or why there is none when it throws (also at once, before any await). */
 async function ask(rewriter: Rewriter, req: { text: string; signal: AbortSignal; style: RewriteStyle; hints?: Hint[] }): Promise<{ answer: string } | { outcome: "failed" | "writer-loading" }> {
@@ -61,8 +63,8 @@ export async function rewritePass(req: { text: string; rewriter: Rewriter; skip:
   // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
   if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
   if (style.stripFinalStop) next = dropFinalStop(next);
-  if (!keepsFacts(text, next, style.template)) return { text, outcome: "changed-facts" };
-  if (hints.length && !keepsOtherWords(text, next, hints, style.template)) return { text, outcome: "changed-words" };
+  if (!keepsFacts(text, next, style.template, style.styles)) return { text, outcome: "changed-facts" };
+  if (hints.length && !keepsOtherWords(text, next, hints, style.template, style.styles)) return { text, outcome: "changed-words" };
   // The text came with its trailing space (or not); the rewrite keeps that.
   return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
 }

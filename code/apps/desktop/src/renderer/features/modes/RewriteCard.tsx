@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { TEMPLATES, type TemplateId } from "@speakkit/dictation";
+import { resolveStyle } from "@speakkit/dictation";
 import { Banner, Button, Modal, Select, SettingRow, Toggle } from "@speakkit/ui";
 import type { DictationStatus } from "../../../shared/dictation/contract";
 import type { WriterCard } from "../../../shared/speech-models/contract";
 import { sizeText } from "../../speech-text";
 import { patchDictation } from "../dictation-bridge";
 import { useSpeechModels } from "../engines";
-import { LOCAL_WRITER, STYLE_NAMES, STYLE_OPTIONS, WRITER, writerName } from "./model";
+import { LOCAL_WRITER, styleOptions, WRITER, writerName } from "./model";
+import { StylesCard } from "./StylesCard";
 import { WriterDownload } from "./WriterDownload";
 
 type Writer = DictationStatus["settings"]["rewriteWriter"];
@@ -108,22 +109,21 @@ function enabledNote(s: DictationStatus, w: WriterCard | undefined): string {
   return `Writer: ${writerName(s.settings.rewriteWriter)}. While it works you can skip it and the text is pasted as you said it. Choose which modes use it in each mode.${missing}`;
 }
 
-const DEFAULT_STYLE_OPTIONS = [{ value: "off", label: "Off: the text is pasted as you said it" }, ...STYLE_OPTIONS];
-
-/** The style for apps in no mode, and the list of every style: a mode picks its own in its settings. */
-function DefaultStyleRow({ value }: { value: DictationStatus["settings"]["rewriteDefault"] }) {
+/** The style for apps in no mode: a mode picks its own in its settings. A style that was deleted shows as Tidy, which is what it does. */
+function DefaultStyleRow({ s }: { s: DictationStatus }) {
+  const { rewriteDefault, styles } = s.settings;
   return (
     <SettingRow
       className="lm-row--control"
       label="Style for apps in no mode"
-      description={`Writing styles: ${STYLE_NAMES}. Pick one in each mode too; a mode's own style wins.`}
+      description="Pick a style in each mode too; a mode's own style wins."
       control={
         <Select
           label="Style for apps in no mode"
-          value={value}
-          onChange={(v) => void patchDictation({ rewriteDefault: v as typeof value })}
-          options={DEFAULT_STYLE_OPTIONS}
-          renderValue={(o) => (o?.value === "off" ? "Off" : TEMPLATES[o?.value as TemplateId]?.name)}
+          value={rewriteDefault === "off" ? "off" : resolveStyle(rewriteDefault, styles).id}
+          onChange={(v) => void patchDictation({ rewriteDefault: v })}
+          options={[{ value: "off", label: "Off: the text is pasted as you said it" }, ...styleOptions(styles)]}
+          renderValue={(o) => (o?.value === "off" ? "Off" : resolveStyle(o?.value ?? "", styles).name)}
         />
       }
     />
@@ -154,7 +154,8 @@ export function RewriteCard({ s }: { s: DictationStatus }) {
                 </div>
               }
             />
-            <DefaultStyleRow value={s.settings.rewriteDefault} />
+            <DefaultStyleRow s={s} />
+            <StylesCard s={s} />
           </>
         ) : (
           <SettingRow
