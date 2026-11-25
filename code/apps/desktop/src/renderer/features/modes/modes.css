@@ -233,3 +233,17 @@
   font-size: 13px;
   line-height: 18px;
 }
+
+/* The style list sits in the rewrite card: the card's own row divider does not reach list items, so add it (15 px padding plus the 1 px line keeps a row 68 high). */
+.lm-card .modes-styles > li > .lm-row.lm-row {
+  border-block-start: 1px solid var(--stroke-hairline);
+  padding-block-start: 15px;
+}
+/* The style form: the textarea reads like the inputs above it, and the note lines up with the labels. */
+.modes-style-area {
+  font-size: 13px;
+  line-height: 18px;
+}
+.modes-style-form .vocab-note {
+  padding: 0;
+}

@@ -52,7 +52,7 @@ function StyleDialog({ editing, styles, onClose }: { editing: CustomStyle | unde
   return (
     <Modal open onClose={onClose} title={editing ? `Edit ${editing.name}` : "Add a style"} width={480} footer={footer}>
       <form
-        className="vocab-form"
+        className="vocab-form modes-style-form"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -78,7 +78,7 @@ function StyleDialog({ editing, styles, onClose }: { editing: CustomStyle | unde
         <label className="lm-field__label" htmlFor="style-prompt">
           Instruction
         </label>
-        <textarea id="style-prompt" className="sk-area" rows={6} value={draft.prompt} onChange={(e) => set({ prompt: e.target.value })} />
+        <textarea id="style-prompt" className="sk-area modes-style-area" rows={6} value={draft.prompt} onChange={(e) => set({ prompt: e.target.value })} />
         <p className="vocab-note">
           {wordCount(draft.prompt)} words. {error === "prompt-too-long" ? LIMITS[error] : HINT}
         </p>
@@ -134,7 +134,7 @@ export function StylesCard({ s }: { s: DictationStatus }) {
           </Button>
         }
       />
-      <ul className="vocab-list" aria-label="Writing styles">
+      <ul className="vocab-list modes-styles" aria-label="Writing styles">
         {TEMPLATE_IDS.map((id) => (
           <li key={id}>
             <SettingRow
