@@ -88,6 +88,22 @@ describe("learning a correction from an edit", () => {
   it("gives nothing for an edit in more than three places", () => {
     expect(learnCorrections("cloud code and get hub and vs good and clod node and more", "Claude Code and GitHub and VS Code and Claude Node and more")).toEqual([]);
   });
+
+  it("takes any new word when the person edits by hand, but still not a rewrite or a change of capitals", () => {
+    const hand = (pasted: string, edited: string) => learnCorrections(pasted, edited, true).map((c) => [c.heard, c.correct]);
+    expect(hand("Can you open the HTML file?", "Can you read the HTML file?")).toEqual([["open", "read"]]);
+    expect(hand("send it to bob today", "send it to alice today")).toEqual([["bob", "alice"]]);
+    expect(hand("In cloud code", "In Claude Code")).toEqual([["cloud code", "Claude Code"]]);
+    expect(hand("I opened Cloud Code and BS Code now", "I opened Claude Code and VS Code now")).toEqual([
+      ["Cloud", "Claude"],
+      ["BS", "VS"],
+    ]);
+    expect(hand("Can you open the HTML file?", "Can you open the html file?")).toEqual([]);
+    expect(hand("Can you open the HTML file?", "Can you open the HTML  file ?")).toEqual([]);
+    expect(hand("it costs 15 dollars today", "it costs 50 dollars today")).toEqual([]);
+    expect(hand("open the big red door now", "close that small blue window later")).toEqual([]);
+    expect(learnCorrections("Can you open the HTML file?", "Can you read the HTML file?")).toEqual([]);
+  });
 });
 
 describe("remembering fixes as words", () => {

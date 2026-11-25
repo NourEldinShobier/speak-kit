@@ -18,6 +18,8 @@ export const MAX_PHRASE = 3;
 /** The edit may change at most this many separate places, and at most half of the words. */
 const MAX_HUNKS = 3;
 const MAX_WORDS = 400;
+/** A hand edit may change this many words in all. */
+const MAX_HAND_WORDS = 6;
 /** Below this likeness the new words are a different word, not a better hearing of the old ones. */
 const MIN_LIKENESS = 0.75;
 
@@ -121,19 +123,19 @@ function inflected(x: string, y: string): boolean {
 }
 
 /** A fix of words with figures or in a link, or one that only swaps function words or capitals, is not a misheard word. */
-function plausible(h: Hunk, e: Edit): boolean {
+function plausible(h: Hunk, e: Edit, byHand: boolean): boolean {
   const [old, now] = [e.a.slice(h.from, h.to), e.b.slice(h.newFrom, h.newTo)];
-  if (!old.length || !now.length || old.length > MAX_PHRASE || now.length > MAX_PHRASE || Math.abs(old.length - now.length) > 1) return false;
+  if (!old.length || !now.length || old.length > MAX_PHRASE || now.length > MAX_PHRASE || (!byHand && Math.abs(old.length - now.length) > 1)) return false;
   if (hasDigits(phrase(e.pasted, old) + phrase(e.edited, now)) || looksTechnical(surround(e.pasted, old) + surround(e.edited, now))) return false;
   if (old.map((w) => w.key).join(" ") === now.map((w) => w.key).join(" ") || inflected(phrase(e.pasted, old), phrase(e.edited, now))) return false;
   return !(old.every((w) => isFunctionWord(w.key)) && now.every((w) => isFunctionWord(w.key)));
 }
 
 /** The fix a hunk stands for, with its neighbours; undefined when the new words are not close enough to the old ones. */
-function candidate(h: Hunk, e: Edit): Candidate | undefined {
+function candidate(h: Hunk, e: Edit, byHand: boolean): Candidate | undefined {
   const [old, now] = [e.a.slice(h.from, h.to), e.b.slice(h.newFrom, h.newTo)];
   const [heard, correct] = [phrase(e.pasted, old), phrase(e.edited, now)];
-  if (likeness(heard, correct) < MIN_LIKENESS) return undefined;
+  if (!byHand && likeness(heard, correct) < MIN_LIKENESS) return undefined;
   const [left, right] = [e.a[h.from - 1], e.a[h.to]];
   const fits = (w: Word | undefined): w is Word => !!w && w.key.length <= MAX_NEIGHBOUR;
   return { heard, correct, ...(fits(left) && { left: left.key }), ...(fits(right) && { right: right.key }) };
@@ -142,16 +144,22 @@ function candidate(h: Hunk, e: Edit): Candidate | undefined {
 /**
  * The fixes a person made when they edited pasted text. Only local replacements of one to three words that look or sound like what was there count;
  * a rewrite, a changed figure, a link, a swap of function words or a synonym gives nothing. The edit must stay a small part of the text.
+ * An edit made on purpose in the Fix dialog (`byHand`) is a correction whatever the new words look or sound like: one to three words changed in up to three
+ * places, at most six words in all and no more than half of a text longer than three words.
  */
-export function learnCorrections(pasted: string, edited: string): Candidate[] {
+export function learnCorrections(pasted: string, edited: string, byHand = false): Candidate[] {
   const e: Edit = { pasted, edited, a: wordsOf(pasted), b: wordsOf(edited) };
   if (!e.a.length || !e.b.length || e.a.length > MAX_WORDS || e.b.length > MAX_WORDS) return [];
-  const found = hunks(e).map((h) => absorbCase(h, e));
-  const changed = found.reduce((n, h) => n + Math.max(h.to - h.from, h.newTo - h.newFrom), 0);
-  if (!found.length || found.length > MAX_HUNKS || changed / Math.max(e.a.length, e.b.length) > 0.5) return [];
+  const raw = hunks(e);
+  const found = raw.map((h) => absorbCase(h, e));
+  const size = Math.max(e.a.length, e.b.length);
+  const changed = (hs: Hunk[]): number => hs.reduce((n, h) => n + Math.max(h.to - h.from, h.newTo - h.newFrom), 0);
+  // By hand, the words that only changed their capitals are not counted: "cloud code" to "Claude Code" changes one word.
+  const tooMuch = byHand ? changed(raw) > MAX_HAND_WORDS || (size > MAX_PHRASE && changed(raw) / size > 0.5) : changed(found) / size > 0.5;
+  if (!found.length || found.length > MAX_HUNKS || tooMuch) return [];
   const out = new Map<string, Candidate>();
-  for (const hunk of found.filter((h) => plausible(h, e))) {
-    const c = candidate(widen(hunk, e), e);
+  for (const hunk of found.filter((h) => plausible(h, e, byHand))) {
+    const c = candidate(byHand ? hunk : widen(hunk, e), e, byHand);
     if (c) out.set(`${c.heard.toLowerCase()}>${c.correct}`, out.get(`${c.heard.toLowerCase()}>${c.correct}`) ?? c);
   }
   return [...out.values()];

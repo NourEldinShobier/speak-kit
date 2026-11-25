@@ -1,7 +1,7 @@
 import { learnCorrections, sameText, saveFix, type Candidate, type Term } from "@speakkit/dictation";
 
 /** The fixes found when `edited` is `original` after the person fixed it. */
-export const suggestionsFor = (original: string, edited: string): Candidate[] => learnCorrections(original, edited);
+export const suggestionsFor = (original: string, edited: string): Candidate[] => learnCorrections(original, edited, true);
 
 export const fixLabel = (f: Pick<Candidate, "heard" | "correct">): string => `${f.heard} → ${f.correct}`;
 
