@@ -206,6 +206,7 @@ function startDesktop() {
         mainWindow.sendUi({ type: "confirm-quit" });
       },
       retryEngine: () => runtime.retry(),
+      unloadEngine: async () => (await runtime.engine?.unload?.()) ?? false,
       test: test.hook,
       fakeUpdate: test.fakeUpdate,
       trayNotice: () => trayNotices.current(),

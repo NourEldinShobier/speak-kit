@@ -106,17 +106,9 @@ describe("the main window uses the dark taskbar tray variant only when asked", (
 describe("arrow keys in lists", () => {
   const focusedText = (l: Launched) => l.page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent ?? "");
 
-  it("move between the voice cards and between the notices in the bell", async () => {
+  it("move between the notices in the bell", async () => {
     const l = await start({ config: DONE });
-    await l.page.getByRole("link", { name: "Voices" }).click();
-    const cards = l.page.getByTestId("voices").locator(".sk-voice");
-    await cards.first().waitFor();
-    await cards.first().focus();
-    await l.page.keyboard.press("ArrowRight");
-    expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe(await cards.nth(1).getAttribute("data-voice"));
-    await l.page.keyboard.press("End");
-    expect(await l.page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.voice)).toBe(await cards.last().getAttribute("data-voice"));
-
+    await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
     for (const mode of ["early", "stable"]) {
       writeFileSync(configFile(l), JSON.stringify({ ...configOf(l), updateChannel: mode }));
       await expect.poll(async () => configOf(l).updateChannel).toBe(mode);

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { launch, type Launched } from "./harness";
+import { launch, unloadEngine, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const start = async (o: Parameters<typeof launch>[0] = {}) => {
@@ -106,7 +106,7 @@ describe("command palette", () => {
     await l.page.keyboard.press("Control+K");
     const input = l.page.getByRole("combobox", { name: "Type a command or search" });
     await input.waitFor();
-    expect(await l.page.getByRole("option").count()).toBeGreaterThan(8);
+    expect(await l.page.getByRole("option").count()).toBe(3); // the three Recent defaults
     await input.fill("contrast");
     expect(await l.page.getByRole("option").count()).toBe(1);
     await l.page.keyboard.press("Enter");
@@ -131,7 +131,7 @@ describe("command palette states", () => {
     // Opened without a query: no count, no Clear, no Best match.
     expect(await l.page.getByText("Best match", { exact: true }).count()).toBe(0);
     expect(await l.page.getByRole("button", { name: "Clear" }).count()).toBe(0);
-    await input.fill("idle");
+    await input.fill("contrast");
     await l.page.getByText("Best match", { exact: true }).waitFor();
     expect(await l.page.getByText("1 result", { exact: true }).count()).toBe(1);
     await l.page.getByRole("button", { name: "Clear" }).click();
@@ -191,7 +191,7 @@ describe("settings sidebar search and Recent", () => {
     await find.fill("zzzz");
     await nav.getByText("No settings match").waitFor();
     await find.fill("");
-    expect(await nav.getByRole("link").count()).toBe(14);
+    expect(await nav.getByRole("link").count()).toBe(8);
   });
 
   it("Recent shows its empty hint when no reading was opened", async () => {
@@ -270,8 +270,9 @@ describe("settings", () => {
   });
 
   it("the title bar says the voice engine is unloaded and wakes on play", async () => {
-    const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
+    const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Dictation", level: 1 }).waitFor();
+    await unloadEngine(l);
     expect(await l.page.locator("[data-engine=kokoro]").count()).toBe(0);
     expect(await l.page.getByTestId("title-engine-status").textContent()).toBe("Unloaded · Wakes on play");
     // Not ready: a grey 8 px dot and one line of text, no pill and no fill.
@@ -286,9 +287,12 @@ describe("settings", () => {
 
 describe("tray and lifecycle", () => {
   it("native tray menu is short, the icon follows engine state, Quit asks what stops", async () => {
-    const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
+    const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
+    await unloadEngine(l);
     const hook = <T>(fn: string, ...a: unknown[]) => l.app.evaluate((_, [f, args]) => (globalThis as any).__speakkit[f as string](...(args as unknown[])) as T, [fn, a] as const);
+    // The tray follows the engine a moment later, once the app has read the server's health again.
+    await expect.poll(() => hook<string>("trayState")).toMatch(/^asleep\|/);
     const items = await hook<{ label: string; enabled: boolean; type: string }[]>("trayItems");
     // Dictation rows come and go with the OS and the dictation setting; the rest of the menu is fixed.
     const labels = items.filter((i) => i.type !== "separator").map((i) => i.label);

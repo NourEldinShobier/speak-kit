@@ -35,6 +35,8 @@ interface DesktopOptions {
   distDir: string;
   requestQuit(): void;
   retryEngine(): Promise<unknown>;
+  /** Tests only: releases the voice engine as the idle timer does; false while it is not ready or is busy. */
+  unloadEngine(): Promise<boolean>;
   /** The test hook (SPEAKKIT_TEST): shortcuts and toasts are simulated instead of touching the OS. */
   test: boolean;
   /** Version the fake updater announces (tests only; see test-env.ts). */
@@ -168,6 +170,6 @@ export function setupDesktop(ctx: Ctx, o: DesktopOptions) {
     /** The system would not create the tray icon. */
     trayMissing: () => tray.failed(),
     dispose: () => disposeAll({ shortcuts, reading, exports, updates, tray, dictation, transcripts }),
-    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest }),
+    testHook: () => desktopTestHook({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs: () => installedByTest, unloadEngine: o.unloadEngine }),
   };
 }

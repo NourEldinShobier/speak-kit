@@ -142,7 +142,7 @@ describe("Vocabulary page", () => {
     const l = await start();
     await open(l, "Voices");
     await l.page.getByRole("button", { name: "Fix a pronunciation" }).click();
-    await l.page.getByRole("heading", { name: "Pronunciations", level: 3 }).waitFor();
+    await l.page.getByRole("heading", { name: "Pronunciations", exact: true, level: 3 }).waitFor();
     await open(l, "Vocabulary");
     expect(await l.page.getByRole("radio").count()).toBe(0);
   });

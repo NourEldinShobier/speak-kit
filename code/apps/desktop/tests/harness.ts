@@ -4,7 +4,7 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { vi } from "vite-plus/test";
+import { expect, vi } from "vite-plus/test";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const appDir = path.resolve(here, "..");
@@ -89,3 +89,7 @@ export const endApp = async (app: { close(): Promise<void> }, proc: { kill(): un
 };
 
 export const health = (port: number) => fetch(`http://127.0.0.1:${port}/v1/health`).then((r) => r.json() as Promise<{ app: string; engine: { state: string } }>);
+
+/** Releases the voice engine as the idle timer does (the app loads it at startup), once it is ready and idle. Needs SPEAKKIT_TEST. */
+export const unloadEngine = (l: Launched) =>
+  expect.poll(() => l.app.evaluate(() => (globalThis as unknown as { __speakkit: { unloadEngine(): Promise<boolean> } }).__speakkit.unloadEngine()), { timeout: 20_000 }).toBe(true);

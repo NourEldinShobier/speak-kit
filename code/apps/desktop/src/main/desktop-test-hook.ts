@@ -15,10 +15,11 @@ interface HookParts {
   dictation: DictationService;
   transcripts: TranscriptsFeature;
   installs(): number;
+  unloadEngine(): Promise<boolean>;
 }
 
 /** SPEAKKIT_TEST hooks: simulate what Playwright cannot do (global key presses, native menus, toasts). */
-export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs }: HookParts) => {
+export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictation, transcripts, installs, unloadEngine }: HookParts) => {
   const loop = monitorEventLoopDelay({ resolution: 10 });
   loop.enable();
   return {
@@ -26,6 +27,7 @@ export const desktopTestHook = ({ shortcuts, shownToasts, tray, reading, dictati
     toasts: () => shownToasts.map(({ title, body, silent }) => ({ title, body, silent })),
     clickToast: (i: number) => shownToasts[i]?.onClick?.(),
     installs,
+    unloadEngine,
     trayItems: () => tray.items().map((i) => ({ label: i.label, enabled: i.enabled, type: i.type, checked: i.checked })),
     clickTray: (label: string) => {
       const item = tray.items().find((i) => i.label === label);

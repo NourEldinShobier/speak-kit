@@ -28,20 +28,20 @@ const openSettings = async (l: Launched, page = "General") => {
 describe("settings search and the Advanced fold", () => {
   it("a search result inside a closed fold opens the fold and rings the row", async () => {
     const l = await start({ config: DONE });
-    await openSettings(l);
+    await openSettings(l, "About");
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("false");
-    await l.page.getByRole("searchbox", { name: "Search settings" }).fill("import settings");
+    await l.page.getByRole("searchbox", { name: "Search settings" }).fill("models folder");
     await l.page.keyboard.press("Enter");
-    await l.page.locator('[data-setting-row="general/import"][data-focus-ring]').waitFor();
+    await l.page.locator('[data-setting-row="about/models-folder"][data-focus-ring]').waitFor();
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("true");
   });
 
   it("the fold is closed again on the next visit", async () => {
     const l = await start({ config: DONE });
-    await openSettings(l);
+    await openSettings(l, "About");
     await l.page.getByRole("button", { name: "Advanced" }).click();
     await openSettings(l, "Privacy");
-    await openSettings(l, "General");
+    await openSettings(l, "About");
     expect(await l.page.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe("false");
   });
 });

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { launch, removeDir, type Launched } from "./harness";
+import { launch, removeDir, unloadEngine, type Launched } from "./harness";
 
 const running: Launched[] = [];
 const tmpDirs: string[] = [];
@@ -124,10 +124,12 @@ describe("mini player and tray", () => {
   }, 90_000);
 
   it("the tray menu has the short model: wake appears when the engine sleeps", async () => {
-    const l = await start({ config: DONE, env: { SPEAKKIT_FAKE_STATE: "unloaded" } });
+    const l = await start({ config: DONE });
     await l.page.getByRole("heading", { name: "Dictation", exact: true }).waitFor();
+    await unloadEngine(l);
     const labels = async () => (await hook<{ label: string }[]>(l, "trayItems")).filter((i) => i.label);
-    expect((await labels()).map((i) => i.label)).toContain("Load the voice engine now");
+    // The tray follows the engine a moment later, once the app has read the server's health again.
+    await expect.poll(async () => (await labels()).map((i) => i.label)).toContain("Load the voice engine now");
   });
 });
 
