@@ -16,7 +16,7 @@ export interface LocalWriterPort {
  */
 export function createLocalRewriter(writer: LocalWriterPort): Rewriter {
   return {
-    async rewrite({ text, signal, style, hints, arabic }) {
+    async rewrite({ text, signal, style, hints, language }) {
       if (!(await writer.downloaded())) throw new Error("no writer model");
       signal.throwIfAborted(); // the deadline may have passed while the disk was read
       const { state } = writer.status();
@@ -24,7 +24,7 @@ export function createLocalRewriter(writer: LocalWriterPort): Rewriter {
         void writer.warm();
         throw state === "error" ? new Error("the writer failed to load") : new WriterLoadingError();
       }
-      const out = (await writer.complete({ system: instructions(style, hints, arabic), text: dictationMessage(text, arabic), signal })).trim();
+      const out = (await writer.complete({ system: instructions(style, hints, language), text: dictationMessage(text, language), signal })).trim();
       if (!out) throw new Error("no answer");
       return out;
     },

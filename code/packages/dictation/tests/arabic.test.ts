@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { arabicSystem, dictationMessage, GUARD, rewritePass, type Hint, type RewriteStyle } from "../src";
+import { dictationMessage, GUARD, LANGUAGES, rewritePass, systemFor, type Hint, type LanguageProfile, type RewriteStyle } from "../src";
 
 const MIXED = "اعمل commit وبعدين push على GitHub";
+const ARABIC = LANGUAGES.find((l) => l.name === "Arabic");
 const NONE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
 
 /** Runs the pass with a writer that answers `answer`, and says whether the writer was told the text is Arabic. */
 async function pass(text: string, answer: string, style: RewriteStyle = NONE, hints?: Hint[]) {
   let told = false;
   const rewriter = {
-    rewrite: async (req: { arabic?: boolean }) => {
-      told = req.arabic ?? false;
+    rewrite: async (req: { language?: LanguageProfile }) => {
+      told = req.language?.name === "Arabic";
       return answer;
     },
   };
@@ -53,7 +54,7 @@ describe("the messages", () => {
   });
 
   it("name Arabic, with an Arabic example in place of the English one", () => {
-    const system = arabicSystem(`Tidy. ${GUARD}`);
+    const system = systemFor(`Tidy. ${GUARD}`, ARABIC);
     expect(system.startsWith('Tidy. Example: <dictation>ممكن يعني تبعتلي الملف</dictation> becomes "ممكن تبعتلي الملف؟" The user message is')).toBe(true);
     expect(system).not.toContain("send me the file");
     expect(
@@ -61,7 +62,7 @@ describe("the messages", () => {
         "without tags. The dictation is in Arabic. Write your reply in Arabic script, in the same dialect; never translate it or spell it in Latin letters. Keep English words that are in the text as they are.",
       ),
     ).toBe(true);
-    expect(dictationMessage("ازيك", true)).toBe("<dictation>\nازيك\n</dictation>\nRewrite the text above in Arabic, do not translate. Output the result only, without tags.");
+    expect(dictationMessage("ازيك", ARABIC)).toBe("<dictation>\nازيك\n</dictation>\nRewrite the text above in Arabic, do not translate. Output the result only, without tags.");
   });
 });
 

@@ -1,5 +1,5 @@
 export * from "./answer";
-export { arabicSystem } from "./arabic";
+export { LANGUAGES, systemFor, type LanguageProfile } from "./languages";
 export * from "./modes";
 export * from "./rewrite";
 export * from "./templates";

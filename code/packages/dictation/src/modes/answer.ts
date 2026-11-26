@@ -1,11 +1,12 @@
+import type { LanguageProfile } from "./languages";
+
 /** The tag around the dictated text in the user message; the guard names it, so the model knows where the text starts and ends. */
 const TAG = "dictation";
 /** After the closing tag: the last words the model reads are the task, not the speech. */
 const REMINDER = "Rewrite the text above. Output the result only, without tags.";
-const ARABIC_REMINDER = "Rewrite the text above in Arabic, do not translate. Output the result only, without tags.";
 
-/** The user message of the writer: the dictated text between tags and a reminder. A tag in the text itself is dropped so it cannot close the wrapper early. */
-export const dictationMessage = (text: string, arabic = false): string => `<${TAG}>\n${text.replace(/<\/?dictation>/gi, "")}\n</${TAG}>\n${arabic ? ARABIC_REMINDER : REMINDER}`;
+/** The user message of the writer: the dictated text between tags and a reminder, the one of `language` when given. A tag in the text itself is dropped so it cannot close the wrapper early. */
+export const dictationMessage = (text: string, language?: LanguageProfile): string => `<${TAG}>\n${text.replace(/<\/?dictation>/gi, "")}\n</${TAG}>\n${language?.reminder ?? REMINDER}`;
 
 const FENCE = /^```(?:[a-z]+(?=\s*(?:\n|<)))?\s*(?<body>[\s\S]*?)\s*```$/i;
 const WRAPPER_TAG = /^<(?<tag>dictation|message|content|text|rewrite|rewritten|output|result)>\s*(?<body>[\s\S]*?)\s*<\/\k<tag>>$/i;
