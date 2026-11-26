@@ -144,6 +144,8 @@ export function rewriteTag(outcome: HistoryItem["rewrite"]): string | undefined 
       return "Pasted as said, the rewrite changed words it was not asked to";
     case "writer-replied":
       return "Pasted as said (writer replied instead)";
+    case "changed-language":
+      return "Pasted as said (writer changed the language)";
     default:
       return undefined;
   }

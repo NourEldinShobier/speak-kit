@@ -1,6 +1,7 @@
 import { keepsOtherWords, type Hint } from "../corrections/hints";
 import { dropFinalStop, isNumbersOnly } from "../rules";
 import { cleanAnswer, isMetaReply } from "./answer";
+import { arabicShare, asksTranslation, isMostlyArabic, tellsArabic } from "./arabic";
 import { DEFAULT_TEMPLATE, resolveStyle, type CustomStyle } from "./templates";
 
 /** The clean-up choices about capitals and the final full stop, which the rewrite must not undo. */
@@ -14,12 +15,12 @@ export interface RewriteStyle {
 }
 const SENTENCE_STYLE: RewriteStyle = { capitals: "sentence", stripFinalStop: false };
 
-/** The writer model. It gets the text, spots that may be misheard words, and a signal that fires when the person skips the rewrite; it must stop when it does. */
+/** The writer model. It gets the text, whether to tell the model it is Arabic, spots that may be misheard words, and a signal that fires when the person skips the rewrite; it must stop when it does. */
 export interface Rewriter {
-  rewrite(req: { text: string; signal: AbortSignal; style?: RewriteStyle; hints?: Hint[] }): Promise<string>;
+  rewrite(req: { text: string; signal: AbortSignal; style?: RewriteStyle; hints?: Hint[]; arabic?: boolean }): Promise<string>;
 }
 
-export type RewriteOutcome = "rewritten" | "skipped" | "writer-loading" | "failed" | "numbers-only" | "changed-facts" | "changed-style" | "changed-words" | "writer-replied";
+export type RewriteOutcome = "rewritten" | "skipped" | "writer-loading" | "failed" | "numbers-only" | "changed-facts" | "changed-style" | "changed-words" | "writer-replied" | "changed-language";
 
 /** A writer throws this when its model is not ready (still loading, or released): the pass does not wait for the load, it pastes the text as said. */
 export class WriterLoadingError extends Error {
@@ -37,7 +38,7 @@ export const keepsFacts = (original: string, rewritten: string, template: string
   digits(original) === digits(rewritten) && (!resolveStyle(template, styles).keepsLists || listLines(original) === listLines(rewritten));
 
 /** The writer's answer, or why there is none when it throws (also at once, before any await). */
-async function ask(rewriter: Rewriter, req: { text: string; signal: AbortSignal; style: RewriteStyle; hints?: Hint[] }): Promise<{ answer: string } | { outcome: "failed" | "writer-loading" }> {
+async function ask(rewriter: Rewriter, req: Parameters<Rewriter["rewrite"]>[0]): Promise<{ answer: string } | { outcome: "failed" | "writer-loading" }> {
   try {
     return { answer: await rewriter.rewrite(req) };
   } catch (e) {
@@ -45,10 +46,17 @@ async function ask(rewriter: Rewriter, req: { text: string; signal: AbortSignal;
   }
 }
 
+/** Whether the answer must stay in Arabic script: the text is mostly Arabic and no style of the person's own asks for translation. */
+function keepsArabicScript(text: string, { template = DEFAULT_TEMPLATE, styles = [] }: RewriteStyle): boolean {
+  const { id } = resolveStyle(template, styles);
+  const own = styles.find((s) => s.id === id);
+  return isMostlyArabic(text) && !(own && asksTranslation(own.prompt));
+}
+
 /**
  * Runs the rewrite and waits for the writer for as long as it works; only `skip` (the person's choice) ends the wait early, and a writer that is not
  * loaded yet (it throws WriterLoadingError) is not waited for at all. Whatever goes wrong (a skip,
- * an error, an empty answer, changed figures, new words away from the misheard spots the writer was told about) gives back the text as said. Numbers-only text is never sent.
+ * an error, an empty answer, Arabic turned into another script, changed figures, new words away from the misheard spots the writer was told about) gives back the text as said. Numbers-only text is never sent.
  */
 export async function rewritePass(req: { text: string; rewriter: Rewriter; skip: AbortSignal; style?: RewriteStyle; hints?: Hint[] }): Promise<{ text: string; outcome: RewriteOutcome }> {
   const { text, rewriter, skip, hints = [] } = req;
@@ -56,12 +64,17 @@ export async function rewritePass(req: { text: string; rewriter: Rewriter; skip:
   if (isNumbersOnly(text)) return { text, outcome: "numbers-only" };
   if (skip.aborted) return { text, outcome: "skipped" };
   const skipped = new Promise<"skipped">((resolve) => skip.addEventListener("abort", () => resolve("skipped"), { once: true }));
-  const asked = await Promise.race([ask(rewriter, { text: text.trimEnd(), signal: skip, style, ...(hints.length && { hints }) }), skipped]);
+  const arabic = keepsArabicScript(text, style);
+  const request = { text: text.trimEnd(), signal: skip, style, ...(hints.length && { hints }), ...(arabic && tellsArabic(text) && { arabic: true }) };
+  const asked = await Promise.race([ask(rewriter, request), skipped]);
   if (asked === "skipped") return { text, outcome: "skipped" };
   if ("outcome" in asked) return { text, outcome: asked.outcome };
   let next = cleanAnswer(asked.answer);
   if (!next) return { text, outcome: "failed" };
   if (isMetaReply(next, text)) return { text, outcome: "writer-replied" };
+  // A misheard spot spelled as the vocabulary says counts as the words that were heard.
+  const asHeard = hints.reduce((t, h) => t.replaceAll(h.correct, h.heard), next);
+  if (arabic && arabicShare(asHeard) < 0.6 * arabicShare(text)) return { text, outcome: "changed-language" };
   // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
   if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
   if (style.stripFinalStop) next = dropFinalStop(next);

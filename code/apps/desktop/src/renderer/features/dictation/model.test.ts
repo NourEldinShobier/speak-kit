@@ -188,6 +188,7 @@ describe("history numbers and tags", () => {
     expect(rewriteTag("changed-style")).toContain("capital letters");
     expect(rewriteTag("changed-words")).toContain("changed words");
     expect(rewriteTag("writer-replied")).toBe("Pasted as said (writer replied instead)");
+    expect(rewriteTag("changed-language")).toBe("Pasted as said (writer changed the language)");
     expect(rewriteTag(undefined)).toBeUndefined();
   });
 });
