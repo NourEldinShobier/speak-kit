@@ -21,20 +21,21 @@ interface Parts {
   writer: { warm(): Promise<void>; unload(): Promise<void> };
 }
 
-export type StartParts = Parts & { core: Dictation; hotkeys: SwitchableHotkeys; cfg: DictationConfig; recover: (() => void) | undefined };
+/** `cfg` is read again after the waits, so a setting changed meanwhile counts. */
+export type StartParts = Parts & { core: Dictation; hotkeys: SwitchableHotkeys; cfg(): DictationConfig; recover: (() => void) | undefined };
 
 /** Dictation turned on: the key hook, the microphone window and an installed model. `quiet` is the start at launch. */
-export async function startParts(p: StartParts, { quiet, idleMinutes }: { quiet: boolean; idleMinutes: number }): Promise<void> {
-  p.core.configure(coreSettings(p.cfg));
-  warmCaret(p.os, p.cfg);
-  p.hotkeys.layout(hotkeyLayout(p.cfg));
+export async function startParts(p: StartParts, { quiet, idleMinutes }: { quiet: boolean; idleMinutes(): number }): Promise<void> {
+  p.core.configure(coreSettings(p.cfg()));
+  warmCaret(p.os, p.cfg());
+  p.hotkeys.layout(hotkeyLayout(p.cfg()));
   const ready = p.hotkeys.enable(true);
   p.hook.set(!ready);
   void p.recorder?.prepare().then(() => p.mic.refresh());
   p.recover?.();
   await p.models.refresh();
-  const speech = prepareModel(p.models, { quiet, idleMinutes });
-  if (!quiet || idleMinutes === 0) warmWriterAfter(speech, p.writer, p.cfg);
+  const speech = prepareModel(p.models, { quiet, idleMinutes: idleMinutes() });
+  if (!quiet || idleMinutes() === 0) warmWriterAfter(speech, p.writer, p.cfg());
   if (!quiet && ready && p.models.installed) p.presenter.flashReady();
 }
 

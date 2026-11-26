@@ -275,7 +275,7 @@ export class DictationService {
 
   async #start(quiet: boolean): Promise<void> {
     const parts = this.#running();
-    if (this.supported && parts) await startParts(parts, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
+    if (this.supported && parts) await startParts(parts, { quiet, idleMinutes: () => this.#ctx.config.engines.idleMinutes });
   }
 
   async #stop(): Promise<void> {
@@ -297,7 +297,7 @@ export class DictationService {
     const [core, hotkeys] = [this.core, this.#hotkeys];
     if (!core || !hotkeys) return undefined;
     const { models, mic, presenter, os } = this;
-    return { core, hotkeys, models, mic, presenter, os, hook: this.#hook, recorder: this.#recorder, recover: this.#recover, writer: this.writer.engine, cfg: this.#cfg };
+    return { core, hotkeys, models, mic, presenter, os, hook: this.#hook, recorder: this.#recorder, recover: this.#recover, writer: this.writer.engine, cfg: () => this.#cfg };
   }
 
   async download(id: DictationModelId): Promise<DictationStatus> {
