@@ -23,7 +23,8 @@ import { createParts, type Failure, type Parts } from "./service-parts";
 import { buildCore } from "./service-core";
 import { createHookFailure } from "./hook-failure";
 import { createOutputSide } from "./service-output";
-import { createRecovery, onRecordingStart, onStateChange, prepareModel, syncWriter, warmCaret, warmWriterAfter } from "./service-extras";
+import { createRecovery, onRecordingStart, onStateChange, syncWriter, warmCaret } from "./service-extras";
+import { startParts, stopParts, type StartParts } from "./service-lifecycle";
 import { MicState } from "./mic-state";
 import { createThrottle } from "./throttle";
 import type { Stt } from "./stt";
@@ -161,12 +162,7 @@ export class DictationService {
     this.core.subscribe((s) => this.#onState(s));
     await this.core.ready();
     await Promise.all([this.models.refresh(), this.history.refresh(), this.records.refreshKey()]);
-    this.#stopSpeech = startSpeech(
-      this.speech,
-      os,
-      () => this.#cfg.enabled,
-      () => this.#cfg.language === "keyboard",
-    );
+    this.#stopSpeech = startSpeech(this.speech, os, { dictationOn: () => this.#cfg.enabled, followsKeyboard: () => this.#cfg.language === "keyboard" });
     if (this.#cfg.enabled) await this.#enable(true, true);
   }
 
@@ -278,30 +274,30 @@ export class DictationService {
   }
 
   async #start(quiet: boolean): Promise<void> {
-    if (!this.supported || !this.core || !this.#hotkeys) return;
-    this.core.configure(coreSettings(this.#cfg));
-    warmCaret(this.os, this.#cfg);
-    this.#hotkeys.layout(hotkeyLayout(this.#cfg));
-    const ready = this.#hotkeys.enable(true);
-    this.#hook.set(!ready);
-    void this.#recorder?.prepare().then(() => this.mic.refresh());
-    this.#recover?.();
-    await this.models.refresh();
-    const speech = prepareModel(this.models, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
-    if (!quiet || this.#ctx.config.engines.idleMinutes === 0) warmWriterAfter(speech, this.writer.engine, this.#cfg);
-    if (!quiet && ready && this.models.installed) this.presenter.flashReady();
+    const parts = this.#running();
+    if (this.supported && parts) await startParts(parts, { quiet, idleMinutes: this.#ctx.config.engines.idleMinutes });
   }
 
   async #stop(): Promise<void> {
-    this.core?.cancel();
-    this.#hotkeys?.enable(false);
-    this.#hook.set(false);
-    this.#recorder?.close();
-    this.mic.reset();
-    this.presenter.dismiss();
-    this.os?.hud.dispose(); // the HUD window goes now; the next recording makes a new one
-    await this.models.unload();
-    await settle(this.writer.engine.unload());
+    await stopParts({
+      core: this.core,
+      hotkeys: this.#hotkeys,
+      hook: this.#hook,
+      recorder: this.#recorder,
+      mic: this.mic,
+      presenter: this.presenter,
+      os: this.os,
+      models: this.models,
+      writer: this.writer.engine,
+    });
+  }
+
+  /** The parts a start needs, once they are built. */
+  #running(): StartParts | undefined {
+    const [core, hotkeys] = [this.core, this.#hotkeys];
+    if (!core || !hotkeys) return undefined;
+    const { models, mic, presenter, os } = this;
+    return { core, hotkeys, models, mic, presenter, os, hook: this.#hook, recorder: this.#recorder, recover: this.#recover, writer: this.writer.engine, cfg: this.#cfg };
   }
 
   async download(id: DictationModelId): Promise<DictationStatus> {

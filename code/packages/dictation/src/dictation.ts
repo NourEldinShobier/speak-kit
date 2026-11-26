@@ -1,4 +1,5 @@
 import { createCancelledTake } from "./cancelled-take";
+import { createCaptures } from "./captures";
 import { TAIL_MIN_MS, tailDone } from "./capture/policy";
 import { createHistory, type History } from "./history";
 import { historyApi } from "./history-actions";
@@ -31,9 +32,8 @@ class Runtime implements Dictation {
   private flashed: Flash | undefined;
   private cancelFlash: Unsubscribe | undefined;
   private cancelLimit: Unsubscribe | undefined;
-  private readonly captures = new Map<number, (r: CaptureResult) => void>();
+  private readonly captures = createCaptures();
   private noUndo = false;
-  private readonly rawCaptures = new Set<number>();
   private readonly listeners = new Set<(state: DictationState) => void>();
   private lastState: string;
   private unsubscribe: Unsubscribe | undefined;
@@ -191,7 +191,7 @@ class Runtime implements Dictation {
       const failure = await tryStart(this.deps, prerollMs);
       if (!failure) return;
       this.failedStarts.add(id);
-      this.settleCapture(id, { ok: false, code: failure });
+      this.captures.settle(id, { ok: false, code: failure });
       this.dispatch({ type: "failed", id });
       this.flash({ error: failure });
     });
@@ -204,7 +204,7 @@ class Runtime implements Dictation {
       // a broken log must not leave the recorder running
     }
     this.targets.delete(id);
-    this.settleCapture(id, { ok: false, code: "cancelled" });
+    this.captures.settle(id, { ok: false, code: "cancelled" });
     if (cancelled) this.flash({ notice: this.noUndo ? { kind: "cancelled" } : { kind: "cancelled", undoable: true } });
     void this.inRecorderOrder(async () => {
       if (this.failedStarts.delete(id)) return;
@@ -238,37 +238,16 @@ class Runtime implements Dictation {
   }
 
   capture(opts: { raw?: boolean } = {}): CaptureHandle {
-    let settle: (r: CaptureResult) => void = () => undefined;
-    const result = new Promise<CaptureResult>((resolve) => (settle = resolve));
-    const busy = this.disposed || this.session.capture.kind !== "idle" || this.pending > 0;
-    if (busy) settle({ ok: false, code: "busy" });
-    else {
-      const before = this.session.seq;
-      this.dispatch({ type: "start", at: this.deps.clock.now() });
-      const id = this.session.seq;
-      if (id === before) settle({ ok: false, code: "busy" });
-      else {
-        this.captures.set(id, settle);
-        if (opts.raw) this.rawCaptures.add(id);
-      }
-    }
-    const owned = () => [...this.captures.entries()].find(([, s]) => s === settle)?.[0];
-    return {
-      result,
-      finish: () => {
-        if (owned() !== undefined) this.dispatch({ type: "stop" });
+    return this.captures.open(opts, {
+      begin: () => {
+        if (this.disposed || this.session.capture.kind !== "idle" || this.pending > 0) return undefined;
+        const before = this.session.seq;
+        this.dispatch({ type: "start", at: this.deps.clock.now() });
+        return this.session.seq === before ? undefined : this.session.seq;
       },
-      cancel: () => {
-        if (owned() !== undefined) this.dispatch({ type: "cancel" });
-      },
-    };
-  }
-
-  private settleCapture(id: number, r: CaptureResult): void {
-    const settle = this.captures.get(id);
-    this.captures.delete(id);
-    this.rawCaptures.delete(id);
-    settle?.(r);
+      finish: () => void this.dispatch({ type: "stop" }),
+      cancel: () => void this.dispatch({ type: "cancel" }),
+    });
   }
 
   private finishRecording(id: number): void {
@@ -282,8 +261,8 @@ class Runtime implements Dictation {
     const job: Job = {
       clip,
       target: this.targets.get(id) ?? Promise.resolve(undefined),
-      ...(this.rawCaptures.has(id) && { raw: true }),
-      ...(owned && { print: (r: CaptureResult) => this.settleCapture(id, r) }),
+      ...(this.captures.isRaw(id) && { raw: true }),
+      ...(owned && { print: (r: CaptureResult) => this.captures.settle(id, r) }),
     };
     this.targets.delete(id);
     this.jobQueue = this.jobQueue.then(() => this.process(job));

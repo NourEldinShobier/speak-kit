@@ -47,7 +47,8 @@ interface FieldsProps {
   onShow?: (() => void) | undefined;
 }
 
-function WordFields({ draft, check, overrides, change, onShow }: FieldsProps) {
+/** The word itself, with what is wrong with it, a way to the entry it collides with and its length. */
+function WordInput({ word, check, change, onShow }: Pick<FieldsProps, "check" | "change" | "onShow"> & { word: string }) {
   const over = check.counter?.over === true;
   return (
     <>
@@ -55,7 +56,7 @@ function WordFields({ draft, check, overrides, change, onShow }: FieldsProps) {
         label="Word or name"
         hint="The text to write."
         placeholder="Claude Code"
-        value={draft.word}
+        value={word}
         onChange={(e) => change({ word: e.target.value })}
         error={check.message}
         data-autofocus=""
@@ -70,12 +71,20 @@ function WordFields({ draft, check, overrides, change, onShow }: FieldsProps) {
         ) : (
           <span />
         )}
-        {check.counter && (draft.word.trim() || over) ? (
+        {check.counter && (word.trim() || over) ? (
           <span className={`vocab-count${over ? " is-over" : ""}`} aria-live="polite">
             {check.counter.length} of {check.counter.max}
           </span>
         ) : null}
       </div>
+    </>
+  );
+}
+
+function WordFields({ draft, check, overrides, change, onShow }: FieldsProps) {
+  return (
+    <>
+      <WordInput word={draft.word} check={check} change={change} onShow={onShow} />
       <TextInput
         label="Heard as"
         hint="How the speech model tends to write it, separated by commas. Optional."

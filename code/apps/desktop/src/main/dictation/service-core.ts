@@ -85,7 +85,7 @@ export function buildCore(h: CoreHost): { recorder: RecorderHost; core: Dictatio
     settled: (clip, done) => kept.settled(clip, done),
     // Only the stage name and a reason: spoken text never reaches a log.
     log: (stage, why) => ctx.log.warn(`dictation stage ${stage}`, why),
-    inserter: createInserterPort(h.os, h.inserted, o.pageSite, () => cfg().language === "keyboard"),
+    inserter: createInserterPort(h.os, h.inserted, { pageSite: o.pageSite, wantsLayout: () => cfg().language === "keyboard" }),
     hotkeys: h.hotkeys,
     storage: files.storage,
     audio: files.audio,

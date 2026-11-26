@@ -237,7 +237,7 @@ describe("export and import", () => {
     ],
   };
   const empty: Vocabulary = { terms: [] };
-  const flat = (v: Vocabulary) => v.terms.map(({ id: _, ...rest }) => rest);
+  const flat = (v: Vocabulary) => v.terms.map((term) => ({ ...term, id: undefined }));
 
   it("writes everything as json with a version, words only as text and the heard-as pairs as csv", () => {
     expect(JSON.parse(exportVocabulary(vocab, "json"))).toEqual({

@@ -112,14 +112,13 @@ export function createSpeechParts(a: Args): { stt: Stt; models: ModelManager; sp
 export function startSpeech(
   speech: SpeechModels,
   os: { foreground(want?: { layout: boolean }): { exe: string | null; layout?: string | undefined } | null },
-  dictationOn: () => boolean,
-  followsKeyboard: () => boolean,
+  when: { dictationOn: () => boolean; followsKeyboard: () => boolean },
 ): () => void {
   void speech.init();
   let last = "";
   const t = setInterval(() => {
-    if (!dictationOn()) return;
-    const info = os.foreground({ layout: speech.wantsLayout() || followsKeyboard() });
+    if (!when.dictationOn()) return;
+    const info = os.foreground({ layout: speech.wantsLayout() || when.followsKeyboard() });
     const c = { app: info?.exe ?? undefined, layout: info?.layout };
     const key = `${c.app}|${c.layout}`;
     if (key === last) return;

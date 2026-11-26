@@ -395,16 +395,16 @@ describe("keeping the writer to the misheard spots", () => {
   const hints = [{ correct: "Claude Code" }];
 
   it("allows the fix and punctuation", () => {
-    expect(keepsOtherWords("i opened clod code and ran it", "I opened Claude Code and ran it.", hints, "exact")).toBe(true);
+    expect(keepsOtherWords("i opened clod code and ran it", "I opened Claude Code and ran it.", { hints, template: "exact" })).toBe(true);
   });
 
   it("refuses new words elsewhere under a template that keeps the speaker's words", () => {
-    expect(keepsOtherWords("i opened clod code and ran it", "I started Claude Code and ran it.", hints, "exact")).toBe(false);
-    expect(keepsOtherWords("i opened clod code and ran it", "I started Claude Code and ran it.", hints, "tidy")).toBe(true);
+    expect(keepsOtherWords("i opened clod code and ran it", "I started Claude Code and ran it.", { hints, template: "exact" })).toBe(false);
+    expect(keepsOtherWords("i opened clod code and ran it", "I started Claude Code and ran it.", { hints, template: "tidy" })).toBe(true);
   });
 
   it("refuses a rewrite under any template", () => {
-    expect(keepsOtherWords("i opened clod code and ran it", "Yesterday afternoon I launched Claude Code, executed everything, and celebrated.", hints, "tidy")).toBe(false);
+    expect(keepsOtherWords("i opened clod code and ran it", "Yesterday afternoon I launched Claude Code, executed everything, and celebrated.", { hints, template: "tidy" })).toBe(false);
   });
 });
 

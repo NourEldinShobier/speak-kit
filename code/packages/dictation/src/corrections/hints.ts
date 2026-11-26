@@ -86,7 +86,11 @@ export const hintBlock = (hints: readonly Pick<Hint, "heard" | "correct">[]): st
  * A writer told about misheard words may fix those spots and word the rest as its template allows, but it must not bring in new words elsewhere:
  * none for a template that keeps the speaker's words, a quarter of the text for the others.
  */
-export function keepsOtherWords(original: string, rewritten: string, hints: readonly Pick<Hint, "correct">[], template: string = DEFAULT_TEMPLATE, styles: readonly CustomStyle[] = []): boolean {
+export function keepsOtherWords(
+  original: string,
+  rewritten: string,
+  { hints, template = DEFAULT_TEMPLATE, styles = [] }: { hints: readonly Pick<Hint, "correct">[]; template?: string | undefined; styles?: readonly CustomStyle[] | undefined },
+): boolean {
   const known = new Set([...wordsOf(original), ...hints.flatMap((h) => wordsOf(h.correct))].flatMap((w) => [w.key, ...pieces(w.key), ...expansions(w.key)]));
   const fresh = wordsOf(rewritten).filter((w) => !known.has(w.key) && !pieces(w.key).every((p) => known.has(p))).length;
   return fresh <= (resolveStyle(template, styles).keepsWords ? 0 : Math.ceil(wordsOf(original).length / 4));

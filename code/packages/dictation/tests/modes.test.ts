@@ -449,20 +449,20 @@ describe("rewrite templates", () => {
   });
 
   it("accepts a different number of list lines for notes and concise, and rejects it for the others", () => {
-    expect(keepsFacts("pack the tent the stove and the bags", "- tent\n- stove\n- bags", "notes")).toBe(true);
-    expect(keepsFacts("- tent\n- stove\n- bags", "Tent, stove and bags", "concise")).toBe(true);
+    expect(keepsFacts("pack the tent the stove and the bags", "- tent\n- stove\n- bags", { template: "notes" })).toBe(true);
+    expect(keepsFacts("- tent\n- stove\n- bags", "Tent, stove and bags", { template: "concise" })).toBe(true);
     for (const id of ["tidy", "exact", "message", "email", "formal", "technical"] as const) {
-      expect(keepsFacts("- tent\n- stove", "Tent and stove", id), id).toBe(false);
-      expect(keepsFacts("- tent\n- stove", "- Tent\n- Stove", id), id).toBe(true);
+      expect(keepsFacts("- tent\n- stove", "Tent and stove", { template: id }), id).toBe(false);
+      expect(keepsFacts("- tent\n- stove", "- Tent\n- Stove", { template: id }), id).toBe(true);
     }
     expect(keepsFacts("- tent\n- stove", "Tent and stove")).toBe(false);
   });
 
   it("rejects changed figures for every template", () => {
     for (const id of TEMPLATE_IDS) {
-      expect(keepsFacts("call 50 people", "Call 15 people.", id), id).toBe(false);
-      expect(keepsFacts("bring 3 contracts", "Bring three contracts.", id), id).toBe(false);
-      expect(keepsFacts("bring 3 contracts", "Bring 3 contracts.", id), id).toBe(true);
+      expect(keepsFacts("call 50 people", "Call 15 people.", { template: id }), id).toBe(false);
+      expect(keepsFacts("bring 3 contracts", "Bring three contracts.", { template: id }), id).toBe(false);
+      expect(keepsFacts("bring 3 contracts", "Bring 3 contracts.", { template: id }), id).toBe(true);
     }
   });
 

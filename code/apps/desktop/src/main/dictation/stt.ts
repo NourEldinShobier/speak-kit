@@ -117,10 +117,11 @@ async function whyNotReady({ stt, model, onModelError }: TranscriberDeps): Promi
 }
 
 /** A language the model lacks becomes English (the page says so); automatic detection only on a model that detects. "keyboard" is the language of the keyboard layout, or detection when the model lacks it or the layout is unknown. */
-const pickLanguage = (id: string, language: string, models?: () => readonly SttModel[], layout?: string): SttLanguage => {
-  const facts = (models?.() ?? STT_MODELS).find((m) => m.id === id);
+const pickLanguage = (id: string, asked: { language: string; layout?: string | undefined }, models: readonly SttModel[] = STT_MODELS): SttLanguage => {
+  const facts = models.find((m) => m.id === id);
   if (!facts) return "en";
-  const wanted = language === "keyboard" ? (layout && !resolveLanguage(facts, layout).changed ? layout : "auto") : language;
+  const fromLayout = () => (asked.layout && !resolveLanguage(facts, asked.layout).changed ? asked.layout : "auto");
+  const wanted = asked.language === "keyboard" ? fromLayout() : asked.language;
   return resolveLanguage(facts, wanted).language as SttLanguage;
 };
 
@@ -141,7 +142,7 @@ export async function heard(
 ): Promise<TranscribeResult> {
   const { clip, language, layout, prompt } = req;
   const id = model();
-  const lang = pickLanguage(id, language, models, layout);
+  const lang = pickLanguage(id, { language, layout }, models?.());
   const sent = prompt && supportsPrompt(id) ? prompt : undefined;
   if (prompt && !sent) onPromptDropped?.();
   const stop = new AbortController();

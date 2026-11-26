@@ -34,7 +34,7 @@ const upperCount = (s: string): number => (s.match(/\p{Lu}/gu) ?? []).length;
 const listLines = (s: string): number => (s.match(/^\s*(?:[-*•]|\d+[.)])\s/gm) ?? []).length;
 
 /** A rewrite may change wording and never the figures; it may change a dictated list only when the template's job is to make or merge lists. */
-export const keepsFacts = (original: string, rewritten: string, template: string = DEFAULT_TEMPLATE, styles: readonly CustomStyle[] = []): boolean =>
+export const keepsFacts = (original: string, rewritten: string, { template = DEFAULT_TEMPLATE, styles = [] }: Pick<RewriteStyle, "template" | "styles"> = {}): boolean =>
   digits(original) === digits(rewritten) && (!resolveStyle(template, styles).keepsLists || listLines(original) === listLines(rewritten));
 
 /** The writer's answer, or why there is none when it throws (also at once, before any await). */
@@ -53,6 +53,23 @@ function keepsArabicScript(text: string, { template = DEFAULT_TEMPLATE, styles =
   return isMostlyArabic(text) && !(own && asksTranslation(own.prompt));
 }
 
+/** The writer's answer as the text to paste, or the text as said with the rule the answer broke. */
+function judge({ text, answer, style, hints, arabic }: { text: string; answer: string; style: RewriteStyle; hints: Hint[]; arabic: boolean }): { text: string; outcome: RewriteOutcome } {
+  let next = cleanAnswer(answer);
+  if (!next) return { text, outcome: "failed" };
+  if (isMetaReply(next, text)) return { text, outcome: "writer-replied" };
+  // A misheard spot spelled as the vocabulary says counts as the words that were heard.
+  const asHeard = hints.reduce((t, h) => t.replaceAll(h.correct, h.heard), next);
+  if (arabic && arabicShare(asHeard) < 0.6 * arabicShare(text)) return { text, outcome: "changed-language" };
+  // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
+  if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
+  if (style.stripFinalStop) next = dropFinalStop(next);
+  if (!keepsFacts(text, next, style)) return { text, outcome: "changed-facts" };
+  if (hints.length && !keepsOtherWords(text, next, { hints, template: style.template, styles: style.styles })) return { text, outcome: "changed-words" };
+  // The text came with its trailing space (or not); the rewrite keeps that.
+  return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
+}
+
 /**
  * Runs the rewrite and waits for the writer for as long as it works; only `skip` (the person's choice) ends the wait early, and a writer that is not
  * loaded yet (it throws WriterLoadingError) is not waited for at all. Whatever goes wrong (a skip,
@@ -69,17 +86,5 @@ export async function rewritePass(req: { text: string; rewriter: Rewriter; skip:
   const asked = await Promise.race([ask(rewriter, request), skipped]);
   if (asked === "skipped") return { text, outcome: "skipped" };
   if ("outcome" in asked) return { text, outcome: asked.outcome };
-  let next = cleanAnswer(asked.answer);
-  if (!next) return { text, outcome: "failed" };
-  if (isMetaReply(next, text)) return { text, outcome: "writer-replied" };
-  // A misheard spot spelled as the vocabulary says counts as the words that were heard.
-  const asHeard = hints.reduce((t, h) => t.replaceAll(h.correct, h.heard), next);
-  if (arabic && arabicShare(asHeard) < 0.6 * arabicShare(text)) return { text, outcome: "changed-language" };
-  // "Keep as spoken" cannot be restored, so a rewrite that moved capitals is dropped.
-  if (style.capitals === "keep" && upperCount(next) !== upperCount(text)) return { text, outcome: "changed-style" };
-  if (style.stripFinalStop) next = dropFinalStop(next);
-  if (!keepsFacts(text, next, style.template, style.styles)) return { text, outcome: "changed-facts" };
-  if (hints.length && !keepsOtherWords(text, next, hints, style.template, style.styles)) return { text, outcome: "changed-words" };
-  // The text came with its trailing space (or not); the rewrite keeps that.
-  return { text: /\s$/.test(text) ? `${next} ` : next, outcome: "rewritten" };
+  return judge({ text, answer: asked.answer, style, hints, arabic });
 }

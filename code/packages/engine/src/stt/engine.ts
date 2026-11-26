@@ -197,7 +197,9 @@ export class WhisperStt implements SpeechToText {
     if (this.#em.status.state === "ready" && this.#model === m) return;
     await this.#unload();
     await this.#o.beforeLoad?.();
-    await mkdir(this.#shaderCache(), { recursive: true }).catch(() => undefined); // without it the driver falls back to its own cache
+    await mkdir(this.#shaderCache(), { recursive: true }).catch(() => {
+      // without it the driver falls back to its own cache
+    });
     const dir = this.#dir();
     const ac = (this.#abort = new AbortController());
     try {

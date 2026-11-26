@@ -54,21 +54,26 @@ export function createActions(h: Host) {
     const url = soundSettingsUrl(process.platform, h.failure.error === "mic-denied" || h.failure.error === "mic-silent");
     if (url) await shell.openExternal(url);
   };
+  /** What each button does besides closing the HUD; "dismiss" does nothing more. */
+  const byAction: Partial<Record<HudAction, () => unknown>> = {
+    retry: () => void retry(),
+    download: () => h.download(),
+    "sound-settings": () => void openSoundSettings(),
+    "undo-cancel": () => void h.undoCancel(),
+    "cancel-recording": () => h.core()?.cancel(),
+    "skip-rewrite": () => h.core()?.cancel(),
+    "copy-last": () => void h.copyLast(),
+    "paste-again": () => void h.pasteAgain(),
+    "learn-save": () => h.learnSave(),
+    "learn-undo": () => h.learnUndo(),
+  };
   const hudAction = (a: HudAction): void => {
     if (a !== "cancel-recording" && a !== "skip-rewrite") h.presenter.dismiss();
     if (a === "dismiss" && h.failure.last) {
       h.failure.last = undefined;
       h.changed?.();
     }
-    if (a === "retry") void retry();
-    else if (a === "download") h.download();
-    else if (a === "sound-settings") void openSoundSettings();
-    else if (a === "undo-cancel") void h.undoCancel();
-    else if (a === "cancel-recording" || a === "skip-rewrite") h.core()?.cancel();
-    else if (a === "copy-last") void h.copyLast();
-    else if (a === "paste-again") void h.pasteAgain();
-    else if (a === "learn-save") h.learnSave();
-    else if (a === "learn-undo") h.learnUndo();
+    byAction[a]?.();
   };
   return { retry, openSoundSettings, hudAction };
 }

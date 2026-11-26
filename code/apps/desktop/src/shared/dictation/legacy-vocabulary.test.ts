@@ -5,7 +5,7 @@ import { unifyVocabulary, VOCABULARY_MIGRATION_ID } from "./legacy-vocabulary";
 type Raw = Record<string, unknown>;
 const unify = (d: Raw) => unifyVocabulary(d);
 /** The entries without their ids, which are made up on the way. */
-const bare = (list: unknown): unknown[] => (list as Raw[]).map(({ id: _, ...rest }) => rest);
+const bare = (list: unknown): unknown[] => (list as Raw[]).map((entry) => ({ ...entry, id: undefined }));
 const termsOf = (d: Raw) => bare(unify(d).dictation.terms);
 
 const fix = (over: Raw = {}) => ({ id: "c1", heard: "cloud code", correct: "Claude Code", count: 1, createdAt: 5, ...over });

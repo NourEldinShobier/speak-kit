@@ -80,20 +80,23 @@ const peakOf = (pcm: Float32Array): number => {
   return peak;
 };
 
+/** What goes to the speech model with the audio: the words to expect, and the keyboard layout of the window. */
+type Ask = { prompt: string; layout: string | undefined };
+
 /** Transcribes a take of any length: a long one goes to the model in pieces, pieces with no sound are skipped, and the texts are joined. */
-async function hear(ctx: Context, clip: Clip, prompt: string, layout: string | undefined): Promise<TranscribeResult & { droppedMs?: number }> {
+async function hear(ctx: Context, clip: Clip, ask: Ask): Promise<TranscribeResult & { droppedMs?: number }> {
   if (ctx.settings.skipPauses) {
     const cut = skipPauses(clip.pcm, clip.sampleRate);
     if (cut.droppedMs > 0) {
-      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm }, prompt, layout);
+      const r = await hearAll(ctx, { ...clip, pcm: cut.pcm }, ask);
       // Trimming only helps when it kept the speech: an empty answer or a failure is tried again on the whole recording.
       if (r.ok && r.text) return { ...r, droppedMs: cut.droppedMs };
     }
   }
-  return hearAll(ctx, clip, prompt, layout);
+  return hearAll(ctx, clip, ask);
 }
 
-async function hearAll(ctx: Context, clip: Clip, prompt: string, layout: string | undefined): Promise<TranscribeResult> {
+async function hearAll(ctx: Context, clip: Clip, { prompt, layout }: Ask): Promise<TranscribeResult> {
   const req = (c: Clip) => ctx.deps.transcriber.transcribe({ clip: c, language: ctx.settings.language, ...(layout && { layout }), ...(prompt && { prompt }) });
   const pieces = chunkPcm(clip.pcm, clip.sampleRate);
   if (pieces.length === 1) return req(clip);
@@ -232,19 +235,14 @@ function checkClip(ctx: Context, clip: Clip): Outcome | undefined {
 }
 
 /** The text rules of the mode in use, with the swaps of the words that apply in the program in front. */
-function cleanUp(heard: Heard, eff: Settings, language: string, exe: string | undefined): string {
-  return applyRules(heard.text, { ...eff, replacements: swapRules(eff.terms, exe), language: heard.language ?? language });
+function cleanUp(heard: Heard, eff: Settings, from: { language: string; exe: string | undefined }): string {
+  return applyRules(heard.text, { ...eff, replacements: swapRules(eff.terms, from.exe), language: heard.language ?? from.language });
 }
 
 /** The speech engine's text for the take, with a made-up credit at the end removed; or why there is none. The take is kept when the engine fails. */
-async function transcribe(
-  ctx: Context,
-  clip: Clip,
-  prompt: string,
-  layout: string | undefined,
-): Promise<{ heard: Heard & { droppedMs?: number }; transcribeMs: number } | { error: DictationErrorCode }> {
+async function transcribe(ctx: Context, clip: Clip, ask: Ask): Promise<{ heard: Heard & { droppedMs?: number }; transcribeMs: number } | { error: DictationErrorCode }> {
   const from = ctx.deps.clock.now();
-  const said = await hear(ctx, clip, prompt, layout);
+  const said = await hear(ctx, clip, ask);
   const transcribeMs = ctx.deps.clock.now() - from;
   if (!said.ok) {
     ctx.deps.keepClip?.(clip, "failed");
@@ -272,7 +270,7 @@ interface Polished {
 }
 
 /** The learned fixes for the program, then the rewrite pass with the spots that look like a misheard phrase of a word that was not caught. */
-async function polish(ctx: Context, eff: Settings & { template: string }, said: string, exe: string | undefined): Promise<Polished> {
+async function polish(ctx: Context, eff: Settings & { template: string }, { said, exe }: { said: string; exe: string | undefined }): Promise<Polished> {
   const fixed = applyCorrections(said, activeFixes(eff.terms, exe));
   const rewritten = await rewriteStep(ctx, eff, { text: fixed.text, hints: findHints(fixed.text, hintFixes(eff.terms, exe)) });
   return { text: rewritten?.text ?? fixed.text, ...(fixed.applied.length && { corrected: fixed.applied }), ...(rewritten && { rewrite: rewritten.outcome }) };
@@ -302,16 +300,16 @@ export async function runJob(ctx: Context, job: Job): Promise<Outcome | undefine
   const target = await within(ctx, { name: "window", ms: STAGE_MS, fallback: undefined }, () => job.target);
   const eff = applyMode(ctx.settings, withDefaultStyle(resolveMode(ctx.settings.modes, target?.exe, target?.site), ctx.settings));
   const prompt = ctx.settings.prompt ? buildPrompt(usableTerms(eff.terms, target?.exe)).text : "";
-  const got = await transcribe(ctx, clip, prompt, target?.layout);
+  const got = await transcribe(ctx, clip, { prompt, layout: target?.layout });
   if ("error" in got) return got;
   const { heard, transcribeMs } = got;
-  const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, ctx.settings.language, target?.exe);
+  const said = job.raw ? heard.text.trim() : cleanUp(heard, eff, { language: ctx.settings.language, exe: target?.exe });
   logTake(ctx, { clip, heard: heard.text, transcribeMs });
   if (!said) return { notice: { kind: "no-speech" } };
-  const { text, corrected, rewrite }: Polished = job.raw ? { text: said } : await polish(ctx, eff, said, target?.exe);
-  if (job.print) return printed(ctx, job, { clip, heard, text, ...(rewrite && { rewrite }), ...(corrected && { corrected }) });
+  const polished: Polished = job.raw ? { text: said } : await polish(ctx, eff, { said, exe: target?.exe });
+  if (job.print) return printed(ctx, job, { clip, heard, ...polished });
   ctx.inserting();
-  return insert(ctx, job, { clip, heard, text, transcribeMs, droppedMs: heard.droppedMs, settings: eff, ...(rewrite && { rewrite }), ...(corrected && { corrected }) });
+  return insert(ctx, job, { clip, heard, ...polished, transcribeMs, droppedMs: heard.droppedMs, settings: eff });
 }
 
 /** Why a job that was meant to print produced no text. */

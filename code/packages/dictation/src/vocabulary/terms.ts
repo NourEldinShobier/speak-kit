@@ -84,22 +84,22 @@ export function usableTerms(terms: readonly Term[], exe: string | undefined): Te
   return terms.filter((t) => (t.app === undefined || t.app === key) && isActive(t));
 }
 
-export function validateWord(list: readonly Term[], word: string, ignoreId?: string, app?: string): "empty" | "too-long" | "duplicate" | undefined {
+export function validateWord(list: readonly Term[], word: string, { ignoreId, app }: { ignoreId?: string | undefined; app?: string | undefined } = {}): "empty" | "too-long" | "duplicate" | undefined {
   const w = word.trim();
   if (!w) return "empty";
   if (len(w) > MAX_WORD) return "too-long";
-  if (saved(list, w, appKey(app), ignoreId)) return "duplicate";
+  if (saved(list, { word: w, app: appKey(app) }, ignoreId)) return "duplicate";
   return undefined;
 }
 
-const saved = (list: readonly Term[], word: string, app: string | undefined, ignoreId?: string): Term | undefined =>
-  list.find((t) => !t.suggested && t.id !== ignoreId && t.app === app && sameText(t.word, word));
+const saved = (list: readonly Term[], entry: { word: string; app: string | undefined }, ignoreId?: string): Term | undefined =>
+  list.find((t) => !t.suggested && t.id !== ignoreId && t.app === entry.app && sameText(t.word, entry.word));
 
 // A heard-as spelling belongs to one word in a program: the newest owner takes it, so an exact match always replaces the same way.
-export function release(list: readonly Term[], sounds: readonly string[], keepId: string, app: string | undefined): { list: Term[]; moved: string[] } {
+export function release(list: readonly Term[], sounds: readonly string[], keeper: Pick<Term, "id" | "app">): { list: Term[]; moved: string[] } {
   const moved: string[] = [];
   const next = list.map((t) => {
-    if (t.id === keepId || t.suggested || t.app !== app) return t;
+    if (t.id === keeper.id || t.suggested || t.app !== keeper.app) return t;
     const kept = t.soundsLike.filter((s) => {
       const taken = sounds.some((x) => sameText(x, s));
       if (taken) moved.push(s);
@@ -128,12 +128,12 @@ function build(id: string, i: TermInput, learned?: Learned): Term {
 }
 
 export function addTerm(list: readonly Term[], input: TermInput): TermResult {
-  const error = validateWord(list, input.word, undefined, input.app);
-  if (error === "duplicate") return { ok: false, error, existing: saved(list, input.word.trim(), appKey(input.app)) as Term };
+  const error = validateWord(list, input.word, { app: input.app });
+  if (error === "duplicate") return { ok: false, error, existing: saved(list, { word: input.word.trim(), app: appKey(input.app) }) as Term };
   if (error) return { ok: false, error, length: len(input.word) };
   if (list.length >= MAX_TERMS) return { ok: false, error: "full" };
   const term = build(newId(), input);
-  const { list: others, moved } = release(list, term.soundsLike, term.id, term.app);
+  const { list: others, moved } = release(list, term.soundsLike, term);
   return { ok: true, list: [...others, term], term, moved };
 }
 
@@ -141,11 +141,11 @@ export function updateTerm(list: readonly Term[], id: string, patch: Partial<Ter
   const cur = list.find((t) => t.id === id);
   if (!cur) return { ok: false, error: "empty" };
   const input: TermInput = { word: cur.word, soundsLike: cur.soundsLike, app: cur.app, matchCase: cur.matchCase, remove: cur.remove, swapOnly: cur.swapOnly, ...patch };
-  const error = validateWord(list, input.word, id, input.app);
-  if (error === "duplicate") return { ok: false, error, existing: saved(list, input.word.trim(), appKey(input.app), id) as Term };
+  const error = validateWord(list, input.word, { ignoreId: id, app: input.app });
+  if (error === "duplicate") return { ok: false, error, existing: saved(list, { word: input.word.trim(), app: appKey(input.app) }, id) as Term };
   if (error) return { ok: false, error, length: len(input.word) };
   const term = build(id, input, cur.learned);
-  const { list: others, moved } = release(list, term.soundsLike, id, term.app);
+  const { list: others, moved } = release(list, term.soundsLike, { id, app: term.app });
   return { ok: true, list: others.map((t) => (t.id === id ? term : t)), term, moved };
 }
 
@@ -157,7 +157,7 @@ export const removeTerm = (list: readonly Term[], id: string): Term[] => list.fi
  * Says "duplicate" when nothing new would be added and "conflict" when the options differ. Whether the word goes to the speech model stays as the saved entry has it.
  */
 export function mergeTerm(list: readonly Term[], input: TermInput): TermResult {
-  const twin = saved(list, input.word.trim(), appKey(input.app));
+  const twin = saved(list, { word: input.word.trim(), app: appKey(input.app) });
   if (!twin) return addTerm(list, input);
   const sameOptions = !!twin.matchCase === !!input.matchCase && !!twin.remove === !!input.remove;
   const fresh = cleanSounds(input.soundsLike ?? []).filter((s) => s !== twin.word && !twin.soundsLike.some((o) => sameText(o, s)));

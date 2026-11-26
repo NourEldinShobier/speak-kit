@@ -103,10 +103,11 @@ function Failure({ view }: { view: Extract<HudView, { kind: "error" }> }) {
 function Transcribing({ view }: { view: Extract<HudView, { kind: "transcribing" }> }) {
   const { t } = useT();
   const { skip } = view;
+  const waiting = view.loading ? t("hud.loadingModel") : t("hud.transcribing");
   return (
     <>
       <Spinner size={14} />
-      <b>{skip ? t("hud.tidying") : view.loading ? t("hud.loadingModel") : t("hud.transcribing")}</b>
+      <b>{skip ? t("hud.tidying") : waiting}</b>
       {skip?.key && <Hint>{t("hud.skipHint", { key: skip.key })}</Hint>}
       {skip && <Act action={skip} />}
     </>

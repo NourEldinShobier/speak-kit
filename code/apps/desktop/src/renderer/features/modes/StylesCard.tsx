@@ -31,6 +31,38 @@ const LIMITS: Partial<Record<StyleError, string>> = {
 
 const draftOf = (s?: CustomStyle): StyleDraft => ({ name: s?.name ?? "", line: s?.line ?? "", prompt: s?.prompt ?? "", keepsLists: s?.keepsLists ?? false });
 
+function StyleFields({ draft, error, set }: { draft: StyleDraft; error: ReturnType<typeof styleDraftError>; set(change: Partial<StyleDraft>): void }) {
+  return (
+    <>
+      <TextInput
+        label="Name"
+        placeholder="Support reply"
+        value={draft.name}
+        onChange={(e) => set({ name: e.target.value })}
+        error={error === "name-too-long" ? LIMITS[error] : undefined}
+        data-autofocus=""
+        autoComplete="off"
+      />
+      <TextInput
+        label="Short description (optional)"
+        placeholder="For customer emails"
+        value={draft.line}
+        onChange={(e) => set({ line: e.target.value })}
+        error={error === "line-too-long" ? LIMITS[error] : undefined}
+        autoComplete="off"
+      />
+      <label className="lm-field__label" htmlFor="style-prompt">
+        Instruction
+      </label>
+      <textarea id="style-prompt" className="sk-area modes-style-area" rows={6} value={draft.prompt} onChange={(e) => set({ prompt: e.target.value })} />
+      <p className="vocab-note">
+        {wordCount(draft.prompt)} words. {error === "prompt-too-long" ? LIMITS[error] : HINT}
+      </p>
+      <Checkbox label="Keeps lists and line breaks" checked={draft.keepsLists} onChange={(e) => set({ keepsLists: e.target.checked })} />
+    </>
+  );
+}
+
 function StyleDialog({ editing, styles, onClose }: { editing: CustomStyle | undefined; styles: readonly CustomStyle[]; onClose(): void }) {
   const [draft, setDraft] = useState(() => draftOf(editing));
   const next = saveStyle(styles, draft, editing?.id);
@@ -58,31 +90,7 @@ function StyleDialog({ editing, styles, onClose }: { editing: CustomStyle | unde
           submit();
         }}
       >
-        <TextInput
-          label="Name"
-          placeholder="Support reply"
-          value={draft.name}
-          onChange={(e) => set({ name: e.target.value })}
-          error={error === "name-too-long" ? LIMITS[error] : undefined}
-          data-autofocus=""
-          autoComplete="off"
-        />
-        <TextInput
-          label="Short description (optional)"
-          placeholder="For customer emails"
-          value={draft.line}
-          onChange={(e) => set({ line: e.target.value })}
-          error={error === "line-too-long" ? LIMITS[error] : undefined}
-          autoComplete="off"
-        />
-        <label className="lm-field__label" htmlFor="style-prompt">
-          Instruction
-        </label>
-        <textarea id="style-prompt" className="sk-area modes-style-area" rows={6} value={draft.prompt} onChange={(e) => set({ prompt: e.target.value })} />
-        <p className="vocab-note">
-          {wordCount(draft.prompt)} words. {error === "prompt-too-long" ? LIMITS[error] : HINT}
-        </p>
-        <Checkbox label="Keeps lists and line breaks" checked={draft.keepsLists} onChange={(e) => set({ keepsLists: e.target.checked })} />
+        <StyleFields draft={draft} error={error} set={set} />
         <button type="submit" hidden />
       </form>
     </Modal>
@@ -113,6 +121,49 @@ function DeleteStyleDialog({ style, styles, users, onClose }: { style: CustomSty
 
 type Dialog = { kind: "edit"; style?: CustomStyle } | { kind: "delete"; style: CustomStyle };
 
+interface StyleListProps {
+  styles: readonly CustomStyle[];
+  full: boolean;
+  onDuplicate(from: Parameters<typeof copyOf>[0]): void;
+  onOpen(dialog: Dialog): void;
+}
+
+function StyleList({ styles, full, onDuplicate, onOpen }: StyleListProps) {
+  return (
+    <ul className="vocab-list modes-styles" aria-label="Writing styles">
+      {TEMPLATE_IDS.map((id) => (
+        <li key={id}>
+          <SettingRow
+            label={TEMPLATES[id].name}
+            description={TEMPLATES[id].line}
+            control={
+              <Button disabled={full} onClick={() => onDuplicate(TEMPLATES[id])}>
+                Duplicate
+              </Button>
+            }
+          />
+        </li>
+      ))}
+      {styles.map((c) => (
+        <li key={c.id}>
+          <SettingRow
+            label={c.name}
+            description={c.line || undefined}
+            control={
+              <div className="modes-acts">
+                <Button onClick={() => onOpen({ kind: "edit", style: c })}>Edit</Button>
+                <Button variant="danger" onClick={() => onOpen({ kind: "delete", style: c })}>
+                  Delete
+                </Button>
+              </div>
+            }
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Every writing style: the built-in ones to copy, and the person's own to edit or delete. */
 export function StylesCard({ s }: { s: DictationStatus }) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -134,37 +185,7 @@ export function StylesCard({ s }: { s: DictationStatus }) {
           </Button>
         }
       />
-      <ul className="vocab-list modes-styles" aria-label="Writing styles">
-        {TEMPLATE_IDS.map((id) => (
-          <li key={id}>
-            <SettingRow
-              label={TEMPLATES[id].name}
-              description={TEMPLATES[id].line}
-              control={
-                <Button disabled={full} onClick={() => duplicate(TEMPLATES[id])}>
-                  Duplicate
-                </Button>
-              }
-            />
-          </li>
-        ))}
-        {styles.map((c) => (
-          <li key={c.id}>
-            <SettingRow
-              label={c.name}
-              description={c.line || undefined}
-              control={
-                <div className="modes-acts">
-                  <Button onClick={() => setDialog({ kind: "edit", style: c })}>Edit</Button>
-                  <Button variant="danger" onClick={() => setDialog({ kind: "delete", style: c })}>
-                    Delete
-                  </Button>
-                </div>
-              }
-            />
-          </li>
-        ))}
-      </ul>
+      <StyleList styles={styles} full={full} onDuplicate={duplicate} onOpen={setDialog} />
       {dialog?.kind === "edit" ? <StyleDialog key={dialog.style?.id ?? "new"} editing={dialog.style} styles={styles} onClose={() => setDialog(null)} /> : null}
       {dialog?.kind === "delete" ? <DeleteStyleDialog style={dialog.style} styles={styles} users={styleUsers(dialog.style.id, modes, rewriteDefault)} onClose={() => setDialog(null)} /> : null}
     </>

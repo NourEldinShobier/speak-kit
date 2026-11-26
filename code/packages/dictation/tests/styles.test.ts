@@ -18,10 +18,10 @@ describe("resolving a style id", () => {
 
   it("lets a style of the person's skip the list-line check only when it does not keep lists, and always checks figures", () => {
     const keeps = { ...mine, keepsLists: true };
-    expect(keepsFacts("- a\n- b", "a and b", "u-abc123", [mine])).toBe(true);
-    expect(keepsFacts("- a\n- b", "a and b", "u-abc123", [keeps])).toBe(false);
-    expect(keepsFacts("- a\n- b", "a and b", "u-abc123", [])).toBe(false);
-    expect(keepsFacts("pay 5 now", "Pay 6 now", "u-abc123", [mine])).toBe(false);
+    expect(keepsFacts("- a\n- b", "a and b", { template: "u-abc123", styles: [mine] })).toBe(true);
+    expect(keepsFacts("- a\n- b", "a and b", { template: "u-abc123", styles: [keeps] })).toBe(false);
+    expect(keepsFacts("- a\n- b", "a and b", { template: "u-abc123", styles: [] })).toBe(false);
+    expect(keepsFacts("pay 5 now", "Pay 6 now", { template: "u-abc123", styles: [mine] })).toBe(false);
   });
 });
 

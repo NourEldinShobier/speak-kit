@@ -91,18 +91,18 @@ describe("the writer's guard with symbols and contractions", () => {
   const hints = [{ correct: "Claude Code" }];
 
   it("accepts a Technical answer that joins spoken words into a flag, while a hint is present", () => {
-    expect(keepsOtherWords("run dash dash save dev in clod code", "Run --save-dev in Claude Code", hints, "technical")).toBe(true);
-    expect(keepsOtherWords("open src slash index dot ts in clod code", "Open src/index.ts in Claude Code", hints, "technical")).toBe(true);
+    expect(keepsOtherWords("run dash dash save dev in clod code", "Run --save-dev in Claude Code", { hints, template: "technical" })).toBe(true);
+    expect(keepsOtherWords("open src slash index dot ts in clod code", "Open src/index.ts in Claude Code", { hints, template: "technical" })).toBe(true);
   });
 
   it("accepts a Formal answer that writes contractions out, while a hint is present", () => {
-    expect(keepsOtherWords("i can't open clod code and it's late", "I cannot open Claude Code and it is late.", hints, "formal")).toBe(true);
-    expect(keepsOtherWords("we don't use clod code", "We do not use Claude Code.", hints, "formal")).toBe(true);
+    expect(keepsOtherWords("i can't open clod code and it's late", "I cannot open Claude Code and it is late.", { hints, template: "formal" })).toBe(true);
+    expect(keepsOtherWords("we don't use clod code", "We do not use Claude Code.", { hints, template: "formal" })).toBe(true);
   });
 
   it("still refuses unrelated new words, hyphenated or not", () => {
-    expect(keepsOtherWords("open clod code now", "Open Claude Code now-ish", hints, "technical")).toBe(false);
-    expect(keepsOtherWords("open clod code now", "Open Claude Code, my friend", hints, "technical")).toBe(false);
+    expect(keepsOtherWords("open clod code now", "Open Claude Code now-ish", { hints, template: "technical" })).toBe(false);
+    expect(keepsOtherWords("open clod code now", "Open Claude Code, my friend", { hints, template: "technical" })).toBe(false);
   });
 });
 

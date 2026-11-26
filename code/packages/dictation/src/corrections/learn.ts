@@ -156,6 +156,12 @@ function candidate(h: Hunk, e: Edit, byHand: boolean): Candidate | undefined {
   return { heard, correct, ...(fits(left) && { left: left.key }), ...(fits(right) && { right: right.key }) };
 }
 
+/** The edit changed too large a part of a text of `size` words to be a correction. */
+function tooMuch(hs: Hunk[], size: number, byHand: boolean): boolean {
+  const changed = hs.reduce((n, h) => n + Math.max(h.to - h.from, h.newTo - h.newFrom), 0);
+  return byHand ? changed > MAX_HAND_WORDS || (size > MAX_PHRASE && changed / size > 0.5) : changed / size > 0.5;
+}
+
 /**
  * The fixes a person made when they edited pasted text. Only local replacements of one to three words that look or sound like what was there count;
  * a rewrite, a changed figure, a link, a swap of function words or a synonym gives nothing. The edit must stay a small part of the text.
@@ -167,11 +173,8 @@ export function learnCorrections(pasted: string, edited: string, byHand = false)
   if (!e.a.length || !e.b.length || e.a.length > MAX_WORDS || e.b.length > MAX_WORDS) return [];
   const raw = hunks(e);
   const found = raw.map((h) => absorbCase(h, e));
-  const size = Math.max(e.a.length, e.b.length);
-  const changed = (hs: Hunk[]): number => hs.reduce((n, h) => n + Math.max(h.to - h.from, h.newTo - h.newFrom), 0);
   // By hand, the words that only changed their capitals are not counted: "cloud code" to "Claude Code" changes one word.
-  const tooMuch = byHand ? changed(raw) > MAX_HAND_WORDS || (size > MAX_PHRASE && changed(raw) / size > 0.5) : changed(found) / size > 0.5;
-  if (!found.length || found.length > MAX_HUNKS || tooMuch) return [];
+  if (!found.length || found.length > MAX_HUNKS || tooMuch(byHand ? raw : found, Math.max(e.a.length, e.b.length), byHand)) return [];
   const out = new Map<string, Candidate>();
   for (const hunk of found.filter((h) => plausible(h, e, byHand))) {
     const c = candidate(byHand ? withName(hunk, e) : widen(hunk, e), e, byHand);

@@ -6,13 +6,13 @@ import type { DictationOs, InsertResult } from "./index";
  * The `Inserter` port over the OS layer. `onResult` sees how each insert really ended (the OS layer can fall back to copying where the plan said paste).
  * `wantsLayout` says whether the keyboard layout of the window is needed (the layer may skip a costly reading otherwise).
  */
-export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void, pageSite?: () => string | undefined, wantsLayout?: () => boolean): Inserter {
+export function createInserterPort(os: DictationOs, onResult: (r: InsertResult) => void, reads: { pageSite?: (() => string | undefined) | undefined; wantsLayout?: () => boolean } = {}): Inserter {
   return {
     async target() {
-      const layout = wantsLayout?.() ?? false;
+      const layout = reads.wantsLayout?.() ?? false;
       const fg = os.foreground({ layout });
       const name = friendlyAppName(fg?.exe);
-      const site = fg && pageSite?.();
+      const site = fg && reads.pageSite?.();
       return fg
         ? {
             id: fg.hwnd,

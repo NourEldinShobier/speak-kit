@@ -53,7 +53,7 @@ export function checkDraft(terms: readonly Term[], draft: Draft, editingId?: str
   if (!word) return { blocked: true };
   const app = draft.app?.trim() ?? "";
   if (/[\s\\/]/.test(app)) return { blocked: true, counter, message: "Use the program file name, such as code.exe." };
-  const error = validateWord(terms, word, editingId, app);
+  const error = validateWord(terms, word, { ignoreId: editingId, app });
   if (error === "too-long") return { blocked: true, counter, message: `Words and names can be up to ${MAX_WORD} characters. This one is ${length}.` };
   if (error === "duplicate") {
     const existing = savedTerms(terms).find((t) => t.id !== editingId && t.word.toLowerCase() === word.toLowerCase() && (t.app ?? "") === app.toLowerCase().replace(/\.exe$/, ""));

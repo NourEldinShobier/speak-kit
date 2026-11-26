@@ -28,7 +28,7 @@ const ownerOf = (list: readonly Term[], word: string, app: string | undefined): 
 function extend(list: readonly Term[], own: Term, learned: Learned): Term[] {
   if (own.soundsLike.some((s) => sameText(s, learned.heard)) || own.soundsLike.length >= MAX_SOUNDS) return [...list];
   const next: Term = { ...own, soundsLike: [...own.soundsLike, learned.heard], learned: own.learned ?? learned };
-  return release(list, [learned.heard], own.id, own.app).list.map((t) => (t.id === own.id ? next : t));
+  return release(list, [learned.heard], own).list.map((t) => (t.id === own.id ? next : t));
 }
 
 /** A full list gives up its oldest suggestion for a new entry; with none to give up, the entry is not added. */
@@ -46,13 +46,20 @@ function seenAgain(t: Term, fix: Candidate, opts: { source?: string | undefined;
   return opts.confirmed ? saved(next) : next;
 }
 
+interface RememberOptions {
+  now: number;
+  app?: string | undefined;
+  confirmed?: boolean | undefined;
+  source?: string | undefined;
+}
+
 /**
  * Keeps a fix the person made: as a suggestion, or, when they saved it on purpose (`confirmed`), as a saved entry that writes the right words and hears the
  * misheard ones, added to the entry for those words when there is one. A suggestion is counted again when the same fix is seen: once per dictation (`source`),
  * and a single word again only with the same neighbour. Saving on purpose takes the spelling from other entries of the program and removes other suggestions
  * for the same words; a suggestion that is only seen sits beside them and never touches a fix that applies. A full list drops its oldest suggestion.
  */
-export function remember(list: readonly Term[], fix: Candidate, opts: { now: number; app?: string | undefined; confirmed?: boolean | undefined; source?: string | undefined }): Term[] {
+export function remember(list: readonly Term[], fix: Candidate, opts: RememberOptions): Term[] {
   const app = opts.app ? exeKey(opts.app) : undefined;
   const heard = squash(fix.heard);
   const correct = squash(fix.correct);
@@ -60,8 +67,13 @@ export function remember(list: readonly Term[], fix: Candidate, opts: { now: num
   const twin = list.find((t) => t.learned && sameText(t.learned.heard, heard) && sameText(t.word, correct) && t.app === app && t.soundsLike.some((s) => sameText(s, heard)));
   if (twin && !(opts.confirmed && twin.suggested && ownerOf(list, correct, app))) {
     const next = list.map((t) => (t === twin ? seenAgain(t, fix, opts) : t));
-    return opts.confirmed ? release(next, [heard], twin.id, app).list : next;
+    return opts.confirmed ? release(next, [heard], twin).list : next;
   }
+  return learnNew(list, { fix, heard, correct, app }, opts);
+}
+
+/** The first time a fix is kept for these words in this program. */
+function learnNew(list: readonly Term[], { fix, heard, correct, app }: { fix: Candidate; heard: string; correct: string; app: string | undefined }, opts: RememberOptions): Term[] {
   const learned: Learned = { heard, count: 1, createdAt: opts.now, ...(fix.left && { left: fix.left }), ...(fix.right && { right: fix.right }), ...(opts.source && { sources: [opts.source] }) };
   const own = ownerOf(list, correct, app);
   if (own?.soundsLike.some((s) => sameText(s, heard))) return [...list];
@@ -70,7 +82,7 @@ export function remember(list: readonly Term[], fix: Candidate, opts: { now: num
   const open = room(rest);
   if (!open) return [...list];
   const entry: Term = { id: newId(), word: correct, soundsLike: [heard], ...(app && { app }), learned, ...(!opts.confirmed && { suggested: true }) };
-  return opts.confirmed ? [...release(open, [heard], entry.id, app).list, entry] : [...open, entry];
+  return opts.confirmed ? [...release(open, [heard], entry).list, entry] : [...open, entry];
 }
 
 const isFixOf = (t: Term, fix: Candidate): boolean => !!t.learned && sameText(t.word, fix.correct) && t.soundsLike.some((s) => sameText(s, fix.heard));
@@ -105,7 +117,7 @@ export function acceptSuggestions(list: readonly Term[], ids: readonly string[])
       const rest = acc.filter((x) => x.id !== t.id);
       const own = ownerOf(rest, t.word, t.app);
       if (own && own.soundsLike.length >= MAX_SOUNDS && !own.soundsLike.some((s) => sameText(s, t.learned?.heard ?? ""))) return acc;
-      return own ? extend(rest, own, t.learned as Learned) : [...release(rest, t.soundsLike, t.id, t.app).list, saved(t)];
+      return own ? extend(rest, own, t.learned as Learned) : [...release(rest, t.soundsLike, t).list, saved(t)];
     },
     [...list],
   );
