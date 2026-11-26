@@ -27,6 +27,7 @@ describe("defaults", () => {
       terms: [],
       prompt: true,
       modes: [],
+      styles: [],
       rewrite: { enabled: false },
       rewriteDefault: "off",
       keepRecordings: false,
