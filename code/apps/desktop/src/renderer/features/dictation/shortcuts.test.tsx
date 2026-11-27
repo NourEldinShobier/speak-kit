@@ -57,7 +57,7 @@ describe("shortcuts page", () => {
     expect(buttonOf(html, "Restore the default Dictation shortcut")).toContain("disabled");
     expect(t).toContain("Hold the key to talk. Let go to insert the text.");
     expect(t).not.toContain("Second shortcut");
-    expect(t).not.toContain("Mouse button");
+    expect(t).toContain("Mouse button");
   });
 
   it("gives every control an accessible name", () => {

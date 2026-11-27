@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { KeyEvent } from "@speakkit/dictation";
 import { createHotkeys, type HotkeyLayout } from "./hotkey-source";
+import type { ButtonSource } from "./logitech/buttons";
 import { VK, type Chord, type HotkeyHandlers, type HotkeySource } from "./types";
 
 const BASE: HotkeyLayout = { hotkey: "", pasteLast: "", learn: "", cancelKey: "Escape" };
@@ -178,5 +179,86 @@ describe("hotkey source", () => {
     hk.layout({ ...BASE, hotkey: "F9" });
     await hk.subscribe(() => true);
     expect(hk.enable(true)).toBe(false);
+  });
+});
+
+describe("hotkey source with mouse buttons", () => {
+  function mouseSetup(layout: Partial<HotkeyLayout>) {
+    const f = fakeOs();
+    const assigned: number[][] = [];
+    let press: (cid: number, down: boolean) => void = () => undefined;
+    const buttons: ButtonSource = {
+      assign: (cids) => void assigned.push([...cids]),
+      onButton: (cb) => void (press = cb),
+      learn: async () => ({ ok: false, reason: "unavailable" }),
+      cancelLearn: () => undefined,
+      dispose: () => void assigned.push([-1]),
+    };
+    const events: KeyEvent[] = [];
+    const pasted: string[] = [];
+    let t = 1000;
+    const hk = createHotkeys({ os: f.os, buttons, now: () => (t += 10) });
+    hk.onPasteLast(() => pasted.push("paste"));
+    hk.onLearn(() => pasted.push("learn"));
+    hk.layout({ ...BASE, ...layout });
+    return { ...f, hk, events, pasted, assigned, press: (cid: number, down: boolean) => press(cid, down), subscribe: () => hk.subscribe((e) => (events.push(e), true)) };
+  }
+
+  it("feeds a mouse button as the dictation key, named by its id, down then up", async () => {
+    const s = mouseSetup({ hotkey: "logi:0x00c3" });
+    await s.subscribe();
+    s.hk.enable(true);
+    s.press(0xc3, true);
+    s.press(0xc3, false);
+    expect(s.events).toEqual([
+      { key: "logi:0x00c3", down: true, at: 1010 },
+      { key: "logi:0x00c3", down: false, at: 1020 },
+    ]);
+  });
+
+  it("hooks no keys for a mouse button shortcut and asks for the button to be diverted only while enabled", async () => {
+    const s = mouseSetup({ hotkey: "logi:0x00c3", pasteLast: "logi:0x00d7", learn: "ControlLeft+KeyL" });
+    await s.subscribe();
+    expect(s.assigned).toEqual([]);
+    s.hk.enable(true);
+    expect(s.chord()).toEqual({ keys: [] });
+    expect(s.assigned.at(-1)).toEqual([0xc3, 0xd7]);
+    s.hk.pause(true);
+    expect(s.assigned.at(-1)).toEqual([]);
+    s.hk.enable(false);
+    expect(s.assigned.at(-1)).toEqual([]);
+  });
+
+  it("runs Paste last and Learn correction from a mouse button press, not from its release", async () => {
+    const s = mouseSetup({ hotkey: "ControlRight", pasteLast: "logi:0x00d7", learn: "logi:0x00c4" });
+    await s.subscribe();
+    s.hk.enable(true);
+    s.press(0xd7, true);
+    s.press(0xd7, false);
+    s.press(0xc4, true);
+    s.press(0x52, true);
+    expect(s.pasted).toEqual(["paste", "learn"]);
+    expect(s.events).toEqual([]);
+  });
+
+  it("reports a held mouse button as released when the shortcuts are paused", async () => {
+    const s = mouseSetup({ hotkey: "logi:0x00c3" });
+    await s.subscribe();
+    s.hk.enable(true);
+    s.press(0xc3, true);
+    s.hk.pause(true);
+    expect(s.events.map((e) => [e.key, e.down])).toEqual([
+      ["logi:0x00c3", true],
+      ["logi:0x00c3", false],
+    ]);
+    s.press(0xc3, true);
+    expect(s.events).toHaveLength(2);
+  });
+
+  it("releases the buttons when disposed", async () => {
+    const s = mouseSetup({ hotkey: "logi:0x00c3" });
+    await s.subscribe();
+    s.hk.dispose();
+    expect(s.assigned.at(-1)).toEqual([-1]);
   });
 });

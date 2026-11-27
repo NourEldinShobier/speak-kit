@@ -1,8 +1,10 @@
 import type { HotkeySource as CoreHotkeys, KeyEvent } from "@speakkit/dictation";
-import { cancelVk, CANCEL_KEY, hotkeyKeys, KEY_VK, keyOfVk } from "../../shared/dictation/keys";
+import { cancelVk, CANCEL_KEY, hotkeyKeys, KEY_VK, keyOfVk, logiCid } from "../../shared/dictation/keys";
+import type { ButtonLearn } from "../../shared/dictation/contract";
+import { createButtons, type ButtonSource } from "./logitech/buttons";
 import { type Chord, type HotkeyEvent, type HotkeySource as OsHotkeys } from "./types";
 
-/** Every shortcut that reaches the key hook. An empty string is unset and registers nothing. */
+/** Every shortcut that reaches the key hook. An empty string is unset and registers nothing. The first three may be a learned mouse button ("logi:0x00c3") in place of keys. */
 export interface HotkeyLayout {
   hotkey: string;
   pasteLast: string;
@@ -25,6 +27,9 @@ export interface SwitchableHotkeys extends CoreHotkeys {
   onPasteLast(cb: () => void): void;
   /** The Learn correction chord was pressed. */
   onLearn(cb: () => void): void;
+  /** Waits for a press on a Logitech mouse button, to use it as a shortcut. */
+  learnButton(): Promise<ButtonLearn>;
+  cancelLearnButton(): void;
   dispose(): void;
 }
 
@@ -34,6 +39,8 @@ const RESUME_POLL_MS = 50;
 
 interface Deps {
   os: OsHotkeys;
+  /** Logitech mouse buttons; the real source on Windows, none elsewhere. */
+  buttons?: ButtonSource;
   now(): number;
   /** The hook died. `recovered` is true when it was reinstalled and runs again; false means the hotkey is dead until dictation is switched off and on. */
   onFault?(e: unknown, recovered: boolean): void;
@@ -44,7 +51,8 @@ interface Deps {
 }
 
 const EMPTY: HotkeyLayout = { hotkey: "", pasteLast: "", learn: "", cancelKey: CANCEL_KEY };
-const chordOf = (hotkey: string): Chord => ({ keys: hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) });
+/** A mouse button is no key: its shortcut has no keys here, and the buttons source reports it. */
+const chordOf = (hotkey: string): Chord => ({ keys: logiCid(hotkey) === undefined ? hotkeyKeys(hotkey).map((k) => KEY_VK[k]!) : [] });
 const defaultAfter = (ms: number, fn: () => void): (() => void) => {
   const t = setTimeout(fn, ms);
   t.unref?.();
@@ -56,7 +64,7 @@ const defaultAfter = (ms: number, fn: () => void): (() => void) => {
  * its whole shortcut string, so the session needs no notion of chords. The hook is only installed while enabled and not paused.
  */
 class Hotkeys implements SwitchableHotkeys {
-  readonly #d: Required<Pick<Deps, "os" | "now" | "after">> & Pick<Deps, "onFault" | "changed">;
+  readonly #d: Required<Pick<Deps, "os" | "now" | "after">> & Pick<Deps, "onFault" | "changed" | "buttons">;
   #handler: ((e: KeyEvent) => boolean) | undefined;
   #layout = EMPTY;
   #enabled = false;
@@ -72,6 +80,7 @@ class Hotkeys implements SwitchableHotkeys {
 
   constructor(d: Deps) {
     this.#d = { ...d, after: d.after ?? defaultAfter };
+    d.buttons?.onButton((cid, down) => this.#onButton(cid, down));
   }
 
   get paused(): boolean {
@@ -113,6 +122,14 @@ class Hotkeys implements SwitchableHotkeys {
     this.#learn = cb;
   }
 
+  learnButton(): Promise<ButtonLearn> {
+    return this.#d.buttons?.learn() ?? Promise.resolve({ ok: false, reason: "unavailable" });
+  }
+
+  cancelLearnButton(): void {
+    this.#d.buttons?.cancelLearn();
+  }
+
   pause(on: boolean): void {
     if (on) {
       this.#generation++;
@@ -120,6 +137,7 @@ class Hotkeys implements SwitchableHotkeys {
       this.#waiting = undefined;
       this.#paused = true;
       this.#d.os.stop();
+      this.#syncButtons();
       // The release will never arrive through the removed hook: report it, so the session does not wait for a key that is up.
       for (const key of this.#held) this.#emit(key, false);
       this.#held.clear();
@@ -129,10 +147,36 @@ class Hotkeys implements SwitchableHotkeys {
   dispose(): void {
     this.#waiting?.();
     this.#d.os.stop();
+    this.#d.buttons?.dispose();
   }
 
   #emit(key: string, down: boolean): void {
     this.#handler?.({ key, down, at: this.#d.now() });
+  }
+
+  /** The session knows the hotkey by its shortcut string, a mouse button by its id. */
+  #press(name: string, down: boolean): void {
+    if (down) this.#held.add(name);
+    else this.#held.delete(name);
+    this.#emit(name, down);
+  }
+
+  /** A mouse button went down or up: it acts like the key it was given as, in whichever shortcut uses it. */
+  #onButton(cid: number, down: boolean): void {
+    const l = this.#layout;
+    const hit = (hotkey: string) => hotkey !== "" && logiCid(hotkey) === cid;
+    if (!this.#enabled || this.#paused || !this.#handler) return;
+    if (hit(l.hotkey)) this.#press(l.hotkey, down);
+    else if (down && hit(l.pasteLast)) this.#pasteLast?.();
+    else if (down && hit(l.learn)) this.#learn?.();
+  }
+
+  /** Divert the buttons the shortcuts use, only while the shortcuts run. */
+  #syncButtons(): void {
+    const l = this.#layout;
+    const live = this.#enabled && !this.#paused && this.#handler !== undefined;
+    const cids = live ? [l.hotkey, l.pasteLast, l.learn].map(logiCid).filter((c) => c !== undefined) : [];
+    this.#d.buttons?.assign(cids);
   }
 
   readonly #onEvent = (e: HotkeyEvent): void => {
@@ -141,13 +185,7 @@ class Hotkeys implements SwitchableHotkeys {
       return;
     }
     if (e.kind === "down" || e.kind === "up") {
-      // The session knows the hotkey by its shortcut string.
-      const name = e.chord === undefined ? this.#layout.hotkey : undefined;
-      if (name) {
-        if (e.kind === "down") this.#held.add(name);
-        else this.#held.delete(name);
-        this.#emit(name, e.kind === "down");
-      }
+      if (e.chord === undefined && this.#layout.hotkey && logiCid(this.#layout.hotkey) === undefined) this.#press(this.#layout.hotkey, e.kind === "down");
     } else if (!e.chord) this.#emit(e.vk === cancelVk(this.#layout.cancelKey) ? this.#layout.cancelKey : keyOfVk(e.vk), true);
   };
 
@@ -169,6 +207,7 @@ class Hotkeys implements SwitchableHotkeys {
   #run(): boolean {
     const { os } = this.#d;
     os.stop();
+    this.#syncButtons();
     if (!this.#enabled || this.#paused || !this.#handler || !this.#layout.hotkey) return false;
     os.grab(this.#grab ? [cancelVk(this.#layout.cancelKey)] : []);
     os.setExtraChords?.(this.#extras());
@@ -195,5 +234,5 @@ class Hotkeys implements SwitchableHotkeys {
 }
 
 export function createHotkeys(deps: Deps): SwitchableHotkeys {
-  return new Hotkeys(deps);
+  return new Hotkeys({ buttons: createButtons(), ...deps });
 }

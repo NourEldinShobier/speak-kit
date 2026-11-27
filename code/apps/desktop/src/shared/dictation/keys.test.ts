@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { defaultHotkey, hotkeyFrom, hotkeyKeys, hotkeyLabels, hotkeyText, KEY_VK, keyOfVk, validHotkey } from "./keys";
+import { defaultHotkey, hotkeyFrom, hotkeyKeys, hotkeyLabels, hotkeyText, KEY_VK, keyOfVk, logiCid, logiHotkey, logiLabel, validHotkey } from "./keys";
 
 describe("validHotkey", () => {
   it.each(["ControlRight", "AltRight", "F9", "F24", "CapsLock", "Pause", "ControlLeft+AltLeft+Space", "ControlLeft+KeyD", "ShiftLeft+ControlLeft+AltLeft"])("accepts %s", (h) => {
@@ -76,5 +76,29 @@ describe("macOS key names", () => {
     expect(defaultHotkey("darwin")).toBe("AltRight");
     expect(defaultHotkey("win32")).toBe("ControlRight");
     expect(validHotkey(defaultHotkey("darwin"))).toBe(true);
+  });
+});
+
+describe("Logitech mouse buttons as shortcuts", () => {
+  it("stores a learned button by its control id and reads it back", () => {
+    expect(logiHotkey(0xc3)).toBe("logi:0x00c3");
+    expect(logiHotkey(0x01a0)).toBe("logi:0x01a0");
+    expect(logiCid("logi:0x00c3")).toBe(0xc3);
+    expect(logiCid("ControlRight")).toBeUndefined();
+    expect(logiCid("logi:0xzz")).toBeUndefined();
+  });
+
+  it("accepts a stored button as a whole hotkey and nothing that only looks like one", () => {
+    expect(validHotkey("logi:0x00c3")).toBe(true);
+    expect(validHotkey("logi:0xc3")).toBe(false);
+    expect(validHotkey("ControlLeft+logi:0x00c3")).toBe(false);
+  });
+
+  it("names the well-known buttons and falls back to the code", () => {
+    expect(logiLabel(0xc3)).toBe("Gesture button");
+    expect(logiLabel(0x53)).toBe("Back button");
+    expect(logiLabel(0x01a0)).toBe("Button 0x01a0");
+    expect(hotkeyLabels("logi:0x00d7")).toEqual(["DPI button"]);
+    expect(hotkeyText("logi:0x01a0")).toBe("Button 0x01a0");
   });
 });

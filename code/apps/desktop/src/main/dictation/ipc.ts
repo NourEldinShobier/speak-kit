@@ -37,6 +37,8 @@ const handlersOf = (d: DictationService): Handlers => ({
   historyDismissNotice: () => d.records.dismissNotice(),
   vocabImport: () => d.records.vocabImport(),
   vocabExport: (format, text) => d.records.vocabExport(format, text),
+  learnButton: async () => (await d.ready, d.controls.learnButton()),
+  cancelLearnButton: async () => d.controls.cancelLearnButton(),
 });
 
 /** The Settings pages call these (only the app window may); the HUD page may only press its own buttons. Arguments are checked before any handler runs. */

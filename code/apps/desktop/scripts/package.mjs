@@ -134,6 +134,9 @@ if (existsSync(llamaBins)) for (const d of readdirSync(llamaBins)) if (!keepLlam
 rm(path.join(stage, "node_modules/node-llama-cpp/llama/gitRelease.bundle"));
 const koffiBuild = path.join(stage, "node_modules/koffi/build/koffi");
 if (existsSync(koffiBuild)) for (const d of readdirSync(koffiBuild)) if (!(mac ? d.startsWith("darwin_") : d === "win32_x64")) rm(path.join(koffiBuild, d));
+// node-hid (Logitech mouse buttons) ships a prebuilt addon per platform, all N-API; keep this app's.
+const hidBuild = path.join(stage, "node_modules/node-hid/prebuilds");
+if (existsSync(hidBuild)) for (const d of readdirSync(hidBuild)) if (!(mac ? d.startsWith("HID-darwin-") : d === "HID-win32-x64")) rm(path.join(hidBuild, d));
 
 // Installer icon, rasterised from the logo SVGs (electron-builder turns the 1024 px PNG into the macOS .icns)
 mkdirSync(res, { recursive: true });

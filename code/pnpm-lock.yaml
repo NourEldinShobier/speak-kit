@@ -251,6 +251,9 @@ catalogs:
     marked:
       specifier: 18.1.2
       version: 18.1.2
+    node-hid:
+      specifier: 3.4.0
+      version: 3.4.0
     node-llama-cpp:
       specifier: 3.22.3
       version: 3.22.3
@@ -376,6 +379,9 @@ importers:
       marked:
         specifier: 'catalog:'
         version: 18.1.2
+      node-hid:
+        specifier: 'catalog:'
+        version: 3.4.0
       pdfjs-dist:
         specifier: 'catalog:'
         version: 6.4.299
@@ -4812,6 +4818,11 @@ packages:
     engines: {node: ^20.17.0 || >=22.9.0}
     hasBin: true
 
+  node-hid@3.4.0:
+    resolution: {integrity: sha512-Br7EO3bJARAJBdtcsGzF/Vs5TjfbkaMdglqLQ+Rk9GOGgVqv5DxYUVH5znLerJU+OfBWw8sd552Ujcprz1bG9g==}
+    engines: {node: '>=10.16'}
+    hasBin: true
+
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
 
@@ -4986,6 +4997,11 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  pkg-prebuilds@1.1.0:
+    resolution: {integrity: sha512-jyai+KTQ2OwbN6iRYw88XbYOMgtpoSYJpjYebx7d9ihqz3txNi3ucsBt3va0iVWe6svSlaqpijMHFF/eJCMZzg==}
+    engines: {node: '>= 14.15.0'}
+    hasBin: true
 
   pkijs@3.4.3:
     resolution: {integrity: sha512-V9kOzaItwDgqlryhXysQsAXUEKi5O7kqWUaP3dXI7MLvkPqWWMb4wVb1QAtmEDCKI+XIAINsZoNKMFF7sZb1eg==}
@@ -9632,6 +9648,11 @@ snapshots:
       undici: 6.29.1
       which: 6.0.1
 
+  node-hid@3.4.0:
+    dependencies:
+      node-addon-api: 8.9.2
+      pkg-prebuilds: 1.1.0
+
   node-int64@0.4.0: {}
 
   node-llama-cpp@3.22.3(typescript@7.0.2):
@@ -9887,6 +9908,8 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  pkg-prebuilds@1.1.0: {}
 
   pkijs@3.4.3:
     dependencies:

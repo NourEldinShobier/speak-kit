@@ -427,3 +427,29 @@ describe("languages and models", () => {
     expect(parseConfig({ dictation: { model: "../../evil" } }).dictation.model).toBe("large-v3-turbo-q5_0");
   });
 });
+
+describe("mouse button shortcuts", () => {
+  it("loads a saved mouse button for the dictation, paste last and learn shortcuts", () => {
+    const got = v.parse(DictationConfigSchema, { hotkey: "logi:0x00c3", pasteLastHotkey: "logi:0x00d7", learnHotkey: "logi:0x00c4" });
+    expect([got.hotkey, got.pasteLastHotkey, got.learnHotkey]).toEqual(["logi:0x00c3", "logi:0x00d7", "logi:0x00c4"]);
+  });
+
+  it("loads an old config with keys exactly as before", () => {
+    const got = v.parse(DictationConfigSchema, { hotkey: "ControlLeft+AltLeft+Space", pasteLastHotkey: "F9", learnHotkey: "" });
+    expect([got.hotkey, got.pasteLastHotkey, got.learnHotkey, got.resetNotice]).toEqual(["ControlLeft+AltLeft+Space", "F9", "", undefined]);
+  });
+
+  it("clears the optional shortcut that uses the same button as another", () => {
+    const got = v.parse(DictationConfigSchema, { hotkey: "logi:0x00c3", learnHotkey: "logi:0x00c3" });
+    expect([got.hotkey, got.learnHotkey, got.resetNotice]).toEqual(["logi:0x00c3", "", "clash"]);
+  });
+
+  it("falls back to the default for a malformed button id", () => {
+    expect(v.parse(DictationConfigSchema, { hotkey: "logi:0x00c" }).hotkey).toBe(DEFAULTS.hotkey);
+  });
+
+  it("lets the settings page patch a mouse button, and not as the cancel key", () => {
+    expect(v.safeParse(DictationPatchSchema, { hotkey: "logi:0x00c3" }).success).toBe(true);
+    expect(v.safeParse(DictationPatchSchema, { cancelKey: "logi:0x00c3" }).success).toBe(false);
+  });
+});

@@ -53,8 +53,9 @@ export const hotkeyKeys = (hotkey: string): string[] => hotkey.split("+");
 /** A key that is safe to be the whole hotkey: a modifier, a function key or a key typing never uses. Letters, digits and Space alone are not. */
 const standsAlone = (code: string) => code in MODIFIERS || /^F\d+$/.test(code) || ["Pause", "ScrollLock", "Insert", "CapsLock", ...ADVANCED_KEYS].includes(code);
 
-/** One to three known, different keys; a single key must be one that stands alone, a chord needs a modifier or such a key in it. */
+/** A learned mouse button, or one to three known, different keys; a single key must be one that stands alone, a chord needs a modifier or such a key in it. */
 export function validHotkey(hotkey: string): boolean {
+  if (isLogiHotkey(hotkey)) return true;
   const keys = hotkeyKeys(hotkey);
   return keys.length <= MAX_CHORD_KEYS && new Set(keys).size === keys.length && keys.every((k) => k in KEY_VK) && keys.some(standsAlone) && (keys.length > 1 || standsAlone(keys[0]!));
 }
@@ -82,7 +83,11 @@ const LABELS: Record<string, string> = {
 };
 const ORDER = ["ControlLeft", "ControlRight", "AltLeft", "AltRight", "ShiftLeft", "ShiftRight", "MetaLeft", "MetaRight"];
 
-export const keyLabel = (code: string, platform = "win32"): string => (platform === "darwin" ? MAC_LABELS[code] : undefined) ?? LABELS[code] ?? code.replace(/^Key|^Digit/, "");
+export const keyLabel = (code: string, platform = "win32"): string => {
+  const cid = logiCid(code);
+  if (cid !== undefined) return logiLabel(cid);
+  return (platform === "darwin" ? MAC_LABELS[code] : undefined) ?? LABELS[code] ?? code.replace(/^Key|^Digit/, "");
+};
 
 /** The hotkey as chips: modifiers first (Ctrl, Alt, Shift, Win), then the rest. */
 export function hotkeyLabels(hotkey: string, platform = "win32"): string[] {
@@ -101,3 +106,16 @@ export function hotkeyFrom(codes: readonly string[]): string | null {
   const h = keys.join("+");
   return validHotkey(h) ? h : null;
 }
+
+/** A Logitech mouse button the app learned is stored as "logi:0x00c3" (the control id of the button), in place of keys. */
+const LOGI_ID = /^logi:0x([0-9a-f]{4})$/;
+export const logiHotkey = (cid: number): string => `logi:0x${cid.toString(16).padStart(4, "0")}`;
+export const isLogiHotkey = (hotkey: string): boolean => LOGI_ID.test(hotkey);
+/** The control id of a stored button, or undefined when the shortcut is made of keys. */
+export const logiCid = (hotkey: string): number | undefined => {
+  const m = LOGI_ID.exec(hotkey);
+  return m ? parseInt(m[1]!, 16) : undefined;
+};
+/** The buttons Logitech mice have in common; any other control reads "Button 0x01a0". */
+const LOGI_NAMES: Record<number, string> = { 0x52: "Middle button", 0x53: "Back button", 0x56: "Forward button", 0xc3: "Gesture button", 0xc4: "Smart Shift button", 0xd7: "DPI button" };
+export const logiLabel = (cid: number): string => LOGI_NAMES[cid] ?? `Button ${logiHotkey(cid).slice(5)}`;

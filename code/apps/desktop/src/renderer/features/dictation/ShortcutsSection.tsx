@@ -58,7 +58,7 @@ function Primary({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string)
         className="lm-row--control"
         label="Dictation shortcut"
         description="Starts and stops dictation in every app."
-        control={<HotkeyRecorder slot="dictation" label="Dictation shortcut" value={c.hotkey} restore="ControlRight" status={s} save={(hotkey) => patch({ hotkey })} confirmAdvanced={confirm} />}
+        control={<HotkeyRecorder slot="dictation" label="Dictation shortcut" value={c.hotkey} restore="ControlRight" status={s} save={(hotkey) => patch({ hotkey })} confirmAdvanced={confirm} mouse />}
       />
       <SettingRow
         className="lm-row--control"
@@ -88,6 +88,7 @@ function Others({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) 
             status={s}
             save={(pasteLastHotkey) => patch({ pasteLastHotkey })}
             confirmAdvanced={confirm}
+            mouse
           />
         }
       />
@@ -103,7 +104,9 @@ function Learn({ s, confirm }: { s: DictationStatus; confirm: (hotkey: string) =
         className="lm-row--control"
         label="Learn correction"
         description="After you fix a misheard word in the app you dictated into, press this to teach Speak Kit the fix. It reads that text once, when you press the key, and nothing leaves this computer."
-        control={<HotkeyRecorder slot="learn" label="Learn correction" value={s.settings.learnHotkey} restore="" status={s} save={(learnHotkey) => patch({ learnHotkey })} confirmAdvanced={confirm} />}
+        control={
+          <HotkeyRecorder slot="learn" label="Learn correction" value={s.settings.learnHotkey} restore="" status={s} save={(learnHotkey) => patch({ learnHotkey })} confirmAdvanced={confirm} mouse />
+        }
       />
     </div>
   );

@@ -333,11 +333,11 @@ export class DictationService {
   }
 
   async dispose(): Promise<void> {
+    this.#hotkeys?.dispose(); // first: the app may exit before the rest finishes, and the mouse must not keep its buttons diverted
     this.#stopSpeech?.();
     this.speech.dispose();
     this.#throttle.dispose();
     await this.#output.dispose();
-    this.#hotkeys?.dispose();
     this.#stopPower?.();
     this.presenter.dispose();
     await this.ready;

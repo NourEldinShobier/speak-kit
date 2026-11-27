@@ -140,6 +140,9 @@ type HudBody =
 /** `locale` is the language of the words around the pill; main adds it when it sends a view. */
 export type HudView = HudBody & { locale?: string };
 
+/** What learning a mouse button ends with: the button pressed, or why none was. */
+export type ButtonLearn = { ok: true; id: string; label: string } | { ok: false; reason: "unavailable" | "timeout" | "cancelled" };
+
 export interface DictationBridge {
   status(): Promise<DictationStatus>;
   setEnabled(on: boolean): Promise<DictationStatus>;
@@ -187,6 +190,9 @@ export interface DictationBridge {
   openSoundSettings(): Promise<void>;
   /** Opens the operating system's microphone permission page. */
   openMicrophoneSettings(): Promise<void>;
+  /** Waits for the next press on a Logitech mouse button (up to 15 seconds) and returns it as a shortcut value. */
+  learnButton(): Promise<ButtonLearn>;
+  cancelLearnButton(): Promise<void>;
   onStatus(cb: (s: DictationStatus) => void): () => void;
   /** HUD page and microphone window. */
   onHud(cb: (v: HudView) => void): () => void;
@@ -277,6 +283,8 @@ export const DICTATION_ARGS = {
   vocabImport: v.tuple([]),
   vocabExport: v.tuple([v.picklist(["json", "txt", "csv"]), v.pipe(v.string(), v.maxLength(2_000_000))]),
   openMicrophoneSettings: v.tuple([]),
+  learnButton: v.tuple([]),
+  cancelLearnButton: v.tuple([]),
 } as const satisfies Record<DictationMethod, v.GenericSchema<unknown[]>>;
 
 export const HudActionSchema = v.picklist(HUD_ACTIONS);

@@ -1,6 +1,7 @@
 import type { Dictation } from "@speakkit/dictation";
 import type { SwitchableHotkeys } from "./hotkey-source";
 import type { HudPresenter } from "./hud-presenter";
+import type { ButtonLearn } from "../../shared/dictation/contract";
 import { at } from "../../shared/i18n";
 import "../../shared/i18n/packs/main";
 
@@ -44,6 +45,15 @@ export class ShortcutControls {
   attach(hotkeys: SwitchableHotkeys): void {
     hotkeys.onPasteLast(() => void this.pasteLast());
     hotkeys.onLearn(() => void this.#d.learn());
+  }
+
+  /** Waits for a press on a Logitech mouse button; `unavailable` before the hotkeys exist. */
+  async learnButton(): Promise<ButtonLearn> {
+    return (await this.#d.hotkeys()?.learnButton()) ?? { ok: false, reason: "unavailable" };
+  }
+
+  cancelLearnButton(): void {
+    this.#d.hotkeys()?.cancelLearnButton();
   }
 
   undoCancel(): boolean {
