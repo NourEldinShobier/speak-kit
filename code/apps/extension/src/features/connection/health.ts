@@ -1,4 +1,4 @@
-import { API_VERSION, DEFAULT_PORT, parseHealth, parseVoiceList, type Health, type VoiceList } from "@speakkit/protocol";
+import { API_VERSION, DEFAULT_PORT, parseHealth, parseVoiceList, type Health } from "@speakkit/protocol";
 import type { ConnResult } from "../../shared/internal";
 import { ignore } from "../../shared/ignore";
 import { tokenRejected } from "../../shared/rejection";
@@ -55,40 +55,26 @@ async function fetchHealth(get: Get, port: number): Promise<ConnResult<Health>> 
   }
 }
 
-/** True when Speak Kit answers its health route on `port`. Nothing is sent but the GET: the token goes only to a port that answered. */
-async function answers(get: Get, port: number): Promise<boolean> {
-  try {
-    const res = await get("/v1/health", port);
-    return res.ok && !!parseHealth(await res.json());
-  } catch {
-    return false;
-  }
-}
-
-/** The first port in the app's fallback range, other than `except`, where Speak Kit answers; null when none does. */
+/** The first port in the app's fallback range, other than `except`, where Speak Kit answers its health route; null when none does. Only the GET goes out: the token goes only to a port that answered. */
 async function findApp(get: Get, except: number): Promise<number | null> {
   const ports = Array.from({ length: FALLBACK_PORTS }, (_, i) => DEFAULT_PORT + i).filter((p) => p !== except);
-  const hits = await Promise.all(ports.map((p) => answers(get, p)));
+  const hits = await Promise.all(
+    ports.map(async (p) => {
+      const r = await fetchHealth(get, p);
+      return r.ok || r.code !== "app-not-running";
+    }),
+  );
   return ports.find((_, i) => hits[i]) ?? null;
 }
 
-async function checkAuth(get: Get, deps: HealthDeps): Promise<ConnResult<true>> {
+/** An authenticated GET; `read` turns an ok answer into the value, or undefined when it is not what the app should send. */
+async function authed<T>(get: Get, deps: HealthDeps, path: string, read: (res: Response) => Promise<T | undefined>): Promise<ConnResult<T>> {
   try {
-    const res = await get("/v1/auth/check", await deps.port(), await deps.token());
-    if (res.status === 204 || res.ok) return { ok: true, value: true };
-    return tokenRejected(res.status, await bodyOf(res)) ? rejected() : down();
-  } catch {
-    return down();
-  }
-}
-
-async function fetchVoices(get: Get, deps: HealthDeps): Promise<ConnResult<VoiceList>> {
-  try {
-    const res = await get("/v1/voices", await deps.port(), await deps.token());
+    const res = await get(path, await deps.port(), await deps.token());
     if (tokenRejected(res.status, await bodyOf(res))) return rejected();
     if (!res.ok) return down();
-    const list = parseVoiceList(await res.json());
-    return list ? { ok: true, value: list } : down();
+    const value = await read(res);
+    return value ? { ok: true, value } : down();
   } catch {
     return down();
   }
@@ -98,17 +84,17 @@ export function createHealthClient(deps: HealthDeps) {
   let cached: { at: number; port: number; value: ConnResult<Health> } | undefined;
   let inflight: Promise<ConnResult<Health>> | undefined;
   const get = makeGet(deps);
-  let scannedAt = -Infinity;
+  let scannedAt = 0;
 
   /** Health on the saved port; when nothing answers there, the app may have moved up to a free port: look once per cooldown and keep what is found. */
-  async function checkApp(port: number): Promise<{ port: number; value: ConnResult<Health> }> {
+  async function checkApp(port: number): Promise<ConnResult<Health>> {
     const value = await fetchHealth(get, port);
-    if (value.ok || value.code !== "app-not-running" || !deps.remember || deps.now() - scannedAt < SCAN_COOLDOWN_MS) return { port, value };
+    if (value.ok || value.code !== "app-not-running" || !deps.remember || deps.now() - scannedAt < SCAN_COOLDOWN_MS) return value;
     scannedAt = deps.now();
     const found = await findApp(get, port);
-    if (found === null) return { port, value };
+    if (found === null) return value;
     await deps.remember(found);
-    return { port: found, value: await fetchHealth(get, found) };
+    return fetchHealth(get, found);
   }
 
   return {
@@ -117,8 +103,8 @@ export function createHealthClient(deps: HealthDeps) {
       const port = await deps.port();
       if (!force && cached && cached.port === port && deps.now() - cached.at < HEALTH_TTL_MS) return cached.value;
       if (inflight && !force) return inflight;
-      const p = checkApp(port).then(({ port: at, value }) => {
-        cached = { at: deps.now(), port: at, value };
+      const p = checkApp(port).then((value) => {
+        cached = { at: deps.now(), port, value };
         return value;
       });
       const shared: Promise<ConnResult<Health>> = p.finally(() => {
@@ -131,7 +117,7 @@ export function createHealthClient(deps: HealthDeps) {
       cached = undefined;
     },
     /** Whether the app accepts the saved token. */
-    authCheck: () => checkAuth(get, deps),
-    voices: () => fetchVoices(get, deps),
+    authCheck: () => authed(get, deps, "/v1/auth/check", async () => true as const),
+    voices: () => authed(get, deps, "/v1/voices", async (res) => parseVoiceList(await res.json())),
   };
 }
