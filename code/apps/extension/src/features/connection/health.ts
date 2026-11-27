@@ -67,23 +67,24 @@ async function findApp(get: Get, except: number): Promise<number | null> {
   return ports.find((_, i) => hits[i]) ?? null;
 }
 
-/** An authenticated GET; `read` turns an ok answer into the value, or undefined when it is not what the app should send. */
-async function authed<T>(get: Get, deps: HealthDeps, path: string, read: (res: Response) => Promise<T | undefined>): Promise<ConnResult<T>> {
-  try {
-    const res = await get(path, await deps.port(), await deps.token());
-    if (tokenRejected(res.status, await bodyOf(res))) return rejected();
-    if (!res.ok) return down();
-    const value = await read(res);
-    return value ? { ok: true, value } : down();
-  } catch {
-    return down();
-  }
-}
-
 export function createHealthClient(deps: HealthDeps) {
   let cached: { at: number; port: number; value: ConnResult<Health> } | undefined;
   let inflight: Promise<ConnResult<Health>> | undefined;
   const get = makeGet(deps);
+
+  /** An authenticated GET; `read` turns an ok answer into the value, or undefined when it is not what the app should send. */
+  async function call<T>(path: string, read: (res: Response) => Promise<T | undefined>): Promise<ConnResult<T>> {
+    try {
+      const res = await get(path, await deps.port(), await deps.token());
+      if (tokenRejected(res.status, await bodyOf(res))) return rejected();
+      if (!res.ok) return down();
+      const value = await read(res);
+      return value ? { ok: true, value } : down();
+    } catch {
+      return down();
+    }
+  }
+
   let scannedAt = 0;
 
   /** Health on the saved port; when nothing answers there, the app may have moved up to a free port: look once per cooldown and keep what is found. */
@@ -117,7 +118,7 @@ export function createHealthClient(deps: HealthDeps) {
       cached = undefined;
     },
     /** Whether the app accepts the saved token. */
-    authCheck: () => authed(get, deps, "/v1/auth/check", async () => true as const),
-    voices: () => authed(get, deps, "/v1/voices", async (res) => parseVoiceList(await res.json())),
+    authCheck: () => call("/v1/auth/check", async () => true as const),
+    voices: () => call("/v1/voices", async (res) => parseVoiceList(await res.json())),
   };
 }
