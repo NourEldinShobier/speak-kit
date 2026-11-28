@@ -118,6 +118,41 @@ describe("assigned buttons", () => {
     s.buttons.dispose();
   });
 
+  it("reports the release of a button held down when the mouse is lost", async () => {
+    const m = fakeDevice();
+    const s = setup([m.dev]);
+    s.buttons.assign([0xd7]);
+    await vi.advanceTimersByTimeAsync(0);
+    m.press(0xd7, true);
+    m.lose();
+    expect(s.events).toEqual(["d7 down", "d7 up"]);
+    s.buttons.dispose();
+  });
+
+  it("reports the release of a button held down when the mouse reset and the divert is made again", async () => {
+    const m = fakeDevice();
+    const s = setup([m.dev]);
+    s.buttons.assign([0xd7]);
+    await vi.advanceTimersByTimeAsync(0);
+    m.press(0xd7, true);
+    m.flags[0xd7] = 0;
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(s.events).toEqual(["d7 down", "d7 up"]);
+    s.buttons.dispose();
+  });
+
+  it("reports the release of a button held down when it is no longer assigned", async () => {
+    const m = fakeDevice();
+    const s = setup([m.dev]);
+    s.buttons.assign([0xd7]);
+    await vi.advanceTimersByTimeAsync(0);
+    m.press(0xd7, true);
+    s.buttons.assign([0x52]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.events).toEqual(["d7 down", "d7 up"]);
+    s.buttons.dispose();
+  });
+
   it("asks the mouse to release its diverts when the app quits, without waiting", async () => {
     const m = fakeDevice();
     const s = setup([m.dev]);

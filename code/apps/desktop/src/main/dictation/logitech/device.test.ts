@@ -61,6 +61,17 @@ describe("a HID++ device", () => {
     expect(seen).toEqual(["c3 down", "52 down", "c3 up", "52 up"]);
   });
 
+  it("sees a press again after its release was lost and the button was diverted again", async () => {
+    const m = fakeMouse();
+    const dev = (await connectDevice(m.t, 50))!;
+    const seen: string[] = [];
+    dev.onPress((cid, down) => seen.push(`${cid.toString(16)} ${down ? "down" : "up"}`));
+    m.send(0x11, 0xff, 13, 0x00, 0x00, 0xc3);
+    await dev.setDivert(0xc3, true);
+    m.send(0x11, 0xff, 13, 0x00, 0x00, 0xc3);
+    expect(seen).toEqual(["c3 down", "c3 down"]);
+  });
+
   it("asks for the divert to end without waiting", async () => {
     const m = fakeMouse();
     const dev = (await connectDevice(m.t, 50))!;

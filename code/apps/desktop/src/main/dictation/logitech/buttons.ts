@@ -30,6 +30,8 @@ interface Held {
   owned: Set<number>;
   /** Buttons diverted for the length of a learn. */
   temp: Set<number>;
+  /** Shortcut buttons reported down and not yet reported up. */
+  down: Set<number>;
 }
 
 const noop = (): void => undefined;
@@ -64,6 +66,7 @@ class Buttons implements ButtonSource {
 
   assign(cids: readonly number[]): void {
     this.#wanted = new Set(cids);
+    for (const h of this.#held) for (const cid of h.down) if (!this.#wanted.has(cid)) this.#release(h, cid);
     if (cids.length > 0 && !this.#timer && !this.#disposed) {
       this.#timer = setInterval(() => void this.#enqueue(() => this.#sync()), this.#d.checkMs);
       this.#timer.unref?.();
@@ -105,22 +108,32 @@ class Buttons implements ButtonSource {
         dev.close();
         continue;
       }
-      const held: Held = { dev, owned: new Set(), temp: new Set() };
-      dev.onPress((cid, down) => this.#onPress(cid, down));
+      const held: Held = { dev, owned: new Set(), temp: new Set(), down: new Set() };
+      dev.onPress((cid, down) => this.#onPress(held, cid, down));
       dev.onLost(() => this.#drop(held));
       this.#held.push(held);
     }
   }
 
+  /** A mouse that is gone, reset or no longer asked for never sends the release of a button it held down: report it, or the shortcut stays pressed. */
+  #release(h: Held, cid: number): void {
+    if (h.down.delete(cid)) this.#press(cid, false);
+  }
+
   #drop(h: Held): void {
     this.#held = this.#held.filter((x) => x !== h);
+    for (const cid of h.down) this.#release(h, cid);
     h.dev.close();
   }
 
-  #onPress(cid: number, down: boolean): void {
+  #onPress(h: Held, cid: number, down: boolean): void {
     if (this.#learning) {
-      if (down && this.#held.some((h) => learnable(h.dev.controls).has(cid))) this.#learning({ ok: true, id: logiHotkey(cid), label: logiLabel(cid) });
-    } else if (this.#wanted.has(cid)) this.#press(cid, down);
+      if (down && this.#held.some((x) => learnable(x.dev.controls).has(cid))) this.#learning({ ok: true, id: logiHotkey(cid), label: logiLabel(cid) });
+    } else if (this.#wanted.has(cid)) {
+      if (down) h.down.add(cid);
+      else if (!h.down.delete(cid)) return;
+      this.#press(cid, down);
+    }
   }
 
   /** Connects when something is wanted and nothing is connected, then brings each device in line with the wanted buttons. */
@@ -146,6 +159,7 @@ class Buttons implements ButtonSource {
     const flags = await this.#flags(h, new Set([...this.#wanted, ...h.owned]));
     const plan = planDiverts({ controls: h.dev.controls, wanted: this.#wanted, owned: h.owned, flags });
     for (const cid of plan.divert) {
+      this.#release(h, cid);
       await h.dev.setDivert(cid, true);
       h.owned.add(cid);
     }

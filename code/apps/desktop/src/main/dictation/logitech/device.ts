@@ -75,6 +75,8 @@ class Session implements ReprogDevice {
   }
   async setDivert(cid: number, on: boolean): Promise<void> {
     await this.#request(this.#feature, 3, divertParams(cid, on));
+    // A diverted button starts from up: a release lost before a reset must not hide the next press.
+    this.#held = new Set([...this.#held].filter((c) => c !== cid));
   }
   releaseNow(cids: readonly number[]): void {
     for (const cid of cids) this.#send(this.#feature, 3, divertParams(cid, false));
