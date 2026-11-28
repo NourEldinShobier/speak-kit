@@ -238,12 +238,12 @@ describe("double tap lock", () => {
     expect(r.rec.log).toEqual(["start:450", "discard", "start:450", "discard"]);
   });
 
-  it("Escape in a locked recording reaches the app and does not cancel", async () => {
+  it("Escape cancels a locked recording and is taken from the app", async () => {
     const r = await rig();
     await r.hold(100);
     await r.hold(100);
-    expect(r.keys.send("Escape", true, r.time.clock.now())).toBe(false);
-    expect(r.dictation.state()).toEqual({ status: "locked" });
+    expect(r.keys.send("Escape", true, r.time.clock.now())).toBe(true);
+    expect(r.dictation.state()).toMatchObject({ status: "idle" });
   });
 
   it("a lost key release is repaired by the stuck-key poll and the recording stays locked", async () => {

@@ -313,8 +313,8 @@ export class DictationService {
 
   // ---- history, retry, HUD buttons ---------------------------------------------------------------------------
 
-  /** True when `contents` is the HUD page: only it may press the HUD buttons. */
-  ownsHud = (contents: WebContents): boolean => !!this.#hudWindow?.owns?.(contents);
+  /** The HUD window when `contents` is its page: only it may press the HUD buttons. */
+  hudOf = (contents: WebContents): HudWindow | undefined => (this.#hudWindow?.owns?.(contents) ? this.#hudWindow : undefined);
 
   #downloadFromHud(): void {
     this.#ctx.showWindow();

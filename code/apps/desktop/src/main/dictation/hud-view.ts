@@ -18,7 +18,7 @@ export interface HudInput {
   secureInput?: boolean;
   /** A failed recording is kept, so "Try again" can work. */
   canRetry: boolean;
-  /** Key that cancels a toggled recording, as a label. */
+  /** Key that cancels a toggled or locked recording, as a label. */
   cancelLabel?: string;
   /** The speech model is not loaded yet, so a recording that was handed over waits for it. */
   speechLoading?: boolean;
@@ -89,7 +89,7 @@ export function hudViewFor(i: HudInput): HudView | null {
         ...(s.mode === "toggle" && i.cancelLabel && { cancel: i.cancelLabel }),
       };
     case "locked":
-      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, i.platform) };
+      return { kind: "recording", locked: true, startedAt: i.startedAt, level: i.level, hotkey: hotkeyText(i.hotkey, i.platform), ...(i.cancelLabel && { cancel: i.cancelLabel }) };
     case "transcribing":
       if (s.rewriting) return { kind: "transcribing", skip: { label: at("hud.skip"), id: "skip-rewrite", ...(i.cancelLabel && { key: i.cancelLabel }) } };
       return i.speechLoading ? { kind: "transcribing", loading: true } : { kind: "transcribing" };

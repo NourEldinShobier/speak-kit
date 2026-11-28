@@ -1,7 +1,7 @@
 import { openMicrophoneSettings } from "./mic-settings";
 import { ipcMain } from "electron";
 import * as v from "valibot";
-import { DICTATION_METHODS, dictationChannel, HUD_ACTION, type DictationMethod } from "../../shared/dictation/channels";
+import { DICTATION_METHODS, dictationChannel, HUD_ACTION, HUD_POINTER, type DictationMethod } from "../../shared/dictation/channels";
 import { DICTATION_ARGS, HudActionSchema, type DictationBridge } from "../../shared/dictation/contract";
 import { registerValidatedIpc } from "../ipc-register";
 import type { DictationService } from "./service";
@@ -53,6 +53,9 @@ export function registerDictationIpc(d: DictationService, isAppWindow: (contents
   });
   ipcMain.on(HUD_ACTION, (e, action) => {
     const parsed = v.safeParse(HudActionSchema, action);
-    if (parsed.success && d.ownsHud(e.sender)) d.actions.hudAction(parsed.output);
+    if (parsed.success && d.hudOf(e.sender)) d.actions.hudAction(parsed.output);
+  });
+  ipcMain.on(HUD_POINTER, (e, over) => {
+    d.hudOf(e.sender)?.pointerOver?.(over === true);
   });
 }

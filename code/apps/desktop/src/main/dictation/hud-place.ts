@@ -22,5 +22,11 @@ export function drawn(indicator: Indicator, view: HudView): boolean {
   return !(view.kind === "recording" || (view.kind === "transcribing" && !view.skip) || view.kind === "ready" || view.kind === "pasted");
 }
 
-/** Whether the pill has a button to click; only then does the HUD window take the mouse, otherwise clicks fall through to the app underneath. */
-export const takesClicks = (view: HudView): boolean => (view.kind === "error" && !!view.action) || (view.kind === "transcribing" && !!view.skip);
+/**
+ * How the HUD window treats the mouse for a view. "click": a failure's button or the skip button takes it over the whole window. "forward": a recording's
+ * cancel button takes it only while the pointer is over the button (the page reports that), everything else falls through. "ignore": everything falls through.
+ */
+export function mouseMode(view: HudView): "click" | "forward" | "ignore" {
+  if ((view.kind === "error" && !!view.action) || (view.kind === "transcribing" && !!view.skip)) return "click";
+  return view.kind === "recording" ? "forward" : "ignore";
+}

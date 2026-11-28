@@ -197,6 +197,7 @@ export interface DictationBridge {
   /** HUD page and microphone window. */
   onHud(cb: (v: HudView) => void): () => void;
   hudAction(a: HudAction): void;
+  hudPointer(over: boolean): void;
   recorder: {
     onCommand(cb: (c: RecorderCommand) => void): () => void;
     reply(id: number, result: RecorderResult): void;

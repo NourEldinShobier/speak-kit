@@ -17,11 +17,15 @@ export interface HudWindow {
   push(state: HudState): void;
   /** True when `contents` is this window's page (the HUD buttons report through it). */
   owns?(contents: Electron.WebContents): boolean;
+  /** The pointer is over a button of a recording pill: the window takes the mouse until it leaves. */
+  pointerOver?(over: boolean): void;
   /** Moves the window to its place on the screen (top or bottom of the display under the pointer) and shows it without taking focus. */
   showInactive(place?: "top" | "bottom"): void;
   hide(): void;
   destroy(): void;
 }
+
+const isRecording = (s: HudState | null): boolean => s?.kind === "recording" || (s?.kind === "view" && s.view.kind === "recording");
 
 export interface Hud {
   /** True while a window exists (visible or hidden, waiting to be reused). */
@@ -70,6 +74,8 @@ export class HudController implements Hud {
 
   show(state: HudState): void {
     this.#wanted = true;
+    // A recording that starts while an earlier pill still shows (a "Pasted" check) goes to the display the pointer is on now.
+    if (isRecording(state) && !isRecording(this.#latest)) this.#shown = false;
     this.#latest = state;
     clearTimeout(this.#idle);
     this.#flush(this.#win && !this.#win.destroyed ? this.#win : this.#create());

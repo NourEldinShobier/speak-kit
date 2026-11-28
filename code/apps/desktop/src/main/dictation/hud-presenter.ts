@@ -20,7 +20,7 @@ interface Deps {
   hotkey(): string;
   platform: NodeJS.Platform;
   canRetry(): boolean;
-  /** Label of the key that cancels a toggled recording. */
+  /** Label of the key that cancels a toggled or locked recording. */
   cancelLabel?(): string;
   /** The last insert ended with the text on the clipboard only. */
   insertedAsCopy(): boolean;

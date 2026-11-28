@@ -67,7 +67,7 @@ export const MAIN = definePack({
   "hud.stopHint": "Press the hotkey to stop, {cancel} cancels",
   "hud.lockedHint": "Recording locked. Press {key} to finish.",
   "hud.release": "Release to finish",
-  "hud.cancelRecording": "Cancel",
+  "hud.cancelRecording": "Cancel recording",
   "hud.soundSettings": "Sound settings",
   "hud.tryAgain": "Try again",
   "hud.copy": "Copy",

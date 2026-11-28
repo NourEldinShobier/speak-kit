@@ -26,7 +26,7 @@ describe("dictation styles", () => {
 describe("the dictation pill and Reduce motion", () => {
   const hud = readFileSync(new URL("./hud.css", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   it("stops the level-bar transition and the spinner when the system asks for reduced motion", () => {
-    expect(hud).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.hud__bars i \{\s*transition: none;\s*\}\s*\.hud \.lm-spin \{\s*animation: none;/);
+    expect(hud).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.hud__bars i,\s*\.hud__close \{\s*transition: none;\s*\}\s*\.hud \.lm-spin \{\s*animation: none;/);
     expect(hud).not.toContain("data-reduce-motion");
   });
 });

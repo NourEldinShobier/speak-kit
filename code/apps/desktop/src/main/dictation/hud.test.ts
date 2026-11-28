@@ -58,6 +58,20 @@ describe("hud window place", () => {
   });
 });
 
+describe("hud window display", () => {
+  it("is placed again when a recording starts while an earlier pill still shows, and not when its state only changes", async () => {
+    const { hud, windows } = setup();
+    hud.show({ kind: "recording", level: 0 });
+    windows[0]!.load();
+    await flush();
+    hud.show({ kind: "transcribing" });
+    hud.show({ kind: "view", view: { kind: "pasted" } });
+    hud.show({ kind: "view", view: { kind: "recording", locked: false, startedAt: 0, level: 0, hotkey: "x" } });
+    hud.show({ kind: "view", view: { kind: "recording", locked: true, startedAt: 0, level: 0, hotkey: "x" } });
+    expect(windows[0]!.log.filter((l) => l === "show")).toHaveLength(2);
+  });
+});
+
 describe("hud window lifecycle", () => {
   it("creates nothing until the first show", () => {
     const { hud, windows } = setup();

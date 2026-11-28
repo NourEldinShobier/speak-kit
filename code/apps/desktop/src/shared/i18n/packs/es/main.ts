@@ -67,7 +67,7 @@ export const ES_MAIN: Record<keyof typeof MAIN, string> = {
   "hud.stopHint": "Pulsa la tecla rápida para detener, {cancel} cancela",
   "hud.lockedHint": "Grabación fijada. Pulsa {key} para terminar.",
   "hud.release": "Suelta para terminar",
-  "hud.cancelRecording": "Cancelar",
+  "hud.cancelRecording": "Cancelar grabación",
   "hud.soundSettings": "Ajustes de sonido",
   "hud.tryAgain": "Reintentar",
   "hud.copy": "Copiar",

@@ -237,11 +237,11 @@ describe("pills for activation", () => {
     });
   });
 
-  it("shows the cancel key while a toggled recording runs, and not in a held or locked one", () => {
+  it("shows the cancel key while a toggled or locked recording runs, and not in a held one", () => {
     const base = { hotkey: "F9", platform: "win32" as const, startedAt: 0, level: 0, insertedAsCopy: false, canRetry: false, cancelLabel: "Esc" };
     expect(hudViewFor({ ...base, state: { status: "recording", mode: "toggle" } })).toMatchObject({ cancel: "Esc" });
     expect(hudViewFor({ ...base, state: { status: "recording", mode: "hold" } })).not.toHaveProperty("cancel");
-    expect(hudViewFor({ ...base, state: { status: "locked" } })).not.toHaveProperty("cancel");
+    expect(hudViewFor({ ...base, state: { status: "locked" } })).toMatchObject({ cancel: "Esc" });
   });
 
   it("offers Undo after a cancel that can be undone", () => {

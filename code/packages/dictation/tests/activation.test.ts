@@ -67,8 +67,10 @@ describe("shortcut modes", () => {
     expect(r.capture).toMatchObject({ kind: "toggle" });
   });
 
-  it("Escape does nothing while locked or held", () => {
-    expect(play("DH0 UH100 DH200 UH300 E400", base).capture).toMatchObject({ kind: "locked" });
+  it("Escape cancels a locked recording and does nothing while held", () => {
+    const locked = play("DH0 UH100 DH200 UH300 E400", base);
+    expect(locked.capture).toEqual({ kind: "idle" });
+    expect(locked.effects).toEqual(["start", "discard", "start", "cancel"]);
     expect(play("DH0 E400", base).capture).toMatchObject({ kind: "hold" });
   });
 

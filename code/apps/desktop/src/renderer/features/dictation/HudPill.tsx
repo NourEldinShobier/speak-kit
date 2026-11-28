@@ -48,11 +48,17 @@ function Recording({ view }: { view: Extract<HudView, { kind: "recording" }> }) 
       <Bars level={view.level} />
       <Elapsed since={view.startedAt} />
       <Hint>{recordingHint(view, t)}</Hint>
-      {view.locked && !view.cancel && (
-        <button type="button" className="hud__act" onClick={(e) => (e.stopPropagation(), dictation.hudAction("cancel-recording"))}>
-          {t("hud.cancelRecording")}
-        </button>
-      )}
+      <button
+        type="button"
+        className="hud__close"
+        aria-label={t("hud.cancelRecording")}
+        title={t("hud.cancelRecording")}
+        onClick={() => dictation.hudAction("cancel-recording")}
+        onPointerEnter={() => dictation.hudPointer(true)}
+        onPointerLeave={() => dictation.hudPointer(false)}
+      >
+        <Icon name="x" size={12} />
+      </button>
     </>
   );
 }

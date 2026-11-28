@@ -67,7 +67,7 @@ export const DE_MAIN: Record<keyof typeof MAIN, string> = {
   "hud.stopHint": "Zum Beenden den Kurzbefehl drücken, {cancel} bricht ab",
   "hud.lockedHint": "Aufnahme fixiert. Zum Beenden {key} drücken.",
   "hud.release": "Zum Beenden loslassen",
-  "hud.cancelRecording": "Abbrechen",
+  "hud.cancelRecording": "Aufnahme abbrechen",
   "hud.soundSettings": "Soundeinstellungen",
   "hud.tryAgain": "Erneut versuchen",
   "hud.copy": "Kopieren",

@@ -1,8 +1,9 @@
-import { screen } from "electron";
+import { screen, type BrowserWindow } from "electron";
+import type { HudView } from "../../shared/dictation/contract";
 import { HUD_EVENT } from "../../shared/dictation/channels";
 import { createSecureWindow } from "../secure-window";
 import { hudChrome, raiseAboveEverything } from "./hud-chrome";
-import { hudPosition, takesClicks } from "./hud-place";
+import { hudPosition, mouseMode } from "./hud-place";
 import type { HudState, HudWindow } from "./hud";
 import { activeLocale } from "../../shared/i18n";
 
@@ -47,6 +48,34 @@ export function stateScript(state: HudState): string {
   })()`;
 }
 
+/** Applies a view's mouse mode to the window. Level updates arrive many times a second, so the window is touched only when the mode changes, which keeps a hover over the cancel button. */
+function mouseGate(w: Pick<BrowserWindow, "setIgnoreMouseEvents">) {
+  let mode: ReturnType<typeof mouseMode> = "ignore";
+  const apply = (ignore: boolean, forward: boolean) => w.setIgnoreMouseEvents(ignore, { forward });
+  return {
+    view(view: HudView): void {
+      const next = mouseMode(view);
+      if (next !== mode) apply(next !== "click", next === "forward");
+      mode = next;
+    },
+    /** The pointer is over (or left) a button of a recording. */
+    over(on: boolean): void {
+      if (mode === "forward") apply(!on, true);
+    },
+    reset(): void {
+      mode = "ignore";
+      apply(true, false);
+    },
+  };
+}
+
+/** Puts the window on the display the pointer is on and shows it. setBounds, not setPosition: a window moved to a display with another scale factor keeps its size only when the whole rectangle is given. */
+function showAtCursor(w: Pick<BrowserWindow, "setBounds" | "showInactive">, size: { width: number; height: number }, place: "top" | "bottom"): void {
+  const at = hudPosition(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, size, place);
+  w.setBounds({ ...at, ...size });
+  w.showInactive();
+}
+
 /**
  * A small always-on-top window that ignores the mouse and cannot take focus: `focusable: false` keeps it from being activated, `showInactive` keeps
  * the foreground window foreground, and the "screen-saver" level keeps it above full-screen windowed apps (on macOS also a panel on every Space).
@@ -74,7 +103,8 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
     () => settle.resolve(),
   );
   raiseAboveEverything(w, hudChrome(process.platform));
-  w.setIgnoreMouseEvents(true);
+  const mouse = mouseGate(w);
+  mouse.reset();
   w.loadURL(page).catch(settle.reject);
 
   return {
@@ -86,7 +116,7 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
     push(state) {
       if (state.kind === "view") {
         // Buttons in the pill need the mouse; everything else lets clicks fall through to the app underneath.
-        w.setIgnoreMouseEvents(!takesClicks(state.view));
+        mouse.view(state.view);
         w.webContents.send(HUD_EVENT, { ...state.view, locale: activeLocale() });
         return;
       }
@@ -94,12 +124,11 @@ export function openHudWindow({ page = HUD_PAGE_URL, width = 240, height = 56, b
         // The page can be gone by the time the script runs (window destroyed right after a show).
       });
     },
+    pointerOver: mouse.over,
     showInactive(place = "bottom") {
-      const at = hudPosition(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, { width, height }, place);
-      w.setPosition(at.x, at.y);
-      w.showInactive();
+      showAtCursor(w, { width, height }, place);
     },
-    hide: () => w.hide(),
+    hide: () => (mouse.reset(), w.hide()),
     destroy() {
       if (!w.isDestroyed()) w.destroy();
     },

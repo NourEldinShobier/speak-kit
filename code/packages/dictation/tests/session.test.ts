@@ -78,7 +78,7 @@ describe("double tap lock", () => {
     ["D0 U100 K150 D200 U250", ["start:450#1", "discard#1", "start:450#2", "discard#2"], "armed"],
     ["D0 U100 D200 U300 D1000", ["start:450#1", "discard#1", "start:450#2", "finish#2"], "ignoring"],
     ["D0 U100 D200 U300 D1000 U1050", ["start:450#1", "discard#1", "start:450#2", "finish#2"], "idle"],
-    ["D0 U100 D200 U300 K400 E500", ["start:450#1", "discard#1", "start:450#2"], "locked"],
+    ["D0 U100 D200 U300 K400 E500", ["start:450#1", "discard#1", "start:450#2", "cancel#2"], "idle"],
     ["D0 U100 D200 U300 D400 D410", ["start:450#1", "discard#1", "start:450#2", "finish#2"], "ignoring"],
   ];
   for (const [script, effects, kind] of rows) it(`${script} -> ${kind}`, () => expect(play(script)).toMatchObject({ effects, capture: { kind } }));

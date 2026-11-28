@@ -32,13 +32,18 @@ describe("HUD pill", () => {
     const h = html({ kind: "recording", locked: true, startedAt: Date.now(), level: 0, hotkey: "x" });
     expect(h).not.toContain("hud__dot");
     expect(h).toContain("Recording locked. Press x to finish.");
-    expect(h).toContain("Cancel");
+    expect(h).toContain('aria-label="Cancel recording"');
   });
 
-  it("shows the cancel key instead of a button while a toggled recording runs", () => {
+  it("puts a round Cancel recording button on a held recording too", () => {
+    const h = html({ kind: "recording", locked: false, startedAt: 0, level: 0, hotkey: "x" });
+    expect(h).toContain('class="hud__close" aria-label="Cancel recording"');
+  });
+
+  it("shows the cancel key next to the button while a toggled recording runs", () => {
     const h = html({ kind: "recording", locked: true, startedAt: 0, level: 0, hotkey: "x", cancel: "Esc" });
     expect(h).toContain("Press the hotkey to stop, Esc cancels");
-    expect(h).not.toContain(">Cancel<");
+    expect(h).toContain('aria-label="Cancel recording"');
   });
 
   it("offers Undo on a cancelled notice", () => {

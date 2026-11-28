@@ -70,9 +70,34 @@
   outline-offset: 2px;
 }
 
+/* The round cancel button at the right end of a recording pill. */
+.hud__close {
+  all: unset;
+  flex: none;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-inline-start: 2px;
+  border-radius: 50%;
+  background: rgb(250 250 250 / 0.14);
+  color: #fafafa;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.hud__close:hover {
+  background: rgb(250 250 250 / 0.28);
+}
+.hud__close:focus-visible {
+  outline: 2px solid #fda29b;
+  outline-offset: 2px;
+}
+
 /* Reduce motion (the system setting): the level bars jump instead of gliding and the spinner stands still. */
 @media (prefers-reduced-motion: reduce) {
-  .hud__bars i {
+  .hud__bars i,
+  .hud__close {
     transition: none;
   }
   .hud .lm-spin {

@@ -1,5 +1,5 @@
 import type { IpcRenderer } from "electron";
-import { DICTATION_METHODS, dictationChannel, HUD_ACTION, HUD_EVENT, MIC_LEVEL_EVENT, REC_CHUNK, REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY, STATUS_EVENT } from "./channels";
+import { DICTATION_METHODS, dictationChannel, HUD_ACTION, HUD_EVENT, HUD_POINTER, MIC_LEVEL_EVENT, REC_CHUNK, REC_COMMAND, REC_EVENT, REC_LEVEL, REC_READY, REC_REPLY, STATUS_EVENT } from "./channels";
 import type { DictationBridge, HudView, RecorderCommand } from "./contract";
 
 export function dictationBridge(ipc: IpcRenderer): DictationBridge {
@@ -15,6 +15,7 @@ export function dictationBridge(ipc: IpcRenderer): DictationBridge {
     onHud: (cb) => on<HudView>(HUD_EVENT, cb),
     onMicLevel: (cb) => on<number>(MIC_LEVEL_EVENT, cb),
     hudAction: (a) => ipc.send(HUD_ACTION, a),
+    hudPointer: (over) => ipc.send(HUD_POINTER, over),
     recorder: {
       onCommand: (cb) => on<RecorderCommand>(REC_COMMAND, cb),
       reply: (id, result) => ipc.send(REC_REPLY, id, result),

@@ -99,11 +99,11 @@ function hotkey(session: Session, cfg: Config, press: Press & { down: boolean })
   return release(session, press.at);
 }
 
-// Another key: a chord during a short hold discards, a long hold ignores it, Escape cancels only a toggled recording.
+// Another key: a chord during a short hold discards, a long hold ignores it, Escape cancels a toggled or locked recording.
 function otherKey(session: Session, cfg: Config, event: KeyEvent): Step {
   const c = session.capture;
-  // Escape cancels only a recording this app owns: a toggled one. Held or locked ones leave it to the app in front.
-  if (c.kind === "toggle" && event.key === cfg.cancelKey) return { ...to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }), consumed: true };
+  // Escape cancels a recording that no key is holding: a toggled or locked one. A held one leaves it to the app in front; its HUD has a cancel button.
+  if ((c.kind === "toggle" || c.kind === "locked") && event.key === cfg.cancelKey) return { ...to(session, idle, { type: "discard-recording", id: c.id, cancelled: true }), consumed: true };
   if (c.kind === "armed") return { ...to(session, idle), consumed: false };
   if (c.kind === "hold" && event.at - c.pressedAt < HOLD_MS)
     return { ...to(session, { kind: "ignoring", key: c.key }, { type: "discard-recording", id: c.id, cancelled: false, why: "chord" }), consumed: false };

@@ -67,7 +67,7 @@ export const AR_MAIN: Record<keyof typeof MAIN, string> = {
   "hud.stopHint": "اضغط الاختصار للإيقاف، و{cancel} يلغي",
   "hud.lockedHint": "التسجيل مثبّت. اضغط {key} للإنهاء.",
   "hud.release": "حرّر للإنهاء",
-  "hud.cancelRecording": "إلغاء",
+  "hud.cancelRecording": "إلغاء التسجيل",
   "hud.soundSettings": "إعدادات الصوت",
   "hud.tryAgain": "حاول مرة أخرى",
   "hud.copy": "نسخ",

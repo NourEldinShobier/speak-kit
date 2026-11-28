@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { HudView } from "../../shared/dictation/contract";
-import { drawn, hudPosition, takesClicks } from "./hud-place";
+import { drawn, hudPosition, mouseMode } from "./hud-place";
 
 const area = { x: 1920, y: 0, width: 2560, height: 1400 };
 const size = { width: 560, height: 64 };
@@ -14,6 +14,17 @@ describe("hudPosition", () => {
   });
   it("follows a work area that starts below a taskbar at the top", () => {
     expect(hudPosition({ x: 0, y: 40, width: 1000, height: 700 }, size, "top")).toEqual({ x: 220, y: 64 });
+  });
+  it("places the pill on a display left of and above the primary one, where coordinates are negative", () => {
+    const left = { x: -1707, y: -120, width: 1707, height: 960 };
+    expect(hudPosition(left, size, "bottom")).toEqual({ x: -1133, y: 752 });
+    expect(hudPosition(left, size, "top")).toEqual({ x: -1133, y: -96 });
+  });
+  it("places the pill on the primary display at scale 1 and on a scaled one next to it, each by its own work area", () => {
+    const primary = { x: 0, y: 0, width: 1920, height: 1040 };
+    const scaled = { x: 1920, y: 0, width: 1280, height: 672 };
+    expect(hudPosition(primary, size, "bottom")).toEqual({ x: 680, y: 952 });
+    expect(hudPosition(scaled, size, "bottom")).toEqual({ x: 2280, y: 584 });
   });
   it("rounds to whole pixels on an odd width", () => {
     expect(hudPosition({ x: 0, y: 0, width: 1001, height: 700 }, size, "bottom").x).toBe(221);
@@ -41,11 +52,16 @@ describe("drawn", () => {
   });
 });
 
-describe("takesClicks", () => {
-  it("is true only for a failure with a button and the skip button of the rewrite", () => {
+describe("mouseMode", () => {
+  it("takes the whole window for a failure with a button and the skip button of the rewrite", () => {
     const skip = { label: "Skip", id: "skip-rewrite" } as const;
-    expect(takesClicks({ kind: "transcribing", skip })).toBe(true);
-    expect(takesClicks({ kind: "error", text: "e", icon: "alert-triangle", action: { label: "Try again", id: "retry" } })).toBe(true);
-    expect([{ kind: "transcribing" }, { kind: "error", text: "e", icon: "alert-triangle" }, { kind: "pasted" }].map((v) => takesClicks(v as HudView))).toEqual([false, false, false]);
+    expect(mouseMode({ kind: "transcribing", skip })).toBe("click");
+    expect(mouseMode({ kind: "error", text: "e", icon: "alert-triangle", action: { label: "Try again", id: "retry" } })).toBe("click");
+  });
+  it("forwards the mouse for a recording, whose cancel button reports its hover", () => {
+    expect(mouseMode({ kind: "recording", locked: false, startedAt: 0, level: 0, hotkey: "x" })).toBe("forward");
+  });
+  it("lets the mouse through everywhere else", () => {
+    expect([{ kind: "transcribing" }, { kind: "error", text: "e", icon: "alert-triangle" }, { kind: "pasted" }].map((v) => mouseMode(v as HudView))).toEqual(["ignore", "ignore", "ignore"]);
   });
 });

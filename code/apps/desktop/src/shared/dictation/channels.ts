@@ -46,6 +46,9 @@ export const HUD_ACTION = "speakkit:dictation:hud-action";
 export const HUD_ACTIONS = ["sound-settings", "download", "retry", "undo-cancel", "cancel-recording", "skip-rewrite", "dismiss", "copy-last", "paste-again", "learn-save", "learn-undo"] as const;
 export type HudAction = (typeof HUD_ACTIONS)[number];
 
+/** The HUD page tells whether the pointer is over a button of a recording: only then does the HUD window take the mouse. */
+export const HUD_POINTER = "speakkit:dictation:hud-pointer";
+
 /** Microphone window: main sends commands, the window answers each one and reports the level while recording. */
 export const REC_COMMAND = "speakkit:dictation:rec-command";
 export const REC_REPLY = "speakkit:dictation:rec-reply";
